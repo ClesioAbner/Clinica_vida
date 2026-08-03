@@ -1,0 +1,11 @@
+﻿wp-config.php
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/
+vendor/
+*.log
+debug.log
+
+.claude/

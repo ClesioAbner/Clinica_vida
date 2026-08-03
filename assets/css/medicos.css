@@ -1,0 +1,80 @@
+/* ==========================================================================
+   Página Médicos — classes .med-*
+   Vive dentro de .hp, por isso reutiliza os tokens teal do home.css.
+   ========================================================================== */
+
+.med-container { max-width: var(--hp-maxw, 1200px); margin: 0 auto; padding: 0 32px; }
+.med-eyebrow { font-size: 13px; font-weight: 700; color: var(--hp-primary); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 14px; }
+
+/* -------------------------------------------------------------------- HERO */
+.med-hero { background: var(--hp-tint-hero); padding: 140px 32px 72px; }
+.med-hero__inner { max-width: var(--hp-maxw, 1200px); margin: 0 auto; display: grid; grid-template-columns: 1.05fr .95fr; gap: 60px; align-items: center; }
+.med-hero__title { margin: 0 0 20px; font-size: 44px; line-height: 1.14; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.med-hero__lead { margin: 0 0 28px; font-size: 17px; line-height: 1.7; color: var(--hp-muted-2); max-width: 520px; }
+.med-hero__anchor { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--hp-primary); text-decoration: none; }
+.med-hero__anchor svg { transition: transform .2s; }
+.med-hero__anchor:hover svg { transform: translateY(3px); }
+
+/* Foto à direita com uma moldura fina deslocada (discreta, editorial). */
+.med-hero__media { position: relative; display: flex; justify-content: center; }
+.med-hero__photo { position: relative; z-index: 2; width: 100%; max-width: 400px; aspect-ratio: 4 / 5; border-radius: 20px; overflow: hidden; box-shadow: 0 24px 50px rgba(15,23,42,.14); }
+.med-hero__photo img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+.med-hero__media::before { content: ""; position: absolute; z-index: 1; right: -16px; bottom: -16px; width: 100%; max-width: 400px; height: 100%; border: 1.5px solid var(--hp-teal-200); border-radius: 20px; }
+
+/* ---------------------------------------------------------------- VALORES */
+.med-valores { background: #fff; padding: 80px 32px; }
+.med-valores__head { max-width: 620px; margin: 0 auto 52px; text-align: center; }
+.med-valores__title { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.med-valores__grid { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+.med-valor { padding: 6px 34px; }
+.med-valor + .med-valor { border-left: 1px solid var(--hp-border); }
+.med-valor__rotulo { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--hp-primary); margin-bottom: 12px; }
+.med-valor__titulo { margin: 0 0 10px; font-size: 19px; font-weight: 700; color: var(--hp-ink); }
+.med-valor__texto { margin: 0; font-size: 14.5px; line-height: 1.7; color: var(--hp-muted); }
+
+/* -------------------------------------------------------------------- TEAM */
+.med-team { background: var(--hp-bg-soft); padding: 84px 32px; }
+.med-team__head { text-align: center; max-width: 620px; margin: 0 auto 52px; }
+.med-team__title { margin: 0 0 14px; font-size: 34px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.med-team__lead { margin: 0; font-size: 16px; line-height: 1.7; color: var(--hp-muted); }
+
+.med-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+
+/* Cartão do médico — sóbrio: retrato + perfil, sem badges nem botões. */
+.med-card { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--hp-border); border-radius: 18px; overflow: hidden; transition: box-shadow .25s, border-color .25s; }
+.med-card:hover { box-shadow: 0 16px 38px rgba(15,23,42,.10); border-color: var(--hp-border-2); }
+
+.med-card__photo { aspect-ratio: 4 / 3; overflow: hidden; background: var(--hp-tint); }
+.med-card__photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; display: block; }
+
+.med-card__body { display: flex; flex-direction: column; flex: 1; padding: 26px 26px 28px; }
+.med-card__spec { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--hp-primary); margin-bottom: 8px; }
+.med-card__name { margin: 0; font-size: 21px; font-weight: 700; color: var(--hp-ink); }
+.med-card__cargo { margin-top: 3px; font-size: 13.5px; font-weight: 600; color: var(--hp-muted); }
+.med-card__desc { margin: 14px 0 20px; font-size: 14px; line-height: 1.65; color: var(--hp-muted-2); }
+
+/* Perfil em lista de definições: rótulo à esquerda, valor à direita. */
+.med-card__meta { margin: 0; padding-top: 18px; border-top: 1px solid var(--hp-border); }
+.med-card__row { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 9px 0; }
+.med-card__row + .med-card__row { border-top: 1px solid var(--hp-border); }
+.med-card__meta dt { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--hp-muted); }
+.med-card__meta dd { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--hp-ink); font-weight: 500; }
+
+/* ------------------------------------------------------------- RESPONSIVO */
+@media (max-width: 960px) {
+	.med-hero__inner { grid-template-columns: 1fr; gap: 44px; }
+	.med-hero__media { order: -1; justify-content: flex-start; }
+	.med-hero__photo, .med-hero__media::before { max-width: 320px; }
+	.med-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 760px) {
+	.med-valores__grid { grid-template-columns: 1fr; max-width: 460px; gap: 4px; }
+	.med-valor { padding: 22px 0; }
+	.med-valor + .med-valor { border-left: none; border-top: 1px solid var(--hp-border); }
+}
+@media (max-width: 560px) {
+	.med-hero { padding: 120px 20px 52px; }
+	.med-hero__title { font-size: 32px; }
+	.med-valores, .med-team { padding: 56px 20px; }
+	.med-grid { grid-template-columns: 1fr; }
+}

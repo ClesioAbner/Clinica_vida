@@ -1,0 +1,71 @@
+/* ==========================================================================
+   Página Entrar — classes .au-* (autenticação).
+   Ecrã dividido: formulário à esquerda, fotografia à direita.
+   Sem navegação completa — só a marca (padrão senior).
+   ========================================================================== */
+
+.au { min-height: 100vh; background: #fff; }
+.au-wrap { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+
+/* --------------------------------------------------------- Painel (form) */
+.au-panel { position: relative; display: flex; flex-direction: column; padding: 40px 56px 34px; }
+.au-brand { display: inline-flex; }
+.au-brand img { height: 52px; width: auto; display: block; }
+
+.au-inner { flex: 1; display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 400px; margin: 0 auto; padding: 28px 0; }
+
+.au-back { align-self: flex-start; font-size: 13.5px; font-weight: 500; color: var(--hp-muted); text-decoration: none; }
+.au-back:hover { color: var(--hp-primary); }
+
+/* Abas — segmented control calmo. */
+.au-tabs { display: flex; gap: 4px; background: var(--hp-bg-soft); border: 1px solid var(--hp-border); border-radius: 12px; padding: 4px; margin-bottom: 26px; }
+.au-tab { flex: 1; border: none; background: transparent; padding: 10px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--hp-muted); cursor: pointer; transition: background .18s, color .18s, box-shadow .18s; }
+.au-tab:hover { color: var(--hp-ink); }
+.au-panel[data-aba="login"] .au-tab[data-tab="login"],
+.au-panel[data-aba="reg"]   .au-tab[data-tab="reg"] { background: #fff; color: var(--hp-primary-700); box-shadow: 0 1px 3px rgba(15,23,42,.10); }
+
+/* Só a aba ativa aparece. */
+.au-form { display: none; flex-direction: column; }
+.au-panel[data-aba="login"] .au-form--login { display: flex; }
+.au-panel[data-aba="reg"]   .au-form--reg   { display: flex; }
+
+.au-title { margin: 2px 0 5px; font-size: 25px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.au-sub { margin: 0 0 24px; font-size: 14.5px; color: var(--hp-muted); }
+
+.au-label { margin-bottom: 7px; font-size: 13px; font-weight: 600; color: var(--hp-muted-2); }
+.au-opt { color: var(--hp-muted); font-weight: 500; }
+.au-input { margin-bottom: 16px; padding: 13px 15px; border: 1.5px solid var(--hp-border-2); border-radius: 11px; font-size: 14.5px; font-family: inherit; color: var(--hp-ink); background: #fff; transition: border-color .16s, box-shadow .16s; }
+.au-input:focus { outline: none; border-color: var(--hp-primary); box-shadow: 0 0 0 3px rgba(78,126,155,.12); }
+
+.au-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0 22px; }
+.au-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--hp-muted-2); cursor: pointer; }
+.au-link { font-size: 13.5px; font-weight: 600; color: var(--hp-primary); text-decoration: none; }
+.au-link:hover { color: var(--hp-primary-600); }
+
+.au-btn { padding: 14px; border: none; border-radius: 11px; background: var(--hp-primary); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; transition: background .2s, transform .1s; }
+.au-btn:hover { background: var(--hp-primary-600); }
+.au-btn:active { transform: translateY(1px); }
+.au-form--reg .au-btn { margin-top: 6px; }
+
+.au-switch { margin: 20px 0 0; font-size: 13.5px; color: var(--hp-muted); text-align: center; }
+.au-switch a { color: var(--hp-primary); font-weight: 600; text-decoration: none; }
+.au-switch a:hover { color: var(--hp-primary-600); }
+
+/* Alertas (reutiliza .cl-alert do controlador PRG). */
+.au-panel .cl-alert { padding: 13px 16px; border-radius: 11px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
+.au-panel .cl-alert--success { background: #E7F3EE; color: #245B3B; border: 1px solid #B9DCC9; }
+.au-panel .cl-alert--error { background: #FBEDEC; color: #8A2F29; border: 1px solid #E7C7C4; }
+
+/* --------------------------------------------------------- Imagem (esquerda) */
+.au-media { order: -1; position: relative; overflow: hidden; background: var(--hp-tint); }
+.au-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.au-media__cover { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 48px; background: linear-gradient(180deg, rgba(28,42,48,0) 45%, rgba(28,42,48,.72) 100%); color: #fff; }
+.au-media__text { margin: 0 0 12px; font-size: 22px; line-height: 1.4; font-weight: 600; letter-spacing: -.01em; max-width: 420px; }
+.au-media__brand { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: rgba(255,255,255,.82); }
+
+/* --------------------------------------------------------- Responsivo */
+@media (max-width: 880px) {
+	.au-wrap { grid-template-columns: 1fr; }
+	.au-media { display: none; }
+	.au-panel { padding: 34px 24px 28px; min-height: 100vh; }
+}

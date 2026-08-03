@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Página Marcar Consulta — classes .mk-*
+   Vive dentro de .hp e reutiliza os tokens teal do home.css.
+   ========================================================================== */
+
+.mk-eyebrow { font-size: 13px; font-weight: 700; color: var(--hp-primary); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
+
+.mk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 999px; font-weight: 600; font-size: 15px; padding: 13px 28px; cursor: pointer; border: none; text-decoration: none; transition: background .2s, transform .2s; }
+.mk-btn--primary { background: var(--hp-primary); color: #fff; box-shadow: 0 6px 20px rgba(78,126,155,.3); }
+.mk-btn--primary:hover { background: var(--hp-primary-600); color: #fff; transform: translateY(-1px); }
+.mk-btn--lg { padding: 15px 34px; font-size: 16px; }
+
+/* ------------------------------------------------------------------ BANNER */
+/* O header é fixo no topo. A imagem é desenhada só na content-box (abaixo do
+   padding-top), por isso a barra do header assenta numa faixa clara e nunca
+   corta a cabeça. A zona clara da foto fica à esquerda -> texto escuro. */
+.mk-banner {
+	position: relative;
+	min-height: 560px;
+	display: flex;
+	align-items: center;
+	padding: 96px 0 0;
+	background:
+		var(--mk-bg) center top / cover no-repeat content-box,
+		#E9F1F6 border-box;
+}
+.mk-banner__inner { position: relative; max-width: var(--hp-maxw, 1200px); margin: 0 auto; padding: 0 32px; width: 100%; }
+.mk-banner__content { max-width: 400px; }
+.mk-banner .mk-eyebrow { color: var(--hp-primary); }
+.mk-banner__title { margin: 0 0 14px; font-size: 38px; line-height: 1.12; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.mk-banner__lead { margin: 0; font-size: 16px; line-height: 1.6; color: var(--hp-muted-2); }
+
+/* -------------------------------------------------------------------- FORM */
+/* Secção abaixo do banner (sem sobreposição). Formulário num painel branco. */
+.mk-section { background: var(--hp-bg-soft); padding: 72px 32px 88px; }
+.mk-wrap { max-width: 780px; margin: 0 auto; }
+
+.mk-head { text-align: center; max-width: 560px; margin: 0 auto 36px; }
+.mk-head .mk-eyebrow { margin-bottom: 8px; }
+.mk-head__title { margin: 0 0 12px; font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
+.mk-head__lead { margin: 0; font-size: 16px; line-height: 1.6; color: var(--hp-muted); }
+
+/* Painel branco elegante, blocos separados por um filete fino. */
+.mk-form { background: #fff; border: 1px solid var(--hp-border); border-radius: 22px; padding: 44px 46px; box-shadow: 0 14px 40px rgba(15,23,42,.07); display: flex; flex-direction: column; gap: 38px; }
+.mk-block { border: none; padding: 0; margin: 0; min-width: 0; }
+.mk-block__title { display: block; width: 100%; margin: 0 0 22px; padding-bottom: 14px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--hp-primary); border-bottom: 1px solid var(--hp-border); }
+
+.mk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.mk-field { display: flex; flex-direction: column; }
+.mk-field--full { grid-column: 1 / -1; }
+.mk-field label { margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--hp-muted-2); }
+.mk-field input, .mk-field select, .mk-field textarea { padding: 12px 14px; border: 1.5px solid var(--hp-border-2); border-radius: 10px; background: #fff; color: var(--hp-ink); font-size: 14.5px; font-family: inherit; transition: border-color .16s, box-shadow .16s; }
+.mk-field input:focus, .mk-field select:focus, .mk-field textarea:focus { outline: none; border-color: var(--hp-primary); box-shadow: 0 0 0 3px rgba(78,126,155,.12); }
+.mk-field input[readonly] { background: #EEF3F6; color: var(--hp-muted); cursor: not-allowed; }
+.mk-field textarea { resize: vertical; }
+
+.mk-form__foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 28px; border-top: 1px solid var(--hp-border); }
+.mk-note { margin: 0; max-width: 380px; font-size: 13px; line-height: 1.5; color: var(--hp-muted); }
+
+/* Utilizador não autenticado. */
+.mk-login { max-width: 520px; margin: 0 auto; background: #fff; border: 1px solid var(--hp-border); border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 12px 30px rgba(15,23,42,.06); }
+.mk-login h2 { margin: 0 0 10px; font-size: 24px; color: var(--hp-ink); }
+.mk-login p { margin: 0 0 22px; color: var(--hp-muted); line-height: 1.6; }
+
+.mk-alert { padding: 14px 18px; border-radius: 12px; font-size: 14px; font-weight: 500; }
+.mk-alert--error { background: #FBEDEC; color: #8A2F29; }
+
+.mk-wrap .cl-alert { padding: 16px 20px; border-radius: 12px; margin-bottom: 24px; font-size: 14.5px; font-weight: 600; }
+.mk-wrap .cl-alert--success { background: #E7F3EE; color: #245B3B; border: 1px solid #B9DCC9; }
+.mk-wrap .cl-alert--error { background: #FBEDEC; color: #8A2F29; border: 1px solid #E7C7C4; }
+
+/* ------------------------------------------------------------- RESPONSIVO */
+@media (max-width: 640px) {
+	.mk-banner { min-height: 460px; padding: 88px 0 0; }
+	.mk-banner__inner { padding: 0 20px; }
+	.mk-banner__title { font-size: 32px; }
+	.mk-section { padding: 48px 20px 64px; }
+	.mk-form { padding: 28px 22px; border-radius: 18px; }
+	.mk-grid { grid-template-columns: 1fr; }
+	.mk-form__foot { flex-direction: column; align-items: stretch; }
+	.mk-form__foot .mk-btn { width: 100%; }
+}
