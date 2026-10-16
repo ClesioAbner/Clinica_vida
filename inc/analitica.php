@@ -532,7 +532,7 @@ final class Clinica_Analitica {
 
 		$hoje = current_time( 'timestamp' );
 
-		// --- Séries diárias, uma query por fonte, 730 dias ---
+		// Séries diárias, uma query por fonte, 730 dias
 		$diario = static function ( string $sql ) use ( $wpdb ) {
 			$out = array();
 			foreach ( (array) $wpdb->get_results( $sql, ARRAY_A ) as $r ) {
@@ -618,7 +618,7 @@ final class Clinica_Analitica {
 			);
 		}
 
-		// --- Métricas de qualidade (últimos 30 dias) ---
+		// Métricas de qualidade (últimos 30 dias)
 		// Limites de sanidade: descarta registos incoerentes (esquecimentos de
 		// fecho, entradas de teste) que inflacionariam a média — 0 a 8h de
 		// espera, 3 a 180 min de consulta.
@@ -648,7 +648,7 @@ final class Clinica_Analitica {
 		$capacidade = $med_ativos * 16 * 64; // 16 slots/dia úteis * ~64 dias úteis em 90d
 		$ocupacao   = $capacidade > 0 ? min( 100, (int) round( $cons_90 / $capacidade * 100 ) ) : 0;
 
-		// --- Rankings (90 dias) ---
+		// Rankings (90 dias)
 		$rk_med = $wpdb->get_results(
 			"SELECT u.display_name nome, e.nome esp,
 			        COALESCE(SUM(pg.valor),0) receita, COUNT(DISTINCT c.id) consultas
@@ -673,7 +673,7 @@ final class Clinica_Analitica {
 			ARRAY_A
 		) ?: array();
 
-		// --- Demografia dos pacientes ---
+		// Demografia dos pacientes
 		$idade = $wpdb->get_row(
 			"SELECT
 			   SUM(a < 18) g0, SUM(a BETWEEN 18 AND 34) g1, SUM(a BETWEEN 35 AND 49) g2,
@@ -689,7 +689,7 @@ final class Clinica_Analitica {
 			ARRAY_A
 		) ?: array();
 
-		// --- Alertas inteligentes (limiares reais) ---
+		// Alertas inteligentes (limiares reais)
 		$alertas   = array();
 		$meta_rec  = (float) get_option( 'clinica_meta_receita_mensal', 0 );
 		$rec_mes   = (float) $wpdb->get_var( "SELECT COALESCE(SUM(valor),0) FROM {$P} WHERE estado='pago' AND DATE_FORMAT(criado_em,'%Y-%m')=DATE_FORMAT(CURDATE(),'%Y-%m')" );
@@ -755,6 +755,298 @@ final class Clinica_Analitica {
 		return $out;
 	}
 
+	/** Períodos dos painéis individuais (médico): chave => rótulo, unidade e nº de pontos. */
+	const PERIODOS_MEDICO = array(
+		'30d' => array( 'label' => '30 dias', 'unidade' => 'dia', 'passos' => 30 ),
+		'90d' => array( 'label' => '90 dias', 'unidade' => 'semana', 'passos' => 13 ),
+		'12m' => array( 'label' => '12 meses', 'unidade' => 'mes', 'passos' => 12 ),
+	);
+
+	/**
+	 * Painel individual do MÉDICO: atividade e produção financeira de um período,
+	 * com o período anterior equivalente para as variações.
+	 *
+	 * Tudo é atribuído à DATA DA CONSULTA (produção por data de serviço), para
+	 * que consultas e valores batam certo entre si em todos os gráficos.
+	 * "Por receber" exclui pagamentos pendentes de consultas canceladas ou
+	 * faltadas: não são dinheiro que se espera receber.
+	 *
+	 * Só dados reais. Custos e honorários não existem no modelo, por isso não
+	 * há lucro nem repartição: o painel mostra o que foi faturado e cobrado.
+	 *
+	 * @param int    $medico_id 0 = todos os médicos (vista de gestão).
+	 * @param string $periodo   Chave de PERIODOS_MEDICO.
+	 */
+	public static function medico( int $medico_id, string $periodo = '90d' ): array {
+		$periodo = isset( self::PERIODOS_MEDICO[ $periodo ] ) ? $periodo : '90d';
+		$chave   = 'clinica_an_med4_' . $medico_id . '_' . $periodo . '_' . (int) get_option( 'clinica_analitica_geracao', 0 );
+		$cache   = get_transient( $chave );
+		if ( is_array( $cache ) ) {
+			return $cache;
+		}
+
+		global $wpdb;
+		$def   = self::PERIODOS_MEDICO[ $periodo ];
+		$agora = current_time( 'timestamp' );
+		$fim   = strtotime( 'tomorrow', $agora );
+
+		// Baldes do período: o último é o dia/semana/mês corrente (parcial).
+		$baldes = array();
+		for ( $i = $def['passos'] - 1; $i >= 0; $i-- ) {
+			if ( 'dia' === $def['unidade'] ) {
+				$a = strtotime( "-{$i} day", strtotime( 'today', $agora ) );
+				$b = strtotime( '+1 day', $a );
+				$curto = date_i18n( 'j/n', $a );
+				$longo = ucfirst( date_i18n( 'D, j \d\e M', $a ) );
+			} elseif ( 'semana' === $def['unidade'] ) {
+				$a = strtotime( 'monday this week', strtotime( "-{$i} week", $agora ) );
+				$b = strtotime( '+1 week', $a );
+				$curto = date_i18n( 'j/n', $a );
+				$longo = 'Semana de ' . date_i18n( 'j \d\e M', $a );
+			} else {
+				$a = strtotime( date( 'Y-m-01', strtotime( "first day of -{$i} month", $agora ) ) );
+				$b = strtotime( '+1 month', $a );
+				$curto = date_i18n( 'M', $a );
+				$longo = ucfirst( date_i18n( 'F Y', $a ) );
+			}
+			$baldes[] = array( 'a' => $a, 'b' => min( $b, $fim ), 'curto' => $curto, 'longo' => $longo );
+		}
+		$ini     = $baldes[0]['a'];
+		$ini_ant = $ini - ( $fim - $ini );
+
+		$C  = Clinica_Repo::T_CONSULTAS;
+		$PA = Clinica_Repo::T_PACIENTES;
+		$M  = Clinica_Repo::T_MEDICOS;
+		$E  = Clinica_Repo::T_ESPECIALIDADES;
+		$P  = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::TABELA : 'clinica_pagamentos';
+		$onde = $medico_id ? $wpdb->prepare( 'AND c.medico_id = %d', $medico_id ) : '';
+		$rows = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT c.id, c.inicio, c.status, c.paciente_id, pu.display_name AS paciente,
+				        mu.display_name AS medico, e.nome AS especialidade,
+				        p.valor, p.estado AS pg_estado, p.metodo, p.atualizado_em AS pago_em
+				   FROM {$C} c
+				   LEFT JOIN {$P} p ON p.consulta_id = c.id
+				   LEFT JOIN {$PA} pa ON pa.id = c.paciente_id
+				   LEFT JOIN {$wpdb->users} pu ON pu.ID = pa.user_id
+				   LEFT JOIN {$M} md ON md.id = c.medico_id
+				   LEFT JOIN {$wpdb->users} mu ON mu.ID = md.user_id
+				   LEFT JOIN {$E} e ON e.id = md.especialidade_id
+				  WHERE c.inicio >= %s AND c.inicio < %s {$onde}
+				  ORDER BY c.inicio DESC",
+				date( 'Y-m-d H:i:s', $ini_ant ),
+				date( 'Y-m-d H:i:s', $fim )
+			),
+			ARRAY_A
+		);
+
+		$vazio = static function (): array {
+			return array(
+				'marcadas' => 0, 'realizadas' => 0, 'agendadas' => 0, 'canceladas' => 0, 'faltas' => 0,
+				'pacientes' => array(), 'faturado' => 0.0, 'recebido' => 0.0, 'por_receber' => 0.0,
+				'n_pagamentos' => 0, 'n_pagos' => 0, 'n_pendentes' => 0,
+			);
+		};
+		$tot      = array( 'atual' => $vazio(), 'anterior' => $vazio() );
+		$n        = count( $baldes );
+		$serie    = array(
+			'marcadas'    => array_fill( 0, $n, 0 ),
+			'realizadas'  => array_fill( 0, $n, 0 ),
+			'recebido'    => array_fill( 0, $n, 0.0 ),
+			'por_receber' => array_fill( 0, $n, 0.0 ),
+		);
+		$metodos    = array();
+		$pagamentos = array();
+		$por_medico = array();
+		$por_esp    = array();
+		$prazos     = array();
+		$dias       = array_fill( 1, 7, 0 );
+		$fechadas   = array( 'cancelada', 'faltou' );
+
+		foreach ( $rows as $r ) {
+			$ts  = strtotime( $r['inicio'] );
+			$cur = $ts >= $ini;
+			$t   = &$tot[ $cur ? 'atual' : 'anterior' ];
+
+			$t['marcadas']++;
+			switch ( $r['status'] ) {
+				case 'realizada':
+					$t['realizadas']++;
+					$t['pacientes'][ (int) $r['paciente_id'] ] = true;
+					break;
+				case 'cancelada':
+					$t['canceladas']++;
+					break;
+				case 'faltou':
+					$t['faltas']++;
+					break;
+				default:
+					$t['agendadas']++;
+			}
+
+			$valor    = (float) ( $r['valor'] ?? 0 );
+			$pago     = 'pago' === $r['pg_estado'];
+			$pendente = 'pendente' === $r['pg_estado'] && ! in_array( $r['status'], $fechadas, true );
+			if ( $pago || $pendente ) {
+				$t['faturado'] += $valor;
+				$t['n_pagamentos']++;
+				if ( $pago ) {
+					$t['recebido'] += $valor;
+					$t['n_pagos']++;
+				} else {
+					$t['por_receber'] += $valor;
+					$t['n_pendentes']++;
+				}
+			}
+			unset( $t );
+
+			if ( ! $cur ) {
+				continue;
+			}
+			foreach ( $baldes as $k => $bd ) {
+				if ( $ts >= $bd['a'] && $ts < $bd['b'] ) {
+					$serie['marcadas'][ $k ]++;
+					if ( 'realizada' === $r['status'] ) {
+						$serie['realizadas'][ $k ]++;
+					}
+					if ( $pago ) {
+						$serie['recebido'][ $k ] += $valor;
+					} elseif ( $pendente ) {
+						$serie['por_receber'][ $k ] += $valor;
+					}
+					break;
+				}
+			}
+			if ( 'cancelada' !== $r['status'] ) {
+				$dias[ (int) date( 'N', $ts ) ]++;
+			}
+			// Repartição por médico e por especialidade (vista de gestão).
+			$nm = (string) $r['medico'];
+			$ne = (string) $r['especialidade'];
+			$por_medico[ $nm ] = $por_medico[ $nm ] ?? array( 'especialidade' => $ne, 'marcadas' => 0, 'realizadas' => 0, 'faltas' => 0, 'faturado' => 0.0 );
+			$por_esp[ $ne ]    = $por_esp[ $ne ] ?? array( 'marcadas' => 0, 'realizadas' => 0, 'faturado' => 0.0 );
+			$por_medico[ $nm ]['marcadas']++;
+			$por_esp[ $ne ]['marcadas']++;
+			if ( 'realizada' === $r['status'] ) {
+				$por_medico[ $nm ]['realizadas']++;
+				$por_esp[ $ne ]['realizadas']++;
+			} elseif ( 'faltou' === $r['status'] ) {
+				$por_medico[ $nm ]['faltas']++;
+			}
+			if ( $pago || $pendente ) {
+				$por_medico[ $nm ]['faturado'] += $valor;
+				$por_esp[ $ne ]['faturado']    += $valor;
+			}
+			// Dias entre a consulta e o registo do pagamento (prazo de cobrança).
+			if ( $pago && ! empty( $r['pago_em'] ) ) {
+				$prazos[] = max( 0, (int) floor( ( strtotime( $r['pago_em'] ) - $ts ) / DAY_IN_SECONDS ) );
+			}
+			if ( $pago ) {
+				$m = (string) $r['metodo'];
+				$metodos[ $m ] = array(
+					'n' => ( $metodos[ $m ]['n'] ?? 0 ) + 1,
+					'v' => ( $metodos[ $m ]['v'] ?? 0.0 ) + $valor,
+				);
+			}
+			if ( ( $pago || $pendente ) && count( $pagamentos ) < 8 ) {
+				$pagamentos[] = array(
+					'inicio'   => $r['inicio'],
+					'paciente' => (string) $r['paciente'],
+					'medico'   => $nm,
+					'valor'    => $valor,
+					'metodo'   => (string) $r['metodo'],
+					'estado'   => $pago ? 'pago' : 'pendente',
+				);
+			}
+		}
+		foreach ( $tot as $q => $v ) {
+			$tot[ $q ]['pacientes'] = count( $v['pacientes'] );
+		}
+		uasort( $metodos, static fn( $x, $y ) => $y['v'] <=> $x['v'] );
+		uasort( $por_medico, static fn( $x, $y ) => array( $y['realizadas'], $y['marcadas'] ) <=> array( $x['realizadas'], $x['marcadas'] ) );
+		uasort( $por_esp, static fn( $x, $y ) => $y['marcadas'] <=> $x['marcadas'] );
+
+		// Novos pacientes (só na vista da clínica: um paciente não é "de" um médico).
+		$novos = array( 'atual' => 0, 'anterior' => 0, 'serie' => array_fill( 0, $n, 0 ) );
+		if ( ! $medico_id ) {
+			$datas = (array) $wpdb->get_col(
+				$wpdb->prepare(
+					"SELECT created_at FROM {$PA} WHERE created_at >= %s AND created_at < %s",
+					date( 'Y-m-d H:i:s', $ini_ant ),
+					date( 'Y-m-d H:i:s', $fim )
+				)
+			);
+			foreach ( $datas as $d ) {
+				$ts = strtotime( (string) $d );
+				if ( $ts < $ini ) {
+					$novos['anterior']++;
+					continue;
+				}
+				$novos['atual']++;
+				foreach ( $baldes as $k => $bd ) {
+					if ( $ts >= $bd['a'] && $ts < $bd['b'] ) {
+						$novos['serie'][ $k ]++;
+						break;
+					}
+				}
+			}
+		}
+
+		$out = array(
+			'periodo'    => $periodo,
+			'label'      => $def['label'],
+			'desde'      => $ini,
+			'unidade'    => $def['unidade'],
+			'rotulos'    => array_column( $baldes, 'curto' ),
+			'longos'     => array_column( $baldes, 'longo' ),
+			'serie'      => $serie,
+			'atual'      => $tot['atual'],
+			'anterior'   => $tot['anterior'],
+			'metodos'    => $metodos,
+			'pagamentos' => $pagamentos,
+			'dias'       => $dias,
+			'por_medico' => $por_medico,
+			'por_esp'    => $por_esp,
+			'novos'      => $novos,
+			'prazo'      => $prazos ? round( array_sum( $prazos ) / count( $prazos ), 1 ) : null,
+		);
+		set_transient( $chave, $out, 2 * MINUTE_IN_SECONDS );
+		return $out;
+	}
+
+	/**
+	 * Por receber por antiguidade: pagamentos pendentes (sem consultas
+	 * canceladas nem faltas) agrupados pelos dias desde a consulta. É o
+	 * "aging" dos painéis financeiros: quanto mais antigo, mais difícil de cobrar.
+	 *
+	 * @return array<int, array{rotulo: string, n: int, v: float}>
+	 */
+	public static function antiguidade(): array {
+		global $wpdb;
+		$C    = Clinica_Repo::T_CONSULTAS;
+		$P    = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::TABELA : 'clinica_pagamentos';
+		$rows = (array) $wpdb->get_results(
+			"SELECT p.valor, c.inicio FROM {$P} p JOIN {$C} c ON c.id = p.consulta_id
+			  WHERE p.estado = 'pendente' AND c.status NOT IN ('cancelada', 'faltou')",
+			ARRAY_A
+		);
+		$baldes = array(
+			array( 'rotulo' => 'Consulta ainda por vir', 'n' => 0, 'v' => 0.0 ),
+			array( 'rotulo' => 'Até 30 dias', 'n' => 0, 'v' => 0.0 ),
+			array( 'rotulo' => '31 a 60 dias', 'n' => 0, 'v' => 0.0 ),
+			array( 'rotulo' => '61 a 90 dias', 'n' => 0, 'v' => 0.0 ),
+			array( 'rotulo' => 'Mais de 90 dias', 'n' => 0, 'v' => 0.0 ),
+		);
+		$agora = current_time( 'timestamp' );
+		foreach ( $rows as $r ) {
+			$dias = (int) floor( ( $agora - strtotime( $r['inicio'] ) ) / DAY_IN_SECONDS );
+			$k    = $dias < 0 ? 0 : ( $dias <= 30 ? 1 : ( $dias <= 60 ? 2 : ( $dias <= 90 ? 3 : 4 ) ) );
+			$baldes[ $k ]['n']++;
+			$baldes[ $k ]['v'] += (float) $r['valor'];
+		}
+		return $baldes;
+	}
+
 	/** Força o recálculo no próximo pedido (após alterações em massa). */
 	public static function limpar(): void {
 		delete_transient( self::CACHE_TATICO );
@@ -763,6 +1055,9 @@ final class Clinica_Analitica {
 		delete_transient( self::CACHE_ANO );
 		delete_transient( self::CACHE_DIRECAO );
 		delete_transient( self::CACHE_BI );
+		// Os painéis por médico têm uma chave por médico e período: mudar a
+		// geração torna-as todas antigas de uma vez (expiram sozinhas).
+		update_option( 'clinica_analitica_geracao', (int) get_option( 'clinica_analitica_geracao', 0 ) + 1, false );
 	}
 }
 

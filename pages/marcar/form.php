@@ -1,4 +1,13 @@
 <?php
+/**
+ * Marcar · Formulário de marcação (sessão iniciada), no painel de vidro do
+ * hero. Os campos sem name (especialidade, data, hora) só alimentam o filtro
+ * e o campo escondido "inicio"; as horas livres vêm de admin-ajax
+ * (action clinica_slots). O POST é tratado por clinica_controller_cliente.
+ *
+ * @package Clinica
+ */
+
 declare( strict_types = 1 );
 defined( 'ABSPATH' ) || exit;
 
@@ -30,101 +39,76 @@ if ( $v_data < $hoje ) {
 	$v_data = '';
 }
 ?>
-<section class="mk-section">
-	<div class="mk-wrap">
+<?php clinica_render_flash(); ?>
 
-		<?php clinica_render_flash(); ?>
+<?php if ( ! $especialidades || ! $medicos ) : ?>
 
-		<?php if ( ! $especialidades || ! $medicos ) : ?>
+	<div class="cv-reserva__form" role="status">
+		<p class="cv-reserva__titulo">Marcação online indisponível</p>
+		<p class="cv-reserva__nota">Ainda não há especialidades ou médicos com horário. Ligue-nos e marcamos consigo.</p>
+	</div>
 
-			<div class="mk-alert mk-alert--error">Ainda não há especialidades ou médicos disponíveis. Por favor, contacte a clínica.</div>
+<?php else : ?>
 
-		<?php else : ?>
+	<form method="post" class="cv-reserva__form" id="mk-form" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
+		<?php wp_nonce_field( 'cl_save', 'cl_nonce' ); ?>
+		<input type="hidden" name="cl_action" value="<?php echo $is_edit ? 'atualizar' : 'criar'; ?>">
+		<input type="hidden" name="consulta_id" value="<?php echo esc_attr( $is_edit ? $edit['id'] : '' ); ?>">
 
-		<div class="mk-head">
-			<div class="mk-eyebrow">Marcação</div>
-			<h2 class="mk-head__title"><?php echo $is_edit ? 'Atualizar consulta' : 'Dados da marcação'; ?></h2>
-			<p class="mk-head__lead">Preencha os campos abaixo. A consulta fica pendente até à confirmação do médico.</p>
+		<p class="cv-reserva__titulo"><?php echo $is_edit ? 'Atualizar consulta' : 'Dados da marcação'; ?></p>
+		<p class="cv-reserva__sub">Sessão iniciada como <?php echo esc_html( $user->user_email ); ?></p>
+
+		<div class="cv-campo cv-campo--largo">
+			<label for="mk-nome">Nome completo</label>
+			<input type="text" id="mk-nome" name="nome_cliente" value="<?php echo esc_attr( $v_nome ); ?>" autocomplete="name" required>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-tel">Telefone</label>
+			<input type="tel" id="mk-tel" name="telefone" value="<?php echo esc_attr( $v_tel ); ?>" placeholder="+258 84 000 0000" autocomplete="tel" required>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-nasc">Data de nascimento</label>
+			<input type="date" id="mk-nasc" name="data_nascimento" value="<?php echo esc_attr( $v_nasc ); ?>" max="<?php echo esc_attr( $hoje ); ?>" required>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-esp">Especialidade</label>
+			<select id="mk-esp" required>
+				<option value="">Selecione</option>
+				<?php foreach ( $especialidades as $e ) : ?>
+					<option value="<?php echo esc_attr( $e['id'] ); ?>" <?php selected( intval( $e['id'] ), $sel_esp ); ?>><?php echo esc_html( $e['nome'] ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-medico">Médico</label>
+			<select id="mk-medico" name="medico_id" required>
+				<option value="">Escolha a especialidade</option>
+				<?php foreach ( $medicos as $m ) : ?>
+					<option value="<?php echo esc_attr( $m['id'] ); ?>" data-esp="<?php echo esc_attr( $m['especialidade_id'] ); ?>" <?php selected( intval( $m['id'] ), $sel_med ); ?>><?php echo esc_html( clinica_nome_medico( $m['nome'] ) ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-data">Data</label>
+			<input type="date" id="mk-data" min="<?php echo esc_attr( $hoje ); ?>" value="<?php echo esc_attr( $v_data ); ?>" required>
+		</div>
+		<div class="cv-campo">
+			<label for="mk-hora">Hora disponível</label>
+			<select id="mk-hora" required data-sel="<?php echo esc_attr( $v_hora ); ?>">
+				<option value="">Escolha médico e data</option>
+			</select>
+		</div>
+		<input type="hidden" name="inicio" id="mk-inicio" value="<?php echo esc_attr( $v_inicio ); ?>">
+		<div class="cv-campo cv-campo--largo">
+			<label for="mk-obs">Motivo da consulta</label>
+			<textarea id="mk-obs" name="observacoes" rows="2" required placeholder="Descreva brevemente os sintomas ou o motivo."><?php echo esc_textarea( $v_obs ); ?></textarea>
 		</div>
 
-		<form method="post" class="mk-form" id="mk-form" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>">
-			<?php wp_nonce_field( 'cl_save', 'cl_nonce' ); ?>
-			<input type="hidden" name="cl_action" value="<?php echo $is_edit ? 'atualizar' : 'criar'; ?>">
-			<input type="hidden" name="consulta_id" value="<?php echo esc_attr( $is_edit ? $edit['id'] : '' ); ?>">
+		<button type="submit" class="cv-btn cv-reserva__enviar"><?php echo $is_edit ? 'Guardar alterações' : 'Confirmar e enviar'; ?></button>
+		<p class="cv-reserva__nota">A consulta fica <strong>pendente</strong> até o médico confirmar. Pode editá-la em «A minha conta» enquanto não for confirmada.</p>
+	</form>
 
-			<fieldset class="mk-block">
-				<legend class="mk-block__title">Os seus dados</legend>
-				<div class="mk-grid">
-					<div class="mk-field">
-						<label for="mk-nome">Nome completo</label>
-						<input type="text" id="mk-nome" name="nome_cliente" value="<?php echo esc_attr( $v_nome ); ?>" required>
-					</div>
-					<div class="mk-field">
-						<label for="mk-email">Email</label>
-						<input type="email" id="mk-email" value="<?php echo esc_attr( $user->user_email ); ?>" readonly>
-					</div>
-					<div class="mk-field">
-						<label for="mk-tel">Telefone</label>
-						<input type="tel" id="mk-tel" name="telefone" value="<?php echo esc_attr( $v_tel ); ?>" placeholder="Ex.: +258 84 000 0000" required>
-					</div>
-					<div class="mk-field">
-						<label for="mk-nasc">Data de nascimento</label>
-						<input type="date" id="mk-nasc" name="data_nascimento" value="<?php echo esc_attr( $v_nasc ); ?>" max="<?php echo esc_attr( $hoje ); ?>" required>
-					</div>
-				</div>
-			</fieldset>
-
-			<fieldset class="mk-block">
-				<legend class="mk-block__title">A consulta</legend>
-				<div class="mk-grid">
-					<div class="mk-field">
-						<label for="mk-esp">Especialidade</label>
-						<select id="mk-esp" required>
-							<option value="">Selecione</option>
-							<?php foreach ( $especialidades as $e ) : ?>
-								<option value="<?php echo esc_attr( $e['id'] ); ?>" <?php selected( intval( $e['id'] ), $sel_esp ); ?>><?php echo esc_html( $e['nome'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="mk-field">
-						<label for="mk-medico">Médico</label>
-						<select id="mk-medico" name="medico_id" required>
-							<option value="">Escolha a especialidade primeiro</option>
-							<?php foreach ( $medicos as $m ) : ?>
-								<option value="<?php echo esc_attr( $m['id'] ); ?>" data-esp="<?php echo esc_attr( $m['especialidade_id'] ); ?>" <?php selected( intval( $m['id'] ), $sel_med ); ?>><?php echo esc_html( clinica_nome_medico( $m['nome'] ) ); ?></option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="mk-field">
-						<label for="mk-data">Data</label>
-						<input type="date" id="mk-data" min="<?php echo esc_attr( $hoje ); ?>" value="<?php echo esc_attr( $v_data ); ?>" required>
-					</div>
-					<div class="mk-field">
-						<label for="mk-hora">Hora disponível</label>
-						<select id="mk-hora" required data-sel="<?php echo esc_attr( $v_hora ); ?>">
-							<option value="">Escolha médico e data</option>
-						</select>
-					</div>
-					<input type="hidden" name="inicio" id="mk-inicio" value="<?php echo esc_attr( $v_inicio ); ?>">
-					<div class="mk-field mk-field--full">
-						<label for="mk-obs">Motivo da consulta</label>
-						<textarea id="mk-obs" name="observacoes" rows="4" required placeholder="Descreva brevemente os sintomas ou o motivo da consulta."><?php echo esc_textarea( $v_obs ); ?></textarea>
-					</div>
-				</div>
-			</fieldset>
-
-			<div class="mk-form__foot">
-				<p class="mk-note">A consulta fica <strong>pendente</strong> até o médico confirmar. Pode editar enquanto não for confirmada.</p>
-				<button type="submit" class="mk-btn mk-btn--primary mk-btn--lg">
-					<?php echo $is_edit ? 'Guardar alterações' : 'Confirmar e enviar'; ?>
-				</button>
-			</div>
-		</form>
-
-		<?php endif; ?>
-
-	</div>
-</section>
+<?php endif; ?>
 
 <script>
 ( function () {

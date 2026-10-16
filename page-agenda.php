@@ -96,7 +96,7 @@ $base_url = remove_query_arg( array( 'cl' ) );
 				<!-- Horário semanal -->
 				<section class="ag-card ag-card--wide">
 					<div class="ag-card__head">
-						<h2>Horário semanal — <?php echo esc_html( clinica_nome_medico( $sel_med['nome'] ) ); ?></h2>
+						<h2>Horário semanal de <?php echo esc_html( clinica_nome_medico( $sel_med['nome'] ) ); ?></h2>
 					</div>
 
 					<form method="post" class="ag-addrow">

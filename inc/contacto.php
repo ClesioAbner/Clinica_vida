@@ -1,136 +1,174 @@
 <?php
-/**
- * inc/contacto.php
- *
- * Backend do formulário de contacto público:
- *   • Tabela própria clinica_mensagens (sem prefixo wp_, como as restantes).
- *   • Gravação segura via $wpdb->insert (dados escapados/preparados).
- *   • Controlador PRG (Post-Redirect-Get) com nonce, validação e sanitização.
- *
- * @package Clinica
- */
 
-declare( strict_types = 1 );
+declare(strict_types=1);
 
-defined( 'ABSPATH' ) || exit;
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
 
-final class Clinica_Contacto {
+// CONFIGURAÇÕES DO TESTE
 
-	const TABELA     = 'clinica_mensagens';
-	const DB_VERSION = '1';
 
-	/**
-	 * Cria a tabela de mensagens (uma vez, guardado por versão numa option).
-	 * Corre no arranque do tema e, por segurança, antes de cada gravação.
-	 */
-	public static function instalar(): void {
-		if ( get_option( 'clinica_mensagens_db' ) === self::DB_VERSION ) {
-			return;
-		}
+$customerMsisdn = '258849596865';
+$amount = '5';
 
-		global $wpdb;
-		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+$apiKey = '66bcaqeruzhqovqshaawuujrebfdpsdl';
+$serviceProviderCode = '901819';
 
-		$tabela  = self::TABELA;
-		$charset = $wpdb->get_charset_collate();
+$endpoint = 'https://api.vm.co.mz:18352/ipg/v1x/c2bPayment/singleStage/';
 
-		$sql = "CREATE TABLE {$tabela} (
-			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			nome VARCHAR(120) NOT NULL,
-			email VARCHAR(160) NOT NULL,
-			telefone VARCHAR(40) NULL,
-			assunto VARCHAR(160) NULL,
-			mensagem TEXT NOT NULL,
-			criado_em DATETIME NOT NULL,
-			lido TINYINT(1) NOT NULL DEFAULT 0,
-			PRIMARY KEY (id),
-			KEY criado_em (criado_em)
-		) {$charset};";
+$publicKeyBase64 = 'MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyrOP7fgXIJgJyp6nP/Vtlu8kW94Qu+gJjfMaTNOSd/mQJChqXiMWsZPH8uOoZGeR/9m7Y8vAU83D96usXUaKoDYiVmxoMBkfmw8DJAtHHt/8LWDdoAS/kpXyZJ5dt19Pv+rTApcjg7AoGczT+yIU7xp4Ku23EqQz70V5Rud+Qgerf6So28Pt3qZ9hxgUA6lgF7OjoYOIAKPqg07pHp2eOp4P6oQW8oXsS+cQkaPVo3nM1f+fctFGQtgLJ0y5VG61ZiWWWFMOjYFkBSbNOyJpQVcMKPcfdDRKq+9r5DFLtFGztPYIAovBm3a1Q6XYDkGYZWtnD8mDJxgEiHWCzog0wZqJtfNREnLf1g2ZOanTDcrEFzsnP2MQwIatV8M6q/fYrh5WejlNm4ujnKUVbnPMYH0wcbXQifSDhg2jcnRLHh9CF9iabkxAzjbYkaG1qa4zG+bCidLCRe0cEQvt0+/lQ40yESvpWF60omTy1dLSd10gl2//0v4IMjLMn9tgxhPp9c+C2Aw7x2Yjx3GquSYhU6IL41lrURwDuCQpg3F30QwIHgy1D8xIfQzno3XywiiUvoq4YfCkN9WiyKz0btD6ZX02RRK6DrXTFefeKjWf0RHREHlfwkhesZ4X168Lxe9iCWjP2d0xUB+lr10835ZUpYYIr4Gon9NTjkoOGwFyS5ECAwEAAQ==';
 
-		dbDelta( $sql );
-		update_option( 'clinica_mensagens_db', self::DB_VERSION );
-	}
+// VALIDAÇÕES INICIAIS
 
-	/** Grava uma mensagem. Devolve true se inseriu. */
-	public static function guardar( array $in ): bool {
-		global $wpdb;
-		self::instalar();
-
-		$ok = $wpdb->insert(
-			self::TABELA,
-			array(
-				'nome'      => $in['nome'],
-				'email'     => $in['email'],
-				'telefone'  => $in['telefone'],
-				'assunto'   => $in['assunto'],
-				'mensagem'  => $in['mensagem'],
-				'criado_em' => current_time( 'mysql' ),
-				'lido'      => 0,
-			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%d' )
-		);
-
-		return (bool) $ok;
-	}
-
-	/** Lista mensagens (mais recentes primeiro). */
-	public static function listar( int $limit = 50 ): array {
-		global $wpdb;
-		self::instalar();
-		$limit = max( 1, min( 200, $limit ) );
-		return $wpdb->get_results(
-			$wpdb->prepare( "SELECT id, nome, email, telefone, assunto, mensagem, criado_em, lido FROM " . self::TABELA . " ORDER BY id DESC LIMIT %d", $limit ),
-			ARRAY_A
-		) ?: array();
-	}
-
-	/** Número de mensagens por ler. */
-	public static function nao_lidas(): int {
-		global $wpdb;
-		self::instalar();
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . self::TABELA . " WHERE lido = 0" );
-	}
-
-	/** Marca uma mensagem como lida. */
-	public static function marcar_lida( int $id ): bool {
-		global $wpdb;
-		return false !== $wpdb->update( self::TABELA, array( 'lido' => 1 ), array( 'id' => $id ), array( '%d' ), array( '%d' ) );
-	}
+if (!extension_loaded('openssl')) {
+    exit('Erro: a extensão OpenSSL não está activa no PHP.');
 }
 
-add_action( 'after_setup_theme', array( 'Clinica_Contacto', 'instalar' ) );
-
-/**
- * Controlador PRG do formulário de contacto (público, sem login).
- * Corre ANTES de get_header() para poder redirecionar.
- */
-function clinica_controller_contacto(): void {
-	if ( ! isset( $_POST['con_action'] ) ) {
-		return;
-	}
-
-	if ( ! Clinica_Input::nonce_ok( $_POST, 'con_nonce', 'con_send' ) ) {
-		clinica_redirect( 'msg_invalida', 'contacto' );
-	}
-
-	$nome     = Clinica_Input::texto( $_POST, 'nome' );
-	$email    = Clinica_Input::email( $_POST, 'email' );
-	$telefone = Clinica_Input::texto( $_POST, 'telefone' );
-	$assunto  = Clinica_Input::texto( $_POST, 'assunto' );
-	$mensagem = Clinica_Input::textarea( $_POST, 'mensagem' );
-
-	// Obrigatórios: nome, email válido e mensagem.
-	if ( '' === $nome || '' === $email || '' === $mensagem ) {
-		clinica_redirect( 'msg_invalida', 'contacto' );
-	}
-
-	Clinica_Contacto::guardar( array(
-		'nome'     => mb_substr( $nome, 0, 120 ),
-		'email'    => mb_substr( $email, 0, 160 ),
-		'telefone' => mb_substr( $telefone, 0, 40 ),
-		'assunto'  => mb_substr( $assunto, 0, 160 ),
-		'mensagem' => $mensagem,
-	) );
-
-	clinica_redirect( 'msg_enviada', 'contacto' );
+if (!extension_loaded('curl')) {
+    exit('Erro: a extensão cURL não está activa no PHP.');
 }
+
+if ($apiKey === '' || $apiKey === 'COLOQUE_AQUI_A_NOVA_API_KEY') {
+    exit('Erro: configure a API key antes de executar o teste.');
+}
+
+if (!preg_match('/^2588[245678]\d{7}$/', $customerMsisdn)) {
+    exit('Erro: o número de telefone não parece ser um MSISDN válido.');
+}
+
+if (!is_numeric($amount) || (float) $amount <= 0) {
+    exit('Erro: o valor da cobrança deve ser numérico e superior a zero.');
+}
+
+// PREPARAÇÃO DA CHAVE PÚBLICA
+
+$decodedPublicKey = base64_decode($publicKeyBase64, true);
+
+if ($decodedPublicKey === false) {
+    exit('Erro: a chave pública não está num formato Base64 válido.');
+}
+
+$publicKeyPem =
+    "-----BEGIN PUBLIC KEY-----\n" .
+    chunk_split(base64_encode($decodedPublicKey), 64, "\n") .
+    "-----END PUBLIC KEY-----\n";
+
+$publicKey = openssl_pkey_get_public($publicKeyPem);
+
+if ($publicKey === false) {
+    $opensslErrors = [];
+
+    while ($error = openssl_error_string()) {
+        $opensslErrors[] = $error;
+    }
+
+    exit(
+        'Erro ao carregar a chave pública: ' .
+        implode(' | ', $opensslErrors)
+    );
+}
+
+// ENCRIPTAÇÃO DA API KEY
+
+$encryptedApiKey = '';
+
+$encryptionSucceeded = openssl_public_encrypt(
+    $apiKey,
+    $encryptedApiKey,
+    $publicKey,
+    OPENSSL_PKCS1_PADDING
+);
+
+if (!$encryptionSucceeded) {
+    $opensslErrors = [];
+
+    while ($error = openssl_error_string()) {
+        $opensslErrors[] = $error;
+    }
+
+    exit(
+        'Erro ao encriptar a API key: ' .
+        implode(' | ', $opensslErrors)
+    );
+}
+
+$encodedApiKey = base64_encode($encryptedApiKey);
+
+// DADOS DO PEDIDO
+
+$thirdPartyReference =
+    'TIME' .
+    date('YmdHis') .
+    random_int(100, 999);
+
+$requestData = [
+    'input_TransactionReference' => "Subscricao nJOBS",
+    'input_CustomerMSISDN' => $customerMsisdn,
+    'input_Amount' => $amount,
+    'input_ThirdPartyReference' => $thirdPartyReference,
+    'input_ServiceProviderCode' => $serviceProviderCode,
+];
+
+$jsonData = json_encode(
+    $requestData,
+    JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+
+if ($jsonData === false) {
+    exit('Erro ao converter os dados para JSON: ' . json_last_error_msg());
+}
+
+// PEDIDO CURL
+
+$headers = [
+    'Content-Type: application/json',
+    'Accept: application/json',
+    'Authorization: Bearer ' . $encodedApiKey,
+    'Origin: developer.mpesa.vm.co.mz',
+];
+
+$curl = curl_init();
+
+if ($curl === false) {
+    exit('Erro: não foi possível inicializar o cURL.');
+}
+
+curl_setopt_array($curl, [
+    CURLOPT_URL => $endpoint,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $jsonData,
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_CONNECTTIMEOUT => 20,
+    CURLOPT_TIMEOUT => 60,
+]);
+
+$response = curl_exec($curl);
+
+$httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+$curlErrorNumber = curl_errno($curl);
+$curlErrorMessage = curl_error($curl);
+
+curl_close($curl);
+
+// RESULTADO
+
+header('Content-Type: text/plain; charset=utf-8');
+
+echo "===== PEDIDO ENVIADO =====\n\n";
+echo json_encode(
+    $requestData,
+    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+);
+
+echo "\n\n===== RESULTADO =====\n\n";
+echo "HTTP Status: {$httpCode}\n";
+echo "Referência: {$thirdPartyReference}\n\n";
+
+if ($response === false) {
+    echo "Erro cURL: {$curlErrorNumber}\n";
+    echo "Descrição: {$curlErrorMessage}\n";
+    exit;
+}
+
+echo "Resposta da API:\n{$response}\n";

@@ -43,11 +43,11 @@ final class Clinica_Security {
 		}
 	}
 
-	/**
-	 * SameSite=Strict + HttpOnly + Secure(SSL) para o cookie de sessão do PHP.
-	 * Os cookies de autenticação do WP já são HttpOnly e Secure (em HTTPS);
-	 * os browsers modernos aplicam SameSite=Lax por omissão a cookies sem o atributo.
-	 */
+	
+	//  SameSite=Strict + HttpOnly + Secure(SSL) para o cookie de sessão do PHP.
+	// 	Os cookies de autenticação do WP já são HttpOnly e Secure (em HTTPS);
+	//  os browsers modernos aplicam SameSite=Lax por omissão a cookies sem o atributo.
+	 
 	private static function endurecer_cookies(): void {
 		if ( headers_sent() || PHP_SESSION_ACTIVE === session_status() ) {
 			return;
@@ -62,7 +62,7 @@ final class Clinica_Security {
 		) );
 	}
 
-	/** ?author=N ou /author/... -> não expõe o login; redireciona para a home. */
+	// ?author=N ou /author/... -> não expõe o login; redireciona para a home. */
 	public static function bloquear_enumeracao_autor(): void {
 		if ( is_admin() ) {
 			return;
@@ -73,7 +73,7 @@ final class Clinica_Security {
 		}
 	}
 
-	/** Esconde /wp-json/wp/v2/users a quem não tem sessão (anti-enumeração). */
+	// Esconde /wp-json/wp/v2/users a quem não tem sessão (anti-enumeração). */
 	public static function restringir_rest_users( array $endpoints ): array {
 		if ( ! is_user_logged_in() ) {
 			unset( $endpoints['/wp/v2/users'] );

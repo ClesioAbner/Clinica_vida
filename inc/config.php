@@ -16,8 +16,8 @@ defined( 'ABSPATH' ) || exit;
 final class Clinica_Config {
 
 	const TABELA     = 'clinica_config';
-	/** v2: chaves das integrações (SMS + M-Pesa). Só insere o que falta. */
-	const DB_VERSION = '2';
+	/** v4: redes sociais do rodapé (com TikTok). Só insere o que falta. */
+	const DB_VERSION = '4';
 
 	/** Cache em memória para o pedido atual. */
 	private static ?array $cache = null;
@@ -44,6 +44,11 @@ final class Clinica_Config {
 			'sms_remetente'          => array( 'ClinicaVida', 'texto' ),
 			'mpesa_ambiente'         => array( 'sandbox', 'texto' ), // sandbox | producao
 			'mpesa_service_code'     => array( '', 'texto' ),
+			// Redes sociais do rodapé (vazio = não aparece; o WhatsApp usa o telefone).
+			'rede_whatsapp'          => array( '', 'texto' ),
+			'rede_facebook'          => array( '', 'url' ),
+			'rede_instagram'         => array( '', 'url' ),
+			'rede_tiktok'            => array( '', 'url' ),
 		);
 	}
 

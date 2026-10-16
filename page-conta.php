@@ -50,7 +50,7 @@ $fmt = static function ( $iso ) { return date_i18n( 'd/m/Y · H:i', strtotime( $
 
 			<?php clinica_render_flash(); ?>
 
-			<!-- Perfil ------------------------------------------------------->
+			<!-- Perfil -->
 			<details class="ac-profile">
 				<summary class="ac-profile__head">
 					<span class="ac-profile__avatar">
@@ -80,7 +80,7 @@ $fmt = static function ( $iso ) { return date_i18n( 'd/m/Y · H:i', strtotime( $
 				</form>
 			</details>
 
-			<!-- Consultas (CRUD) --------------------------------------------->
+			<!-- Consultas (CRUD) -->
 			<section class="ac-card">
 				<div class="ac-card__head">
 					<h2>As minhas consultas</h2>
@@ -127,7 +127,7 @@ $fmt = static function ( $iso ) { return date_i18n( 'd/m/Y · H:i', strtotime( $
 				<?php endif; ?>
 			</section>
 
-			<!-- Respostas do médico ------------------------------------------>
+			<!-- Respostas do médico -->
 			<section class="ac-card">
 				<div class="ac-card__head"><h2>Respostas do médico</h2></div>
 				<?php if ( $respostas ) : ?>
@@ -150,7 +150,7 @@ $fmt = static function ( $iso ) { return date_i18n( 'd/m/Y · H:i', strtotime( $
 				<?php endif; ?>
 			</section>
 
-			<!-- Mensagens enviadas ------------------------------------------->
+			<!-- Mensagens enviadas -->
 			<section class="ac-card">
 				<div class="ac-card__head"><h2>Mensagens enviadas</h2></div>
 				<?php if ( $mensagens ) : ?>

@@ -65,7 +65,6 @@ $pode_apr = current_user_can( 'clinica_aprovar_estrategico' );
 // Crescimento face ao mês e ao ano anteriores.
 $g_mes = $var( $dir['receita']['mes'], $dir['receita']['mes_ant'] );
 $g_ano = $var( $dir['receita']['mes'], $dir['receita']['ano_ant'] );
-$g_vol = $var( $dir['volume']['mes'], $dir['volume']['mes_ant'] );
 
 // Progresso face à meta de receita do mês.
 $meta_rec  = (float) $metas['receita'];
@@ -74,287 +73,321 @@ $meta_pac  = (int) $metas['pacientes'];
 $pac_mes   = (int) $dir['pacientes']['novos'];
 $prog_pac  = $meta_pac > 0 ? min( 100, (int) round( $pac_mes / $meta_pac * 100 ) ) : 0;
 
-// Amostra quando ainda não há histórico, sempre assinalada.
-$demo = array_sum( array_map( 'floatval', $dir['serie'] ) ) <= 0 || count( array_filter( $dir['serie'] ) ) < 2;
-if ( $demo ) {
-	$dir['serie'] = array( 82000, 74000, 96000, 88000, 105000, 99000, 121000, 112000, 134000, 128000, 146000, 139000 );
-}
 $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeitado' => 'Rejeitado' );
 ?>
 <div class="hp">
-<div class="pm-shell pm-shell--admin">
+<div class="pm-shell pm-shell--admin gt">
 
-	<aside class="pm-side">
-		<div class="pm-side__brand">
-			<span class="pm-side__logo"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo2.png' ); ?>" alt=""></span>
-			<span class="pm-side__brandname">Clínica Vida</span>
-		</div>
+	<aside class="pm-side gt-side">
+		<a class="gt-marca" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<span class="gt-marca__ic"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="24" height="24" alt=""></span>
+			<span class="gt-marca__t">Clínica Vida</span>
+		</a>
 
-		<div class="pm-side__me">
-			<img src="<?php echo esc_url( $avatar ); ?>" alt="">
-			<div class="pm-side__meinfo">
-				<div class="pm-side__name"><?php echo esc_html( $primeiro ); ?></div>
-				<div class="pm-side__role">Direção</div>
-			</div>
+		<div class="gt-perfil">
+			<img src="<?php echo esc_url( $avatar ); ?>" width="54" height="54" alt="">
+			<span><small>Olá,</small><b><?php echo esc_html( $utilizador->display_name ); ?></b></span>
 		</div>
 
 		<nav class="pm-nav">
 			<span class="pm-nav__cap">Executivo</span>
-			<a class="pm-nav__i is-active" href="#" data-go="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Visão geral</span></a>
-			<a class="pm-nav__i" href="#" data-go="rentabilidade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Rentabilidade</span></a>
-			<a class="pm-nav__i" href="#" data-go="relatorios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg><span>Relatórios</span></a>
-			<a class="pm-nav__i" href="#" data-go="aprovacoes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Aprovações</span><?php if ( $cont['pendente'] > 0 ) : ?><span class="pm-nav__badge"><?php echo (int) $cont['pendente']; ?></span><?php endif; ?></a>
-			<?php if ( $pode_def ) : ?>
-				<a class="pm-nav__i" href="#" data-go="metas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg><span>Metas</span></a>
-			<?php endif; ?>
+			<?php
+			$gt_menu = array(
+				'painel'        => array( 'Visão geral', 'painel' ),
+				'rentabilidade' => array( 'Rentabilidade', 'tendencia' ),
+				'relatorios'    => array( 'Relatórios', 'registo' ),
+				'aprovacoes'    => array( 'Aprovações', 'verificar' ),
+			);
+			if ( $pode_def ) {
+				$gt_menu['metas'] = array( 'Metas', 'alvo' );
+			}
+			foreach ( $gt_menu as $k => $it ) : ?>
+				<a class="pm-nav__i<?php echo 'painel' === $k ? ' is-active' : ''; ?>" href="#<?php echo esc_attr( $k ); ?>" data-go="<?php echo esc_attr( $k ); ?>">
+					<?php echo Clinica_Painel::icone( $it[1] ); ?><span><?php echo esc_html( $it[0] ); ?></span>
+					<?php if ( 'aprovacoes' === $k && $cont['pendente'] > 0 ) : ?><span class="pm-nav__badge"><?php echo (int) $cont['pendente']; ?></span><?php endif; ?>
+				</a>
+			<?php endforeach; ?>
+			<span class="pm-nav__cap gt-cap2">Ligações</span>
+			<a class="pm-nav__i" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php echo Clinica_Painel::icone( 'coracao' ); ?><span>Site da clínica</span></a>
 		</nav>
 
-		<a class="pm-nav__i pm-nav__out" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sair</span></a>
+		<div class="gt-side__barra">
+			<?php if ( $pode_def ) : ?><a href="#metas" data-ir="metas" aria-label="Metas" title="Metas"><?php echo Clinica_Painel::icone( 'alvo' ); ?></a><?php endif; ?>
+			<a href="#relatorios" data-ir="relatorios" aria-label="Relatórios" title="Relatórios"><?php echo Clinica_Painel::icone( 'registo' ); ?></a>
+			<a href="#aprovacoes" data-ir="aprovacoes" aria-label="Aprovações" title="Aprovações"><?php echo Clinica_Painel::icone( 'verificar' ); ?></a>
+			<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" aria-label="Sair" title="Sair"><?php echo Clinica_Painel::icone( 'sair' ); ?></a>
+		</div>
 	</aside>
 
-	<main class="pm-main ex-exec">
+	<main class="pm-main ex-exec gt-main">
 
-		<header class="pm-top">
-			<div class="pm-top__l">
-				<span class="ad-eyebrow">Direção</span>
-				<h1 class="pm-welcome"><?php echo esc_html( $saudacao . ', ' . $primeiro ); ?></h1>
-				<p class="pm-date"><?php echo esc_html( ucfirst( date_i18n( 'l, j \d\e F', $agora ) ) ); ?></p>
+		<!-- Barra de topo (a da referência): menu, avisos e utilizador -->
+		<header class="gt-topo">
+			<button type="button" class="gt-menu" aria-label="Recolher ou abrir o menu" aria-pressed="false" data-gt-menu>
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+			</button>
+			<div class="gt-topo__r">
+				<a class="gt-ic" href="#aprovacoes" data-ir="aprovacoes" aria-label="<?php echo esc_attr( sprintf( _n( '%d aprovação pendente', '%d aprovações pendentes', (int) $cont['pendente'], 'clinica' ), (int) $cont['pendente'] ) ); ?>">
+					<?php echo Clinica_Painel::icone( 'mensagem' ); ?>
+					<?php if ( $cont['pendente'] > 0 ) : ?><b class="gt-ic__n"><?php echo (int) $cont['pendente']; ?></b><?php endif; ?>
+				</a>
+				<details class="gt-user">
+					<summary><img src="<?php echo esc_url( $avatar ); ?>" width="30" height="30" alt=""><span><?php echo esc_html( $utilizador->display_name ); ?></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+					<div class="gt-user__menu">
+						<a href="#relatorios" data-ir="relatorios">Relatórios</a>
+						<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">Sair</a>
+					</div>
+				</details>
 			</div>
 		</header>
 
 		<?php clinica_render_flash(); ?>
 
-		<!-- ===================== CENTRO DE INTELIGÊNCIA =====================
-		     Dashboard executivo de BI: seletor de período global (troca a banda
-		     de KPIs e a tendência sem novo pedido), alertas calculados de
-		     limiares reais, indicadores de qualidade, rankings e demografia.
-		     Só dados que existem — sem custos/lucro, unidades nem seguradoras.
-		     ================================================================== -->
+		<!-- Visão geral
+		     Cópia da referência "Gentelella" com as cores da clínica: faixa de
+		     seis números, painel grande de atividade com a procura por
+		     especialidade ao lado, três painéis (médicos, métodos, metas com
+		     mostrador) e, em baixo, aprovações e pontos de atenção. Cada painel
+		     recolhe e fecha como no original. Animações em assets/js/direcao.js. -->
 		<?php
-		$q30   = $bi['qualidade'];
-		$pd    = $bi['periodos']['30d'];
-		$crescer = static function ( $a, $b ) {
-			if ( $b <= 0 ) {
-				return null;
+		$dp      = Clinica_Painel::dados( 0 );
+		$at      = $dp['atual'];
+		$ant     = $dp['anterior'];
+		$alertas = $bi['alertas'] ?? array();
+		$gt_url  = static fn( string $k ): string => add_query_arg( 'periodo', $k, remove_query_arg( array( 'periodo', 'cl' ) ) ) . '#painel';
+		$contra  = 'face aos ' . $dp['label'] . ' anteriores';
+		$gt_var  = static function ( ?int $v, bool $sobe_bom = true, string $un = '%' ) use ( $contra ): string {
+			if ( null === $v ) {
+				return '<span class="gt-tile__d">Sem período anterior</span>';
 			}
-			return (int) round( ( $a - $b ) / $b * 100 );
+			$bom = ( $v >= 0 ) === $sobe_bom;
+			return '<span class="gt-tile__d"><i class="gt-' . ( $bom ? 'bom' : 'mau' ) . '">' . ( $v >= 0 ? '▲' : '▼' ) . ' ' . esc_html( abs( $v ) . $un ) . '</i> ' . esc_html( $contra ) . '</span>';
 		};
-		$g_rec = $crescer( $pd['receita'], $pd['receita_ant'] );
-		$g_con = $crescer( $pd['consultas'], $pd['cons_ant'] );
-		$g_nov = $crescer( $pd['novos'], $pd['novos_ant'] );
-		// Variação em texto, sem pastilha: a hierarquia é feita com peso e cor.
-		$pill  = static function ( $g ) {
-			if ( null === $g ) {
-				return '<span class="ex-trend--flat">sem período anterior</span>';
-			}
-			$d = $g >= 0 ? 'up' : 'down';
-			return '<b class="ex-trend--' . $d . '">' . ( $g >= 0 ? '+' : '−' ) . abs( $g ) . '%</b> vs período anterior';
+		$comp_var = null === $dp['comparencia'] || null === $dp['comparencia_ant'] ? null : (int) round( $dp['comparencia'] - $dp['comparencia_ant'] );
+		// [ícone, rótulo, valor mostrado, valor numérico p/ contar, formato, variação, destaque]
+		$gt_tiles = array(
+			array( 'financeiro', 'Faturado', Clinica_Grafico::compacto( $at['faturado'] ), $at['faturado'], 'mil', $gt_var( Clinica_Painel::var_pct( $at['faturado'], $ant['faturado'] ) ), false ),
+			array( 'verificar', 'Recebido', Clinica_Grafico::compacto( $at['recebido'] ), $at['recebido'], 'mil', $gt_var( Clinica_Painel::var_pct( $at['recebido'], $ant['recebido'] ) ), false ),
+			array( 'feito', 'Consultas realizadas', number_format_i18n( $at['realizadas'] ), $at['realizadas'], 'int', $gt_var( Clinica_Painel::var_pct( $at['realizadas'], $ant['realizadas'] ) ), true ),
+			array( 'paciente', 'Novos pacientes', number_format_i18n( $dp['novos']['atual'] ), $dp['novos']['atual'], 'int', $gt_var( Clinica_Painel::var_pct( $dp['novos']['atual'], $dp['novos']['anterior'] ) ), false ),
+			array( 'tendencia', 'Comparência', Clinica_Grafico::pct( $dp['comparencia'] ), $dp['comparencia'], 'pct', $gt_var( $comp_var, true, ' p.p.' ), false ),
+			array( 'pacientes', 'Retenção', (int) $dir['pacientes']['retencao'] . '%', (int) $dir['pacientes']['retencao'], 'pct', '<span class="gt-tile__d">Pacientes que voltaram este mês</span>', false ),
+		);
+		$total_esp = array_sum( array_column( $dp['por_esp'], 'marcadas' ) );
+		$nomes_met = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::METODOS : array();
+		$total_met = array_sum( array_column( $dp['metodos'], 'v' ) );
+		$cores_met = array( 'c1', 'c2', 'c3', 'c4' );
+		// Ferramentas do painel (recolher e fechar), como no original.
+		$gt_ferr = static function (): string {
+			return '<div class="gt-ferr">'
+				. '<button type="button" data-gt-recolher aria-expanded="true" aria-label="Recolher painel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>'
+				. '<button type="button" data-gt-fechar aria-label="Fechar painel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
+				. '</div>';
 		};
 		?>
-		<section class="bi-bar pm-view" data-view="painel">
-			<div class="ad-tabs bi-tabs" id="bi-per" role="tablist">
-				<button type="button" class="ad-tab" data-p="7d">7 dias</button>
-				<button type="button" class="ad-tab is-active" data-p="30d">30 dias</button>
-				<button type="button" class="ad-tab" data-p="90d">90 dias</button>
-				<button type="button" class="ad-tab" data-p="12m">12 meses</button>
-			</div>
-		</section>
+		<section class="gt-painel pm-view" data-view="painel">
 
-		<section class="ex-kpis pm-view" data-view="painel" id="bi-kpis"
-			data-bi="<?php echo esc_attr( wp_json_encode( $bi['periodos'] ) ); ?>"
-			data-moeda="<?php echo esc_attr( $moeda ); ?>">
-			<div class="ex-kpi">
-				<span class="ex-kpi__l">Receita</span>
-				<strong class="ex-kpi__n ex-kpi__n--sm ad-num" id="bi-receita" data-final="<?php echo esc_attr( $fmt_valor( $pd['receita'] ) ); ?>"><?php echo esc_html( $fmt_valor( $pd['receita'] ) ); ?></strong>
-				<span class="ex-kpi__f" id="bi-receita-p"><?php echo $pill( $g_rec ); ?></span>
-			</div>
-			<div class="ex-kpi">
-				<span class="ex-kpi__l">Consultas realizadas</span>
-				<strong class="ex-kpi__n" id="bi-consultas"><?php echo number_format_i18n( $pd['consultas'] ); ?></strong>
-				<span class="ex-kpi__f" id="bi-consultas-p"><?php echo $pill( $g_con ); ?></span>
-			</div>
-			<div class="ex-kpi">
-				<span class="ex-kpi__l">Novos pacientes</span>
-				<strong class="ex-kpi__n" id="bi-novos"><?php echo number_format_i18n( $pd['novos'] ); ?></strong>
-				<span class="ex-kpi__f" id="bi-novos-p"><?php echo $pill( $g_nov ); ?></span>
-			</div>
-			<div class="ex-kpi">
-				<span class="ex-kpi__l">Ocupação dos médicos</span>
-				<strong class="ex-kpi__n"><span class="ad-num" data-n="<?php echo (int) $q30['ocupacao']; ?>">0</span>%</strong>
-				<span class="ex-kpi__f"><?php echo (int) $q30['medicos']; ?> médicos ativos · últimos 90 dias</span>
-			</div>
-		</section>
-
-		<section class="ex-stack pm-view" data-view="painel">
-			<div class="ex-duo">
-				<div class="ad-card">
-					<div class="ad-card__h">
-						<strong>Tendência da receita</strong>
-						<span class="ad-card__s" id="bi-plabel2">Últimos 30 dias</span>
+			<div class="gt-tiles" data-gt-entrada>
+				<?php foreach ( $gt_tiles as $t ) : ?>
+					<div class="gt-tile" data-gt-3d>
+						<span class="gt-tile__l"><?php echo Clinica_Painel::icone( $t[0] ); ?><?php echo esc_html( $t[1] ); ?></span>
+						<b class="gt-tile__n<?php echo $t[6] ? ' is-destaque' : ''; ?>"<?php echo null !== $t[3] ? ' data-gt-n="' . esc_attr( (string) round( (float) $t[3], 1 ) ) . '" data-gt-fmt="' . esc_attr( $t[4] ) . '"' : ''; ?>><?php echo esc_html( $t[2] ); ?></b>
+						<?php echo $t[5]; ?>
 					</div>
-					<p class="ad-read" id="bi-read"></p>
-					<div class="bi-wave">
-						<div class="bi-wave__y" id="bi-way"></div>
-						<div class="bi-wave__plot">
-							<svg class="bi-wave__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-								<defs><linearGradient id="bi-wavegrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4E7E9B" stop-opacity="0.22"></stop><stop offset="1" stop-color="#4E7E9B" stop-opacity="0"></stop></linearGradient></defs>
-								<path class="bi-wave__area" id="bi-wavearea" d=""></path>
-								<path class="bi-wave__line" id="bi-waveline" d="" pathLength="100" vector-effect="non-scaling-stroke"></path>
-							</svg>
-							<span class="bi-wave__dot" id="bi-wavedot" hidden></span>
-							<div class="bi-wave__hits" id="bi-wavehits"></div>
-							<div class="bi-wave__x" id="bi-wavex"></div>
-						</div>
-					</div>
-				</div>
+				<?php endforeach; ?>
+			</div>
 
-				<div class="ad-card">
-					<div class="ad-card__h"><strong>Receita por especialidade</strong><span class="ad-card__s">Histórico</span></div>
-					<?php
-					$esp_top = array_slice( $dir['por_esp'], 0, 4 );
-					$esp_tot = 0.0;
-					foreach ( $esp_top as $e ) {
-						$esp_tot += (float) $e['receita'];
-					}
-					$demo_esp = $esp_tot <= 0;
-					if ( $demo_esp ) {
-						$esp_top = array(
-							array( 'nome' => 'Clínica Geral', 'receita' => 148000 ),
-							array( 'nome' => 'Pediatria', 'receita' => 96000 ),
-							array( 'nome' => 'Cardiologia', 'receita' => 71000 ),
-							array( 'nome' => 'Dermatologia', 'receita' => 44000 ),
-						);
-						$esp_tot = 359000;
-					}
-					$cores   = array( '#2E4E60', '#4E7E9B', '#7BA7C1', '#C3D6E2' );
-					$top_pct = $esp_tot > 0 ? round( (float) $esp_top[0]['receita'] / $esp_tot * 100 ) : 0;
-					// Anel em conic-gradient, como na receção.
-					$acc = 0.0;
-					$stops = array();
-					foreach ( $esp_top as $i => $e ) {
-						$val = (float) $e['receita'];
-						if ( $val <= 0 ) {
-							continue;
-						}
-						$from = $acc / $esp_tot * 100;
-						$acc += $val;
-						$to = $acc / $esp_tot * 100;
-						$stops[] = sprintf( '%s %.2f%% %.2f%%', $cores[ $i % 4 ], $from, $to );
-					}
-					$donut_bg = $stops ? 'conic-gradient(' . implode( ',', $stops ) . ')' : '#E7ECF2';
-					?>
-					<div class="pm-donut-wrap">
-						<div class="pm-donut" style="background:<?php echo esc_attr( $donut_bg ); ?>">
-							<div class="pm-donut__c"><span class="ad-num" data-n="<?php echo (int) $top_pct; ?>">0</span><small>% líder</small></div>
-						</div>
-						<ul class="pm-legend">
-							<?php foreach ( $esp_top as $i => $e ) : ?>
-								<li>
-									<span class="pm-legend__d" style="background:<?php echo esc_attr( $cores[ $i % 4 ] ); ?>"></span>
-									<?php echo esc_html( $e['nome'] ); ?>
-									<b><?php echo esc_html( number_format( (float) $e['receita'] / $esp_tot * 100, 1, ',', '' ) ); ?>%</b>
-								</li>
+			<section class="gt-x gt-atividade" aria-labelledby="gt-g-ativ" data-gt-entrada>
+				<div class="gt-x__cab">
+					<h2 class="gt-x__t" id="gt-g-ativ">Atividade da clínica <small>consultas marcadas e realizadas</small></h2>
+					<details class="gt-datas">
+						<summary><?php echo Clinica_Painel::icone( 'agenda' ); ?><span><?php echo esc_html( date_i18n( 'j \d\e F \d\e Y', $dp['desde'] ) . ' – ' . date_i18n( 'j \d\e F \d\e Y', $agora ) ); ?></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+						<div class="gt-datas__menu">
+							<?php foreach ( Clinica_Analitica::PERIODOS_MEDICO as $k => $p ) : ?>
+								<a href="<?php echo esc_url( $gt_url( $k ) ); ?>"<?php echo $k === $dp['periodo'] ? ' aria-current="true"' : ''; ?>><?php echo esc_html( 'Últimos ' . $p['label'] ); ?></a>
 							<?php endforeach; ?>
+						</div>
+					</details>
+				</div>
+				<div class="gt-x__corpo gt-atividade__corpo">
+					<?php
+					echo Clinica_Grafico::linhas(
+						array(
+							'titulo'  => 'Consultas ' . $dp['por_unidade'],
+							'rotulos' => $dp['rotulos'],
+							'longos'  => $dp['longos'],
+							'saltar'  => $dp['saltar'],
+							'suave'   => true,
+							'areas'   => 'todas',
+							'final'   => false,
+							'pontos'  => 'valores',
+							'series'  => array(
+								// Realizadas à frente (cabem sempre dentro das marcadas, atrás).
+								array( 'nome' => 'Realizadas', 'valores' => $dp['serie']['realizadas'], 'cor' => 'c1' ),
+								array( 'nome' => 'Marcadas', 'valores' => $dp['serie']['marcadas'], 'cor' => 'o3' ),
+							),
+							'formato' => static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v ),
+							'eixo'    => static fn( $v ) => number_format_i18n( (int) $v ),
+							'vazio'   => 'Sem consultas nos últimos ' . $dp['label'] . '.',
+						)
+					);
+					?>
+					<div class="gt-campanha">
+						<p class="gt-campanha__t">Procura por especialidade</p>
+						<?php if ( $dp['por_esp'] ) :
+							// As cinco mais procuradas; o nome inteiro fica na dica e na tabela.
+							$esp_top = array_slice( $dp['por_esp'], 0, 5, true );
+							echo Clinica_Grafico::colunas(
+								array(
+									'titulo'    => 'Procura por especialidade',
+									'rotulos'   => array_keys( $esp_top ),
+									'agrupado'  => true,
+									'rotular'   => true,
+									'cabecalho' => 'Especialidade',
+									'series'    => array(
+										array( 'nome' => 'Marcadas', 'valores' => array_column( $esp_top, 'marcadas' ), 'cor' => 'o3' ),
+										array( 'nome' => 'Realizadas', 'valores' => array_column( $esp_top, 'realizadas' ), 'cor' => 'c1' ),
+									),
+									'formato'   => static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v ),
+									'eixo'      => static fn( $v ) => number_format_i18n( (int) $v ),
+								)
+							);
+						else : ?>
+							<p class="gt-nota">Sem consultas neste período.</p>
+						<?php endif; ?>
+					</div>
+				</div>
+			</section>
+
+			<div class="gt-linha3" data-gt-entrada>
+				<section class="gt-x" aria-labelledby="gt-g-med">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-g-med">Médicos <small>realizadas de marcadas</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $dp['por_medico'] ) :
+							$itens = array();
+							foreach ( $dp['por_medico'] as $nome => $m ) {
+								$itens[] = array(
+									'rotulo' => $nome,
+									'sub'    => $m['especialidade'],
+									'parte'  => $m['realizadas'],
+									'total'  => $m['marcadas'],
+									'extra'  => array( array( 'Faltas', number_format_i18n( $m['faltas'] ) ) ),
+								);
+							}
+							echo Clinica_Grafico::barras_parte(
+								array(
+									'titulo'    => 'Consultas por médico',
+									'nomes'     => array( 'Realizadas', 'Marcadas' ),
+									'cores'     => array( 'c1', 'o3' ),
+									'itens'     => $itens,
+									'cabecalho' => 'Médico',
+								)
+							);
+						else : ?>
+							<p class="gt-nota">Sem consultas neste período.</p>
+						<?php endif; ?>
+					</div>
+				</section>
+
+				<section class="gt-x" aria-labelledby="gt-g-met">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-g-met">Métodos de pagamento</h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $dp['metodos'] ) : ?>
+							<div class="gt-metodos">
+								<p class="gt-metodos__cab"><span>Top <?php echo count( $dp['metodos'] ); ?></span><span>Método</span><span>Quota</span></p>
+								<?php
+								$itens = array();
+								$i     = 0;
+								foreach ( $dp['metodos'] as $m => $v ) {
+									$itens[] = array( 'rotulo' => $nomes_met[ $m ] ?? ucfirst( (string) $m ), 'valor' => $v['v'], 'cor' => $cores_met[ $i++ % 4 ], 'texto' => Clinica_Grafico::moeda( $v['v'] ) );
+								}
+								echo Clinica_Grafico::anel(
+									array(
+										'titulo'  => 'Valor recebido por método',
+										'centro'  => Clinica_Grafico::compacto( $total_met ),
+										'sub'     => Clinica_Grafico::moeda_codigo(),
+										'itens'   => $itens,
+										'legenda' => false,
+									)
+								);
+								?>
+								<ul class="gt-metodos__lista">
+									<?php foreach ( $itens as $it ) : ?>
+										<li><i class="gf-c--<?php echo esc_attr( $it['cor'] ); ?>"></i><span><?php echo esc_html( $it['rotulo'] ); ?></span><b><?php echo esc_html( number_format( $total_met ? $it['valor'] / $total_met * 100 : 0, 0, ',', ' ' ) . '%' ); ?></b></li>
+									<?php endforeach; ?>
+								</ul>
+							</div>
+						<?php else : ?>
+							<p class="gt-nota">Sem pagamentos recebidos neste período.</p>
+						<?php endif; ?>
+					</div>
+				</section>
+
+				<section class="gt-x" aria-labelledby="gt-g-metas">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-g-metas">Metas do mês</h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo gt-metas">
+						<ul class="gt-atalhos">
+							<?php if ( $pode_def ) : ?><li><a href="#metas" data-ir="metas"><?php echo Clinica_Painel::icone( 'alvo' ); ?>Metas</a></li><?php endif; ?>
+							<li><a href="#relatorios" data-ir="relatorios"><?php echo Clinica_Painel::icone( 'registo' ); ?>Relatórios</a></li>
+							<li><a href="#rentabilidade" data-ir="rentabilidade"><?php echo Clinica_Painel::icone( 'tendencia' ); ?>Rentabilidade</a></li>
+							<li><a href="#aprovacoes" data-ir="aprovacoes"><?php echo Clinica_Painel::icone( 'verificar' ); ?>Aprovações</a></li>
+							<li><a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><?php echo Clinica_Painel::icone( 'sair' ); ?>Sair</a></li>
 						</ul>
-					</div>
-				</div>
-			</div>
-
-			<div class="ex-duo">
-				<div class="ad-card">
-					<div class="ad-card__h"><strong>Consultas realizadas</strong><span class="ad-card__s" id="bi-plabel3">Últimos 30 dias</span></div>
-					<div class="ad-plot" id="bi-conplot">
-						<div class="ad-plot__y" id="bi-cony"></div>
-						<div class="ad-plot__c">
-							<div class="ad-plot__bars" id="bi-conbars"></div>
-							<div class="ad-plot__x" id="bi-conx"></div>
+						<div class="gt-metas__mostrador" data-gt-3d>
+							<p class="gt-metas__t">Meta de receita</p>
+							<?php echo Clinica_Grafico::ponteiro( $meta_rec > 0 ? (float) $prog_rec : null, 'Progresso da meta de receita', Clinica_Grafico::compacto( (float) $dir['receita']['mes'] ), $meta_rec > 0 ? Clinica_Grafico::compacto( $meta_rec ) : 'sem meta' ); ?>
+							<?php if ( $meta_rec <= 0 && $pode_def ) : ?><a class="gt-metas__def" href="#metas" data-ir="metas">Definir meta</a><?php endif; ?>
 						</div>
 					</div>
-				</div>
-
-				<div class="ad-card">
-					<div class="ad-card__h"><strong>Qualidade do serviço</strong><span class="ad-card__s">Recente</span></div>
-					<dl class="ad-dl bi-qual">
-						<div><dt>Tempo de espera</dt><dd><?php echo (int) $q30['espera']; ?> min</dd></div>
-						<div><dt>Duração média</dt><dd><?php echo (int) $q30['duracao']; ?> min</dd></div>
-						<div><dt>Taxa de faltas</dt><dd class="<?php echo $q30['no_show'] >= 10 ? 'is-warn' : ''; ?>"><?php echo (int) $q30['no_show']; ?>%</dd></div>
-						<div><dt>Cancelamentos</dt><dd class="<?php echo $q30['cancel'] >= 15 ? 'is-warn' : ''; ?>"><?php echo (int) $q30['cancel']; ?>%</dd></div>
-					</dl>
-				</div>
+				</section>
 			</div>
 
-			<div class="ex-duo">
-			<div class="ad-card">
-				<?php
-				// Evolução de novos pacientes (12 meses), em linha, como no portal
-				// do médico. Preenche com uma amostra quando os dados são escassos.
-				$p12  = $bi['periodos']['12m'];
-				$nov  = array_map( 'intval', $p12['serie_nov'] );
-				$nlbl = $p12['serie_lbl'];
-				$demo_nov = count( array_filter( $nov ) ) < 3;
-				if ( $demo_nov ) {
-					$nov = array( 14, 19, 16, 24, 21, 29, 27, 34, 31, 39, 36, 43 );
-				}
-				$nmax  = max( 1, max( $nov ) );
-				$nn    = count( $nov );
-				$npts  = array();
-				$ndots = array();
-				foreach ( $nov as $i => $v ) {
-					$x   = $nn > 1 ? ( $i / ( $nn - 1 ) * 100 ) : 50;
-					$pct = $v / $nmax * 100;
-					$npts[]  = round( $x, 1 ) . ',' . round( 100 - $pct, 1 );
-					$ndots[] = array( 'x' => round( $x, 1 ), 'y' => round( $pct, 1 ), 'n' => $v, 'l' => $nlbl[ $i ] ?? '' );
-				}
-				$npoly = implode( ' ', $npts );
-				$narea = '0,100 ' . $npoly . ' 100,100';
-				?>
-				<div class="pm-chart">
-					<div class="pm-chart__head"><strong>Evolução de novos pacientes</strong><span><?php echo $demo_nov ? 'exemplo' : 'últimos 12 meses'; ?></span></div>
-					<div class="pm-plot">
-						<div class="pm-plot__y">
-							<span><?php echo (int) $nmax; ?></span>
-							<span><?php echo (int) ceil( $nmax / 2 ); ?></span>
-							<span>0</span>
-						</div>
-						<div class="pm-plot__c">
-							<div class="pm-plot__line">
-								<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-									<polygon class="pm-line__area" points="<?php echo esc_attr( $narea ); ?>"></polygon>
-									<polyline class="pm-line__l" points="<?php echo esc_attr( $npoly ); ?>"></polyline>
-								</svg>
-								<?php foreach ( $ndots as $d ) : ?>
-									<i class="pm-line__dot" style="left:<?php echo esc_attr( $d['x'] ); ?>%; bottom:<?php echo esc_attr( $d['y'] ); ?>%" title="<?php echo (int) $d['n']; ?> novos · <?php echo esc_attr( $d['l'] ); ?>"></i>
+			<div class="gt-linha2" data-gt-entrada>
+				<section class="gt-x" aria-labelledby="gt-g-apr">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-g-apr">Aprovações recentes <small>propostas da gestão</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $aprovs ) : ?>
+							<ul class="gt-linhatempo">
+								<?php foreach ( array_slice( $aprovs, 0, 4 ) as $ap ) : ?>
+									<li>
+										<b><?php echo esc_html( $ap['titulo'] ?? 'Proposta' ); ?></b>
+										<small><?php echo esc_html( ( $labels[ $ap['estado'] ] ?? $ap['estado'] ) . ( ! empty( $ap['criador'] ) ? ' · ' . $ap['criador'] : '' ) . ( ! empty( $ap['criado_em'] ) ? ' · há ' . human_time_diff( strtotime( $ap['criado_em'] ), $agora ) : '' ) ); ?></small>
+										<?php if ( ! empty( $ap['detalhe'] ) ) : ?><p><?php echo esc_html( wp_trim_words( $ap['detalhe'], 22, '…' ) ); ?></p><?php endif; ?>
+									</li>
 								<?php endforeach; ?>
-							</div>
-							<div class="pm-plot__x">
-								<?php foreach ( $nlbl as $j => $l ) : ?><span><?php echo ( 0 === $j % 2 ) ? esc_html( $l ) : ''; ?></span><?php endforeach; ?>
-							</div>
-						</div>
+							</ul>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Sem propostas da gestão.</p>
+						<?php endif; ?>
 					</div>
-				</div>
-			</div>
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Base de pacientes</strong><span class="ad-card__s">Este mês</span></div>
-				<div class="ad-gauge">
-					<div class="ad-gauge__n"><span class="ad-num" data-n="<?php echo (int) $dir['pacientes']['retencao']; ?>">0</span>%</div>
-					<div class="ad-gauge__l">taxa de retenção</div>
-					<div class="ad-gauge__bar"><span style="width:<?php echo (int) $dir['pacientes']['retencao']; ?>%"></span></div>
-				</div>
-				<dl class="ad-dl">
-					<div><dt>Base total</dt><dd><?php echo number_format_i18n( $dir['pacientes']['base'] ); ?></dd></div>
-					<div><dt>Novos este mês</dt><dd><?php echo (int) $dir['pacientes']['novos']; ?></dd></div>
-					<div><dt>Recorrentes</dt><dd><?php echo (int) $dir['pacientes']['recorrentes']; ?></dd></div>
-					<div><dt>Retenção</dt><dd><?php echo (int) $dir['pacientes']['retencao']; ?>%</dd></div>
-				</dl>
-			</div>
+				</section>
+
+				<section class="gt-x" aria-labelledby="gt-g-alertas">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-g-alertas">Pontos de atenção <small>limiares</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $alertas ) : ?>
+							<ul class="gt-alertas">
+								<?php foreach ( $alertas as $al ) :
+									$alta = 'alta' === $al['n'];
+									?>
+									<li class="gt-alerta gt-alerta--<?php echo $alta ? 'alta' : 'media'; ?>">
+										<span class="gt-alerta__t"><b><?php echo esc_html( $al['t'] ); ?></b><small><?php echo esc_html( $al['d'] ); ?></small></span>
+										<span class="gt-alerta__n"><?php echo $alta ? 'Alta' : 'Média'; ?></span>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Todos os indicadores dentro dos limites.</p>
+						<?php endif; ?>
+					</div>
+				</section>
 			</div>
 		</section>
 
-		<!-- =========================== RELATÓRIOS ===========================
+		<!-- Relatórios
 		     Financeiro, por médico e pacientes por período (diário/semanal/
 		     mensal), exportáveis em PDF e CSV. O estado vive no endereço para
-		     sobreviver ao recarregamento e à partilha do link.
-		     ================================================================== -->
+		     sobreviver ao recarregamento e à partilha do link. -->
 		<section class="pm-view" data-view="relatorios" hidden>
 			<div class="bi-reltop">
 				<div class="bi-reltop__l">
@@ -386,12 +419,259 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 				</div>
 			</div>
 
-			<div class="ad-card">
-				<div class="ad-card__h">
-					<strong><?php echo esc_html( $rel_dados['titulo'] ); ?></strong>
-					<span class="ad-card__s"><?php echo count( $rel_dados['linhas'] ); ?> linhas</span>
+			<?php
+			// Painel do relatório: números do período, um gráfico principal e dois
+			// de apoio, conforme o tipo (financeiro, por médico, pacientes). A
+			// tabela completa fica por baixo e é o que se exporta.
+			if ( $rel_dados['linhas'] ) :
+				$rl      = $rel_dados['linhas'];
+				$rn      = count( $rl );
+				$rot     = array_map( static fn( $l ) => (string) $l[0], $rl );
+				// Eixo curto: "Jul", "27/07" (semana: a data de início), "12/10" (dia).
+				$curtos  = array_map(
+					static function ( string $r ) use ( $rel_grupo ): string {
+						if ( 'mes' === $rel_grupo ) {
+							return mb_substr( $r, 0, 3 );
+						}
+						if ( 'semana' === $rel_grupo && false !== mb_strpos( $r, '· ' ) ) {
+							return trim( mb_substr( $r, mb_strpos( $r, '· ' ) + 2 ) );
+						}
+						return 'dia' === $rel_grupo ? mb_substr( $r, 0, 5 ) : $r;
+					},
+					$rot
+				);
+				$saltar  = max( 1, (int) ceil( $rn / 12 ) );
+				$poucos  = $rn <= 14;
+				$f_int   = static fn( $v ) => number_format_i18n( (int) round( (float) $v ) );
+				$f_comp  = static fn( $v ) => Clinica_Grafico::compacto( (float) $v );
+				$acum    = static function ( array $v ): array {
+					$t = 0.0;
+					$r = array();
+					foreach ( $v as $x ) {
+						$t  += (float) $x;
+						$r[] = $t;
+					}
+					return $r;
+				};
+				$por     = 'medicos' === $rel_tipo ? '' : mb_strtolower( Clinica_Relatorios::GRUPOS[ $rel_grupo ] );
+				$melhor  = static function ( array $v ) use ( $rot ): array {
+					$m = $v ? max( $v ) : 0;
+					return $m > 0 ? array( $m, $rot[ array_search( $m, $v, true ) ] ) : array( 0, 'Sem registos' );
+				};
+				// Faixa de números: [ícone, rótulo, valor, 'moeda'|'int', nota, destaque].
+				$rel_tile = static function ( array $t ) use ( $moeda, $fmt_valor ): string {
+					$moe = 'moeda' === $t[3];
+					$dec = 'dec' === $t[3];
+					$h   = '<div class="gt-tile" data-gt-3d><span class="gt-tile__l">' . Clinica_Painel::icone( $t[0] ) . esc_html( $t[1] ) . '</span>';
+					$h  .= '<b class="gt-tile__n' . ( $t[5] ? ' is-destaque' : '' ) . '"' . ( $moe ? ' title="' . esc_attr( $fmt_valor( $t[2] ) ) . '"' : '' ) . '>';
+					$txt = $moe ? Clinica_Grafico::compacto( (float) $t[2] ) : ( $dec ? number_format( (float) $t[2], 1, ',', ' ' ) : number_format_i18n( (int) round( (float) $t[2] ) ) );
+					$h  .= '<span data-gt-n="' . esc_attr( (string) round( (float) $t[2], $dec ? 1 : 0 ) ) . '" data-gt-fmt="' . ( $moe ? 'mil' : ( $dec ? 'dec' : 'int' ) ) . '">' . esc_html( $txt ) . '</span>';
+					$h  .= $moe ? ' <small>' . esc_html( $moeda ) . '</small>' : '';
+					return $h . '</b><span class="gt-tile__d">' . esc_html( $t[4] ) . '</span></div>';
+				};
+				$painel = static function ( string $id, string $titulo, string $sub, string $corpo, string $classe = '' ) use ( $gt_ferr ): string {
+					return '<section class="gt-x' . ( $classe ? ' ' . $classe : '' ) . '" aria-labelledby="' . esc_attr( $id ) . '">'
+						. '<div class="gt-x__cab"><h2 class="gt-x__t" id="' . esc_attr( $id ) . '">' . esc_html( $titulo ) . ( $sub ? ' <small>' . esc_html( $sub ) . '</small>' : '' ) . '</h2>' . $gt_ferr() . '</div>'
+						. '<div class="gt-x__corpo">' . $corpo . '</div></section>';
+				};
+
+				if ( 'financeiro' === $rel_tipo ) {
+					$rec   = array_map( static fn( $l ) => (float) $l[1], $rl );
+					$pag   = array_map( static fn( $l ) => (float) $l[2], $rl );
+					$tot   = array_sum( $rec );
+					$npag  = array_sum( $pag );
+					$best  = $melhor( $rec );
+					$tiles = array(
+						array( 'dinheiro', 'Receita', $tot, 'moeda', 'No período do relatório', true ),
+						array( 'registo', 'Pagamentos', $npag, 'int', 'Pagamentos recebidos', false ),
+						array( 'financeiro', 'Valor médio', $npag > 0 ? $tot / $npag : 0, 'moeda', 'Por pagamento', false ),
+						array( 'tendencia', 'Melhor período', $best[0], 'moeda', $best[1], false ),
+					);
+					$g_main = $painel(
+						'gt-rel-g1',
+						'Receita',
+						$por,
+						Clinica_Grafico::colunas(
+							array(
+								'titulo'  => 'Receita ' . $por,
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'rotular' => $poucos,
+								'series'  => array( array( 'nome' => 'Receita', 'valores' => $rec, 'cor' => 'c1' ) ),
+								'formato' => $fmt_valor,
+								'eixo'    => $f_comp,
+								'minimo'  => 1000,
+							)
+						),
+						'gt-rel'
+					);
+					$g_a = $painel(
+						'gt-rel-g2',
+						'Pagamentos',
+						$por,
+						Clinica_Grafico::linhas(
+							array(
+								'titulo'  => 'Pagamentos ' . $por,
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'suave'   => true,
+								'pontos'  => 'valores',
+								'final'   => false,
+								'series'  => array( array( 'nome' => 'Pagamentos', 'valores' => $pag, 'cor' => 'o3' ) ),
+								'formato' => static fn( $v ) => sprintf( _n( '%d pagamento', '%d pagamentos', (int) $v, 'clinica' ), (int) $v ),
+								'eixo'    => $f_int,
+							)
+						)
+					);
+					$g_b = $painel(
+						'gt-rel-g3',
+						'Receita acumulada',
+						'desde o início do relatório',
+						Clinica_Grafico::linhas(
+							array(
+								'titulo'  => 'Receita acumulada',
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'suave'   => true,
+								'series'  => array( array( 'nome' => 'Acumulado', 'valores' => $acum( $rec ), 'cor' => 'c3' ) ),
+								'formato' => $fmt_valor,
+								'eixo'    => $f_comp,
+								'minimo'  => 1000,
+							)
+						)
+					);
+				} elseif ( 'medicos' === $rel_tipo ) {
+					$meds = $rl;
+					usort( $meds, static fn( $x, $y ) => (float) $y[3] <=> (float) $x[3] );
+					$tot   = array_sum( array_map( static fn( $l ) => (float) $l[3], $meds ) );
+					$ncon  = array_sum( array_map( static fn( $l ) => (float) $l[2], $meds ) );
+					$ativos = count( array_filter( $meds, static fn( $l ) => (float) $l[2] > 0 ) );
+					$tiles = array(
+						array( 'dinheiro', 'Receita', $tot, 'moeda', 'Últimos 90 dias', true ),
+						array( 'consultas', 'Consultas', $ncon, 'int', 'Realizadas', false ),
+						array( 'financeiro', 'Valor médio', $ncon > 0 ? $tot / $ncon : 0, 'moeda', 'Por consulta', false ),
+						array( 'medico', 'Médicos ativos', $ativos, 'int', 'Com consultas no período', false ),
+					);
+					$b_rec = array();
+					$b_con = array();
+					foreach ( $meds as $l ) {
+						$b_rec[] = array( 'rotulo' => (string) $l[0], 'valor' => (float) $l[3], 'texto' => $fmt_valor( $l[3] ), 'det' => (string) $l[1] );
+						$b_con[] = array( 'rotulo' => (string) $l[0], 'valor' => (float) $l[2], 'texto' => sprintf( _n( '%d consulta', '%d consultas', (int) $l[2], 'clinica' ), (int) $l[2] ), 'det' => (string) $l[1] );
+					}
+					usort( $b_con, static fn( $x, $y ) => $y['valor'] <=> $x['valor'] );
+					$g_main = $painel( 'gt-rel-g1', 'Receita por médico', 'últimos 90 dias', '<div class="gt-barras-linha gt-barras-linha--rel">' . Clinica_Grafico::barras( array( 'titulo' => 'Receita por médico', 'itens' => $b_rec ) ) . '</div>', 'gt-rel' );
+					// Quota: até quatro cores validadas; o resto junta-se em "Outros".
+					$quota = array_slice( $meds, 0, count( $meds ) > 4 ? 3 : 4 );
+					$itens = array();
+					foreach ( $quota as $k => $l ) {
+						$itens[] = array( 'rotulo' => (string) $l[0], 'valor' => (float) $l[3], 'cor' => array( 'c1', 'c2', 'c3', 'c4' )[ $k ], 'texto' => $fmt_valor( $l[3] ) );
+					}
+					if ( count( $meds ) > 4 ) {
+						$resto   = array_sum( array_map( static fn( $l ) => (float) $l[3], array_slice( $meds, 3 ) ) );
+						$itens[] = array( 'rotulo' => 'Outros', 'valor' => $resto, 'cor' => 'ctx', 'texto' => $fmt_valor( $resto ) );
+					}
+					$lista = '';
+					foreach ( $itens as $it ) {
+						$lista .= '<li><i class="gf-c--' . esc_attr( $it['cor'] ) . '"></i><span>' . esc_html( $it['rotulo'] ) . '</span><em>' . esc_html( Clinica_Grafico::compacto( $it['valor'] ) ) . '</em><b>' . esc_html( number_format( $tot > 0 ? $it['valor'] / $tot * 100 : 0, 0, ',', ' ' ) . '%' ) . '</b></li>';
+					}
+					$g_a = $painel(
+						'gt-rel-g2',
+						'Quota da receita',
+						'',
+						$tot > 0
+							? '<div class="gt-metodos gt-metodos--valor"><p class="gt-metodos__cab"><span>Total</span><span>Médico</span><span>Receita</span></p>'
+								. Clinica_Grafico::anel( array( 'titulo' => 'Quota da receita por médico', 'centro' => Clinica_Grafico::compacto( $tot ), 'sub' => $moeda, 'itens' => $itens, 'legenda' => false ) )
+								. '<ul class="gt-metodos__lista">' . $lista . '</ul></div>'
+							: '<p class="gt-nota gt-nota--meio">Sem receita nos últimos 90 dias.</p>'
+					);
+					$g_b = $painel( 'gt-rel-g3', 'Consultas por médico', 'realizadas', '<div class="gt-barras-linha gt-barras-linha--o3">' . Clinica_Grafico::barras( array( 'titulo' => 'Consultas por médico', 'itens' => $b_con ) ) . '</div>' );
+				} else {
+					$nov   = array_map( static fn( $l ) => (float) $l[1], $rl );
+					$con   = array_map( static fn( $l ) => (float) $l[2], $rl );
+					$best  = $melhor( $nov );
+					$tiles = array(
+						array( 'paciente', 'Novos pacientes', array_sum( $nov ), 'int', 'No período do relatório', true ),
+						array( 'consultas', 'Consultas realizadas', array_sum( $con ), 'int', 'No mesmo período', false ),
+						array( 'pacientes', 'Média de novos', $rn > 0 ? array_sum( $nov ) / $rn : 0, 'dec', 'Por período', false ),
+						array( 'tendencia', 'Melhor período', $best[0], 'int', $best[1], false ),
+					);
+					$f_con  = static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v );
+					$f_pac  = static fn( $v ) => sprintf( _n( '%d paciente', '%d pacientes', (int) $v, 'clinica' ), (int) $v );
+					$g_main = $painel(
+						'gt-rel-g1',
+						'Pacientes e consultas',
+						$por,
+						Clinica_Grafico::linhas(
+							array(
+								'titulo'  => 'Novos pacientes e consultas ' . $por,
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'suave'   => true,
+								'areas'   => 'todas',
+								'pontos'  => 'valores',
+								'final'   => false,
+								'series'  => array(
+									array( 'nome' => 'Novos pacientes', 'valores' => $nov, 'cor' => 'c1' ),
+									array( 'nome' => 'Consultas realizadas', 'valores' => $con, 'cor' => 'o3' ),
+								),
+								'formato' => $f_int,
+								'eixo'    => $f_int,
+							)
+						),
+						'gt-rel gt-atividade'
+					);
+					$g_a = $painel(
+						'gt-rel-g2',
+						'Novos pacientes',
+						$por,
+						Clinica_Grafico::colunas(
+							array(
+								'titulo'  => 'Novos pacientes ' . $por,
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'rotular' => $poucos,
+								'series'  => array( array( 'nome' => 'Novos pacientes', 'valores' => $nov, 'cor' => 'c1' ) ),
+								'formato' => $f_pac,
+								'eixo'    => $f_int,
+							)
+						)
+					);
+					$g_b = $painel(
+						'gt-rel-g3',
+						'Novos pacientes acumulados',
+						'desde o início do relatório',
+						Clinica_Grafico::linhas(
+							array(
+								'titulo'  => 'Novos pacientes acumulados',
+								'rotulos' => $curtos,
+								'longos'  => $rot,
+								'saltar'  => $saltar,
+								'suave'   => true,
+								'series'  => array( array( 'nome' => 'Acumulado', 'valores' => $acum( $nov ), 'cor' => 'c3' ) ),
+								'formato' => $f_pac,
+								'eixo'    => $f_int,
+							)
+						)
+					);
+				}
+				?>
+				<div class="gt-tiles gt-tiles--4" data-gt-entrada>
+					<?php foreach ( $tiles as $t ) { echo $rel_tile( $t ); } ?>
 				</div>
-				<?php if ( $rel_dados['linhas'] ) : ?>
+				<div data-gt-entrada><?php echo $g_main; ?></div>
+				<div class="gt-linha2" data-gt-entrada><?php echo $g_a . $g_b; ?></div>
+			<?php endif; ?>
+
+			<section class="gt-x" aria-labelledby="gt-rel-tab" data-gt-entrada>
+				<div class="gt-x__cab">
+					<h2 class="gt-x__t" id="gt-rel-tab">Tabela <small><?php echo esc_html( sprintf( _n( '%d linha', '%d linhas', count( $rel_dados['linhas'] ), 'clinica' ), count( $rel_dados['linhas'] ) ) ); ?></small></h2>
+				</div>
+					<?php if ( $rel_dados['linhas'] ) : ?>
 					<div class="bi-rtbl-wrap">
 						<table class="bi-rtbl">
 							<thead>
@@ -424,12 +704,12 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 						</table>
 					</div>
 				<?php else : ?>
-					<p class="pm-empty">Sem dados para este relatório</p>
+					<p class="gt-nota gt-nota--meio">Sem dados para este relatório.</p>
 				<?php endif; ?>
-			</div>
+			</section>
 		</section>
 
-		<!-- =========================== RENTABILIDADE =========================== -->
+		<!-- Rentabilidade -->
 		<section class="pm-view ex-rent" data-view="rentabilidade" hidden>
 			<?php
 			$r_esp = $dir['por_esp'];
@@ -441,107 +721,166 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 				$pag_total += (int) $e['n'];
 			}
 			$ticket = $pag_total > 0 ? $esp_total / $pag_total : 0;
-			$conc   = $esp_total > 0 ? round( (float) $r_esp[0]['receita'] / $esp_total * 100 ) : 0;
+			$fin      = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::totais() : array( 'pago_valor' => $esp_total, 'pendente_valor' => 0, 'pago_n' => $pag_total, 'pendente_n' => 0 );
+				$faturado = (float) $fin['pago_valor'] + (float) $fin['pendente_valor'];
+				$taxa     = $faturado > 0 ? round( (float) $fin['pago_valor'] / $faturado * 100 ) : 0;
 			?>
-			<section class="ex-kpis">
+			<div class="gt-tiles gt-tiles--4" data-gt-entrada>
 				<?php
+				// [ícone, rótulo, valor, em moeda?, nota, destaque]
 				$rk = array(
-					array( 'l' => 'Receita total', 'n' => $fmt_valor( $esp_total ), 'c' => 'pagamentos confirmados', 'sm' => true ),
-					array( 'l' => 'Ticket médio', 'n' => $fmt_valor( $ticket ), 'c' => 'por pagamento', 'sm' => true ),
-					array( 'l' => 'Pagamentos', 'n' => number_format_i18n( $pag_total ), 'c' => 'no histórico' ),
-					array( 'l' => 'Concentração', 'n' => $conc . '%', 'c' => $r_esp ? $r_esp[0]['nome'] . ' lidera' : 'sem dados' ),
+					array( 'dinheiro', 'Receita recebida', (float) $fin['pago_valor'], true, sprintf( _n( '%d pagamento', '%d pagamentos', (int) $fin['pago_n'], 'clinica' ), (int) $fin['pago_n'] ), false ),
+					array( 'pendente', 'Por cobrar', (float) $fin['pendente_valor'], true, sprintf( _n( '%d pendente', '%d pendentes', (int) $fin['pendente_n'], 'clinica' ), (int) $fin['pendente_n'] ), false ),
+					array( 'tendencia', 'Taxa de cobrança', (float) $taxa, false, 'Recebido do faturado', true ),
+					array( 'financeiro', 'Valor médio', (float) $ticket, true, 'Por pagamento', false ),
 				);
 				foreach ( $rk as $k ) : ?>
-					<div class="ex-kpi">
-						<span class="ex-kpi__l"><?php echo esc_html( $k['l'] ); ?></span>
-						<strong class="ex-kpi__n<?php echo ! empty( $k['sm'] ) ? ' ex-kpi__n--sm' : ''; ?>"><?php echo esc_html( $k['n'] ); ?></strong>
-						<span class="ex-kpi__f"><?php echo esc_html( $k['c'] ); ?></span>
+					<div class="gt-tile" data-gt-3d>
+						<span class="gt-tile__l"><?php echo Clinica_Painel::icone( $k[0] ); ?><?php echo esc_html( $k[1] ); ?></span>
+						<b class="gt-tile__n<?php echo $k[5] ? ' is-destaque' : ''; ?>"><span data-gt-n="<?php echo esc_attr( (string) round( $k[2] ) ); ?>" data-gt-fmt="<?php echo $k[3] ? 'int' : 'pct'; ?>"><?php echo esc_html( $k[3] ? number_format( $k[2], 0, ',', ' ' ) : (int) $k[2] . '%' ); ?></span><?php if ( $k[3] ) : ?> <small><?php echo esc_html( $moeda ); ?></small><?php endif; ?></b>
+						<span class="gt-tile__d"><?php echo esc_html( $k[4] ); ?></span>
 					</div>
 				<?php endforeach; ?>
-			</section>
-
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Receita por especialidade</strong><span class="ad-card__s">Histórico pago</span></div>
-				<?php if ( $r_esp ) : ?>
-					<div class="bi-rtbl-wrap">
-						<table class="bi-rtbl">
-							<thead>
-								<tr><th>Especialidade</th><th class="r">Pagamentos</th><th class="r">Receita</th><th class="r">Quota</th></tr>
-							</thead>
-							<tbody>
-								<?php foreach ( $r_esp as $e ) :
-									$share = $esp_total > 0 ? (float) $e['receita'] / $esp_total * 100 : 0;
-								?>
-									<tr>
-										<td class="bi-rtbl__k"><?php echo esc_html( $e['nome'] ); ?></td>
-										<td class="r"><?php echo (int) $e['n']; ?></td>
-										<td class="r"><?php echo esc_html( $fmt_valor( $e['receita'] ) ); ?></td>
-										<td class="r"><?php echo esc_html( number_format( $share, 1, ',', '' ) ); ?>%</td>
-									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
-					</div>
-				<?php else : ?>
-					<p class="pm-empty">Ainda não há receita registada</p>
-				<?php endif; ?>
 			</div>
 
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Receita por médico</strong><span class="ad-card__s">Top 8 · histórico</span></div>
-				<?php if ( $r_med ) : ?>
-					<div class="bi-rtbl-wrap">
-						<table class="bi-rtbl">
-							<thead>
-								<tr><th class="bi-rtbl__pos">#</th><th>Médico</th><th>Especialidade</th><th class="r">Pagamentos</th><th class="r">Receita</th><th class="r">Ticket</th></tr>
-							</thead>
-							<tbody>
-								<?php foreach ( $r_med as $i => $m ) :
-									$tk = (int) $m['n'] > 0 ? (float) $m['receita'] / (int) $m['n'] : 0;
+			<div class="gt-linha2" data-gt-entrada>
+				<section class="gt-x" aria-labelledby="gt-r-esp">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-r-esp">Receita por especialidade <small>histórico pago</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $r_esp && $esp_total > 0 ) : ?>
+							<div class="gt-metodos gt-metodos--valor">
+								<p class="gt-metodos__cab"><span>Total</span><span>Especialidade</span><span>Receita</span></p>
+								<?php
+								// Quatro cores validadas: além de quatro, as menores juntam-se em "Outras".
+								$ordem = $r_esp;
+								usort( $ordem, static fn( $x, $y ) => (float) $y['receita'] <=> (float) $x['receita'] );
+								if ( count( $ordem ) > 4 ) {
+									$resto = array_slice( $ordem, 3 );
+									$ordem = array_slice( $ordem, 0, 3 );
+									$ordem[] = array( 'nome' => 'Outras', 'receita' => array_sum( array_column( $resto, 'receita' ) ), 'n' => array_sum( array_column( $resto, 'n' ) ), 'cor' => 'ctx' );
+								}
+								// Pagamentos sem consulta/especialidade: entram à parte, para o
+								// total do anel bater com a receita recebida da faixa de cima.
+								$sem_esp = (float) $fin['pago_valor'] - $esp_total;
+								if ( $sem_esp >= 1 ) {
+									$n_sem = max( 0, (int) $fin['pago_n'] - $pag_total );
+									if ( isset( $resto ) ) {
+										$k_out                      = count( $ordem ) - 1;
+										$ordem[ $k_out ]['receita'] += $sem_esp;
+										$ordem[ $k_out ]['n']       += $n_sem;
+									} else {
+										$ordem[] = array( 'nome' => 'Sem especialidade', 'receita' => $sem_esp, 'n' => $n_sem, 'cor' => 'ctx' );
+									}
+									$esp_total += $sem_esp;
+								}
+								$itens = array();
+								foreach ( $ordem as $k => $e ) {
+									$itens[] = array(
+										'rotulo' => $e['nome'],
+										'valor'  => (float) $e['receita'],
+										'cor'    => $e['cor'] ?? array( 'c1', 'c2', 'c3', 'c4' )[ $k ],
+										'texto'  => $fmt_valor( $e['receita'] ) . ' · ' . sprintf( _n( '%d pagamento', '%d pagamentos', (int) $e['n'], 'clinica' ), (int) $e['n'] ),
+									);
+								}
+								echo Clinica_Grafico::anel(
+									array(
+										'titulo'  => 'Receita por especialidade',
+										'centro'  => Clinica_Grafico::compacto( $esp_total ),
+										'sub'     => $moeda,
+										'itens'   => $itens,
+										'legenda' => false,
+									)
+								);
 								?>
-									<tr>
-										<td class="bi-rtbl__pos"><?php echo $i + 1; ?></td>
-										<td class="bi-rtbl__k"><?php echo esc_html( $m['nome'] ); ?></td>
-										<td><?php echo esc_html( $m['esp'] ); ?></td>
-										<td class="r"><?php echo (int) $m['n']; ?></td>
-										<td class="r"><?php echo esc_html( $fmt_valor( $m['receita'] ) ); ?></td>
-										<td class="r"><?php echo esc_html( $fmt_valor( $tk ) ); ?></td>
-									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+								<ul class="gt-metodos__lista">
+									<?php foreach ( $itens as $it ) : ?>
+										<li><i class="gf-c--<?php echo esc_attr( $it['cor'] ); ?>"></i><span><?php echo esc_html( $it['rotulo'] ); ?></span><em><?php echo esc_html( Clinica_Grafico::compacto( $it['valor'] ) ); ?></em><b><?php echo esc_html( number_format( $it['valor'] / $esp_total * 100, 0, ',', ' ' ) . '%' ); ?></b></li>
+									<?php endforeach; ?>
+								</ul>
+							</div>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Ainda sem receita registada.</p>
+						<?php endif; ?>
 					</div>
-				<?php else : ?>
-					<p class="pm-empty">Ainda não há receita por médico</p>
-				<?php endif; ?>
+				</section>
+
+				<section class="gt-x" aria-labelledby="gt-r-med">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-r-med">Receita por médico <small>top 8</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $r_med ) : ?>
+							<ul class="gt-versoes gt-versoes--valor">
+								<?php
+								$max_m = max( 1.0, max( array_map( static fn( $m ) => (float) $m['receita'], $r_med ) ) );
+								foreach ( $r_med as $m ) :
+									?>
+									<li>
+										<span class="gt-versoes__r"><?php echo esc_html( $m['nome'] ); ?></span>
+										<i class="gt-versoes__t"><em data-gt-barra style="width:<?php echo esc_attr( (string) round( (float) $m['receita'] / $max_m * 100, 1 ) ); ?>%"></em></i>
+										<b title="<?php echo esc_attr( $fmt_valor( $m['receita'] ) ); ?>"><?php echo esc_html( Clinica_Grafico::compacto( (float) $m['receita'] ) ); ?></b>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Ainda sem receita por médico.</p>
+						<?php endif; ?>
+					</div>
+				</section>
 			</div>
+
+			<?php if ( $r_med ) : ?>
+				<section class="gt-x" aria-labelledby="gt-r-tab" data-gt-entrada>
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="gt-r-tab">Detalhe por médico <small>histórico pago</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<div class="bi-rtbl-wrap">
+							<table class="bi-rtbl gt-tabela">
+								<thead>
+									<tr><th class="bi-rtbl__pos">#</th><th>Médico</th><th>Especialidade</th><th class="r">Pagamentos</th><th class="r">Receita</th><th class="r">Valor médio</th></tr>
+								</thead>
+								<tbody>
+									<?php foreach ( $r_med as $i => $m ) :
+										$tk = (int) $m['n'] > 0 ? (float) $m['receita'] / (int) $m['n'] : 0;
+										?>
+										<tr>
+											<td class="bi-rtbl__pos"><?php echo $i + 1; ?></td>
+											<td class="bi-rtbl__k"><?php echo esc_html( $m['nome'] ); ?></td>
+											<td><?php echo esc_html( $m['esp'] ); ?></td>
+											<td class="r"><?php echo (int) $m['n']; ?></td>
+											<td class="r"><?php echo esc_html( $fmt_valor( $m['receita'] ) ); ?></td>
+											<td class="r"><?php echo esc_html( $fmt_valor( $tk ) ); ?></td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</section>
+			<?php endif; ?>
 		</section>
 
-		<!-- =========================== APROVAÇÕES ===========================
+		<!-- Aprovações
 		     Caixa de decisão da Direção. Os pedidos SOBEM da Gestão (portal
 		     tático); aqui só se decide. Comunicação entre portais pela tabela
-		     clinica_aprovacoes.
-		     ================================================================== -->
+		     clinica_aprovacoes. -->
 		<section class="pm-view" data-view="aprovacoes" hidden>
-			<section class="ex-kpis">
+			<div class="gt-tiles gt-tiles--3" data-gt-entrada>
 				<?php
 				$ck = array(
-					array( 'Pendentes', $cont['pendente'], 'A aguardar a sua decisão' ),
-					array( 'Aprovadas', $cont['aprovado'], 'Decididas a favor' ),
-					array( 'Rejeitadas', $cont['rejeitado'], 'Decididas contra' ),
+					array( 'pendente', 'Pendentes', $cont['pendente'], 'A aguardar decisão', $cont['pendente'] > 0 ),
+					array( 'verificar', 'Aprovadas', $cont['aprovado'], 'Decididas a favor', false ),
+					array( 'rejeitar', 'Rejeitadas', $cont['rejeitado'], 'Decididas contra', false ),
 				);
 				foreach ( $ck as $c ) : ?>
-					<div class="ex-kpi">
-						<span class="ex-kpi__l"><?php echo esc_html( $c[0] ); ?></span>
-						<strong class="ex-kpi__n"><?php echo (int) $c[1]; ?></strong>
-						<span class="ex-kpi__f"><?php echo esc_html( $c[2] ); ?></span>
+					<div class="gt-tile" data-gt-3d>
+						<span class="gt-tile__l"><?php echo Clinica_Painel::icone( $c[0] ); ?><?php echo esc_html( $c[1] ); ?></span>
+						<b class="gt-tile__n<?php echo $c[4] ? ' is-destaque' : ''; ?>" data-gt-n="<?php echo (int) $c[2]; ?>" data-gt-fmt="int"><?php echo (int) $c[2]; ?></b>
+						<span class="gt-tile__d"><?php echo esc_html( $c[3] ); ?></span>
 					</div>
 				<?php endforeach; ?>
-			</section>
+			</div>
 
-			<div class="ad-card">
-				<div class="ad-card__h">
-					<strong>Pedidos da Gestão</strong>
+			<section class="gt-x gt-pedidos" aria-labelledby="gt-a-ped" data-gt-entrada>
+				<div class="gt-x__cab">
+					<h2 class="gt-x__t" id="gt-a-ped">Pedidos da Gestão</h2>
 					<nav class="ad-tabs bi-tabs ex-aprfiltro" id="ex-aprfiltro">
 						<?php
 						$ini_f = $cont['pendente'] > 0 ? 'pendente' : 'todas';
@@ -589,18 +928,14 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 					</div>
 					<p class="pm-empty" id="ex-aprovazio" hidden>Nada neste estado</p>
 				<?php else : ?>
-					<div class="ex-blank">
-						<p>Sem pedidos da Gestão.</p>
-						<span class="ex-kpi__f">Os pedidos estratégicos submetidos pela Gestão aparecem aqui para a sua decisão.</span>
-					</div>
+					<p class="gt-nota gt-nota--meio">Sem pedidos da Gestão.</p>
 				<?php endif; ?>
-			</div>
+			</section>
 		</section>
 
-		<!-- =========================== METAS ===========================
+		<!-- Metas
 		     Cada objetivo num cartão: onde se está agora, o progresso e o campo
-		     para definir. Assim o ecrã explica-se sozinho, com ou sem metas.
-		     ============================================================== -->
+		     para definir. Assim o ecrã explica-se sozinho, com ou sem metas. -->
 		<?php if ( $pode_def ) : ?>
 			<section class="pm-view ex-rent" data-view="metas" hidden>
 				<?php
@@ -609,23 +944,24 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 				$falta_pac = max( 0, $meta_pac - $pac_mes );
 				$mes_nome  = ucfirst( date_i18n( 'F', $agora ) );
 				?>
-				<div class="ad-card ex-metahead">
-					<h2 class="ex-metahead__t">Metas de <?php echo esc_html( $mes_nome ); ?></h2>
-					<p class="ex-metahead__s">Defina os objetivos do mês. O progresso passa a aparecer aqui e na Visão geral. As alterações aplicam-se de imediato.</p>
+				<div class="gt-pagina" data-gt-entrada>
+					<h2 class="gt-pagina__t">Metas de <?php echo esc_html( $mes_nome ); ?></h2>
+					<p class="gt-pagina__s">Objetivos do mês e o progresso até agora.</p>
 				</div>
 
 				<form method="post" class="ex-form">
 					<?php wp_nonce_field( 'dir_metas', 'dir_nonce' ); ?>
 					<input type="hidden" name="dir_action" value="metas">
-					<div class="ex-duo ex-duo--even">
+					<div class="gt-linha2" data-gt-entrada>
 						<!-- Receita -->
-						<div class="ad-card ex-goal">
-							<div class="ad-card__h"><strong>Receita</strong><span class="ad-card__s"><?php echo esc_html( $mes_nome ); ?></span></div>
+						<section class="gt-x ex-goal">
+							<div class="gt-x__cab"><h3 class="gt-x__t">Receita <small><?php echo esc_html( $mes_nome ); ?></small></h3></div>
+							<div class="gt-x__corpo">
 							<p class="ex-goal__now">Este mês vai em <b><?php echo esc_html( $fmt_valor( $rec_mes ) ); ?></b></p>
+							<div class="gt-metas__mostrador" data-gt-3d>
+								<?php echo Clinica_Grafico::ponteiro( $meta_rec > 0 ? (float) $prog_rec : null, 'Progresso da meta de receita', Clinica_Grafico::compacto( $rec_mes ), $meta_rec > 0 ? Clinica_Grafico::compacto( $meta_rec ) : 'sem meta' ); ?>
+							</div>
 							<?php if ( $meta_rec > 0 ) : ?>
-								<div class="ex-goal__bar">
-									<span class="ex-goal__fill" style="width:<?php echo (int) $prog_rec; ?>%"></span>
-								</div>
 								<p class="ex-goal__stat"><b><?php echo (int) $prog_rec; ?>%</b> da meta · faltam <?php echo esc_html( $fmt_valor( $falta_rec ) ); ?></p>
 							<?php else : ?>
 								<p class="ex-goal__stat ex-goal__stat--off">Sem meta definida</p>
@@ -634,16 +970,18 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 								<span>Objetivo de receita (<?php echo esc_html( $moeda ); ?>)</span>
 								<input type="number" name="meta_receita" min="0" step="any" value="<?php echo esc_attr( $meta_rec > 0 ? (string) $meta_rec : '' ); ?>" placeholder="Ex.: 150000">
 							</label>
-						</div>
+							</div>
+						</section>
 
 						<!-- Pacientes novos -->
-						<div class="ad-card ex-goal">
-							<div class="ad-card__h"><strong>Pacientes novos</strong><span class="ad-card__s"><?php echo esc_html( $mes_nome ); ?></span></div>
+						<section class="gt-x ex-goal">
+							<div class="gt-x__cab"><h3 class="gt-x__t">Pacientes novos <small><?php echo esc_html( $mes_nome ); ?></small></h3></div>
+							<div class="gt-x__corpo">
 							<p class="ex-goal__now">Este mês entraram <b><?php echo (int) $pac_mes; ?></b></p>
+							<div class="gt-metas__mostrador" data-gt-3d>
+								<?php echo Clinica_Grafico::ponteiro( $meta_pac > 0 ? (float) $prog_pac : null, 'Progresso da meta de novos pacientes', (string) $pac_mes, $meta_pac > 0 ? (string) $meta_pac : 'sem meta' ); ?>
+							</div>
 							<?php if ( $meta_pac > 0 ) : ?>
-								<div class="ex-goal__bar">
-									<span class="ex-goal__fill" style="width:<?php echo (int) $prog_pac; ?>%"></span>
-								</div>
 								<p class="ex-goal__stat"><b><?php echo (int) $prog_pac; ?>%</b> da meta · faltam <?php echo (int) $falta_pac; ?></p>
 							<?php else : ?>
 								<p class="ex-goal__stat ex-goal__stat--off">Sem meta definida</p>
@@ -652,11 +990,12 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 								<span>Objetivo de novos pacientes</span>
 								<input type="number" name="meta_pacientes" min="0" step="1" value="<?php echo esc_attr( $meta_pac > 0 ? (string) $meta_pac : '' ); ?>" placeholder="Ex.: 40">
 							</label>
-						</div>
+							</div>
+						</section>
 					</div>
 
 					<div class="ex-metafoot">
-						<span class="ex-metafoot__hint">Deixe um campo a zero para retirar essa meta.</span>
+						<span class="ex-metafoot__hint">Zero retira a meta.</span>
 						<button type="submit" class="ge-btn ge-btn--primary">Guardar metas</button>
 					</div>
 				</form>
@@ -675,6 +1014,7 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 
 	function show( v, silencioso ) {
 		views.forEach( function ( s ) { s.hidden = ( s.dataset.view !== v ); } );
+		document.dispatchEvent( new CustomEvent( 'clinica:vista', { detail: v } ) );
 		items.forEach( function ( i ) { i.classList.toggle( 'is-active', i.dataset.go === v ); } );
 		if ( shell ) { shell.classList.toggle( 'is-full', v !== 'painel' ); }
 		if ( ! silencioso && window.history && history.replaceState ) {
@@ -684,6 +1024,31 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 		if ( 'painel' === v || 'pacientes' === v ) { tocar(); }
 	}
 	items.forEach( function ( i ) { i.addEventListener( 'click', function ( e ) { e.preventDefault(); show( i.dataset.go ); } ); } );
+	var botaoMenu = document.querySelector( '[data-gt-menu]' );
+	if ( botaoMenu && shell ) {
+		var recolhido = false;
+		try { recolhido = '1' === localStorage.getItem( 'clinica_gt_menu' ); } catch ( e ) {}
+		var aplicarMenu = function () {
+			shell.classList.toggle( 'gt--recolhido', recolhido );
+			botaoMenu.setAttribute( 'aria-pressed', recolhido ? 'true' : 'false' );
+		};
+		aplicarMenu();
+		botaoMenu.addEventListener( 'click', function () {
+			recolhido = ! recolhido;
+			try { localStorage.setItem( 'clinica_gt_menu', recolhido ? '1' : '0' ); } catch ( e ) {}
+			aplicarMenu();
+		} );
+	}
+	var conta = document.querySelector( '.gt-user' );
+	if ( conta ) {
+		document.addEventListener( 'click', function ( e ) {
+			if ( conta.open && ( ! conta.contains( e.target ) || e.target.closest( '.gt-user__menu a' ) ) ) { conta.open = false; }
+		} );
+	}
+	// Atalhos dentro das vistas (faixa do mês, cartões e ligações dos painéis).
+	document.querySelectorAll( '[data-ir]' ).forEach( function ( a ) {
+		a.addEventListener( 'click', function ( e ) { e.preventDefault(); show( a.dataset.ir ); } );
+	} );
 
 	// Os cartões começam invisíveis (opacity:0 em gestao.css) e só aparecem com
 	// a classe is-in. Sem isto ver-se-ia apenas a barra lateral.
@@ -705,123 +1070,7 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 		cartoes.forEach( function ( c ) { io.observe( c ); } );
 	} )();
 
-	// --- Gráfico de receita mensal ---
-	// --- Centro de Inteligência: KPIs + tendência por período ---
-	( function () {
-		var kpis = document.getElementById( 'bi-kpis' );
-		if ( ! kpis ) { return; }
-		var per, moeda = kpis.dataset.moeda || '';
-		try { per = JSON.parse( kpis.dataset.bi ); } catch ( e ) { return; }
-
-		function fmtN( n ) { return Math.round( n ).toLocaleString( 'pt-PT' ); }
-		function fmtV( n ) { return fmtN( n ) + ' ' + moeda; }
-		function pill( cur, ant ) {
-			if ( ant <= 0 ) { return '<span class="ex-trend--flat">sem período anterior</span>'; }
-			var g = Math.round( ( cur - ant ) / ant * 100 ), d = g >= 0 ? 'up' : 'down';
-			return '<b class="ex-trend--' + d + '">' + ( g >= 0 ? '+' : '−' ) + Math.abs( g ) + '%</b> vs período anterior';
-		}
-		function txt( id, v ) { var e = document.getElementById( id ); if ( e ) { e.textContent = v; } }
-		function html( id, v ) { var e = document.getElementById( id ); if ( e ) { e.innerHTML = v; } }
-
-		// Escala "redonda" para o eixo.
-		function escala( serie ) {
-			var max = Math.max.apply( null, serie ) || 1;
-			var passo = Math.pow( 10, Math.floor( Math.log( max ) / Math.LN10 ) );
-			return Math.ceil( max / passo ) * passo;
-		}
-		function eixoY( el, max ) {
-			el.innerHTML = '';
-			for ( var i = 4; i >= 0; i-- ) { var y = document.createElement( 'span' ); y.textContent = fmtN( max * i / 4 ); el.appendChild( y ); }
-		}
-		// Curva suave (Catmull-Rom -> Bézier) a partir de pontos [x,y].
-		function suave( pts ) {
-			if ( ! pts.length ) { return ''; }
-			var d = 'M' + pts[0][0] + ',' + pts[0][1];
-			for ( var i = 0; i < pts.length - 1; i++ ) {
-				var p0 = pts[ i - 1 ] || pts[ i ], p1 = pts[ i ], p2 = pts[ i + 1 ], p3 = pts[ i + 2 ] || p2;
-				var c1x = p1[0] + ( p2[0] - p0[0] ) / 6, c1y = p1[1] + ( p2[1] - p0[1] ) / 6;
-				var c2x = p2[0] - ( p3[0] - p1[0] ) / 6, c2y = p2[1] - ( p3[1] - p1[1] ) / 6;
-				d += ' C' + c1x.toFixed( 2 ) + ',' + c1y.toFixed( 2 ) + ' ' + c2x.toFixed( 2 ) + ',' + c2y.toFixed( 2 ) + ' ' + p2[0].toFixed( 2 ) + ',' + p2[1].toFixed( 2 );
-			}
-			return d;
-		}
-
-		// Gráfico de ondas (área) da receita.
-		var way = document.getElementById( 'bi-way' ), warea = document.getElementById( 'bi-wavearea' ),
-			wline = document.getElementById( 'bi-waveline' ), whits = document.getElementById( 'bi-wavehits' ),
-			wx = document.getElementById( 'bi-wavex' ), wdot = document.getElementById( 'bi-wavedot' );
-		function waveChart( p ) {
-			if ( ! warea ) { return; }
-			var serie = p.serie, lbl = p.serie_lbl, n = serie.length, max = escala( serie );
-			eixoY( way, max );
-			var pts = serie.map( function ( v, i ) {
-				var x = ( i + 0.5 ) / n * 100;
-				var y = 100 - ( v / max * 90 ) - 5;
-				return [ x, y ];
-			} );
-			wline.setAttribute( 'd', suave( pts ) );
-			warea.setAttribute( 'd', suave( pts ) + ' L' + pts[ n - 1 ][0].toFixed( 2 ) + ',100 L' + pts[0][0].toFixed( 2 ) + ',100 Z' );
-			whits.innerHTML = ''; wx.innerHTML = '';
-			var muitos = n > 14;
-			serie.forEach( function ( v, i ) {
-				var h = document.createElement( 'div' ); h.className = 'bi-wave__hit';
-				h.dataset.r = lbl[ i ] || ''; h.dataset.v = v; h.dataset.x = pts[ i ][0]; h.dataset.y = pts[ i ][1];
-				whits.appendChild( h );
-				var xl = document.createElement( 'span' ); xl.textContent = ( muitos && i % 3 !== 0 ) ? '' : ( lbl[ i ] || '' ); wx.appendChild( xl );
-			} );
-			var total = serie.reduce( function ( a, b ) { return a + b; }, 0 );
-			var repouso = fmtV( total ) + ' no período';
-			if ( read ) {
-				read.textContent = repouso;
-				whits.onmouseover = function ( e ) {
-					var h = e.target.closest( '.bi-wave__hit' ); if ( ! h ) { return; }
-					read.innerHTML = '<b>' + h.dataset.r + '</b> ' + fmtV( h.dataset.v );
-					if ( wdot ) { wdot.style.left = h.dataset.x + '%'; wdot.style.top = h.dataset.y + '%'; wdot.hidden = false; }
-				};
-				whits.onmouseleave = function () { read.textContent = repouso; if ( wdot ) { wdot.hidden = true; } };
-			}
-		}
-
-		// Gráfico de barras das consultas realizadas.
-		var cbars = document.getElementById( 'bi-conbars' ), cx = document.getElementById( 'bi-conx' ), cy = document.getElementById( 'bi-cony' );
-		function barChart( p ) {
-			if ( ! cbars ) { return; }
-			var serie = p.serie_con || [], lbl = p.serie_lbl, n = serie.length, max = escala( serie );
-			eixoY( cy, max );
-			cbars.innerHTML = ''; cx.innerHTML = '';
-			var muitos = n > 14;
-			serie.forEach( function ( v, i ) {
-				var g = document.createElement( 'div' ); g.className = 'ad-mes'; g.title = ( lbl[ i ] || '' ) + ': ' + v + ' consultas';
-				var b = document.createElement( 'span' ); b.className = 'ad-bar ad-bar--a';
-				b.style.height = Math.round( v / max * 100 ) + '%'; b.style.animationDelay = ( i * 0.02 ).toFixed( 2 ) + 's';
-				g.appendChild( b ); cbars.appendChild( g );
-				var xl = document.createElement( 'span' ); xl.textContent = ( muitos && i % 3 !== 0 ) ? '' : ( lbl[ i ] || '' ); cx.appendChild( xl );
-			} );
-		}
-
-		var read = document.getElementById( 'bi-read' );
-		var nomes = { '7d': 'nos últimos 7 dias', '30d': 'nos últimos 30 dias', '90d': 'nos últimos 90 dias', '12m': 'nos últimos 12 meses' };
-		var nomes2 = { '7d': 'Últimos 7 dias', '30d': 'Últimos 30 dias', '90d': 'Últimos 90 dias', '12m': 'Últimos 12 meses' };
-		function aplicar( k ) {
-			var p = per[ k ]; if ( ! p ) { return; }
-			txt( 'bi-receita', fmtV( p.receita ) ); html( 'bi-receita-p', pill( p.receita, p.receita_ant ) );
-			txt( 'bi-consultas', fmtN( p.consultas ) ); html( 'bi-consultas-p', pill( p.consultas, p.cons_ant ) );
-			txt( 'bi-novos', fmtN( p.novos ) ); html( 'bi-novos-p', pill( p.novos, p.novos_ant ) );
-			txt( 'bi-plabel', nomes[ k ] ); txt( 'bi-plabel2', nomes2[ k ] ); txt( 'bi-plabel3', nomes2[ k ] );
-			waveChart( p ); barChart( p );
-		}
-		var tabs = document.getElementById( 'bi-per' );
-		if ( tabs ) {
-			tabs.addEventListener( 'click', function ( e ) {
-				var b = e.target.closest( '.ad-tab' ); if ( ! b ) { return; }
-				tabs.querySelectorAll( '.ad-tab' ).forEach( function ( o ) { o.classList.toggle( 'is-active', o === b ); } );
-				aplicar( b.dataset.p );
-			} );
-		}
-		aplicar( '30d' );
-	} )();
-
-	// --- Contagem dos números ---
+	// Contagem dos números
 	var suave = ! window.matchMedia || ! window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
 	var relogios = [];
 	function contar( el ) {
@@ -895,7 +1144,7 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 		} );
 	} )();
 
-	// --- Filtro das aprovações por estado ---
+	// Filtro das aprovações por estado
 	( function () {
 		var tabs = document.getElementById( 'ex-aprfiltro' ),
 			lista = document.getElementById( 'ex-aprovs' ),
@@ -920,7 +1169,7 @@ $labels    = array( 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'rejeita
 		aplicar( ativo ? ativo.dataset.filtro : 'todas' );
 	} )();
 
-	// --- Combobox pesquisável (tipo da proposta) ---
+	// Combobox pesquisável (tipo da proposta)
 	document.querySelectorAll( 'select[data-combo]' ).forEach( function ( sel ) {
 		var opcoes = [].map.call( sel.options, function ( o ) { return { v: o.value, t: o.textContent.trim(), q: o.textContent.trim().toLowerCase() }; } );
 		if ( opcoes.length < 2 ) { return; }

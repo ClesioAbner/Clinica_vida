@@ -84,12 +84,15 @@ function clinica_flash( string $code ): ?array {
 		'rc_pac_dados'   => array( 'Reveja os dados do paciente (nome e email válido são obrigatórios).', 'error' ),
 		'rc_pac_existe'  => array( 'Já existe uma conta com esse email.', 'error' ),
 		'nc_ok'          => array( 'Consulta marcada. A pessoa foi registada e a consulta agendada (fica pendente até o médico confirmar).', 'success' ),
-		'nc_dados'       => array( 'Reveja os dados: nome completo e email válido são obrigatórios.', 'error' ),
+		'nc_dados'       => array( 'Reveja os dados: nome completo e um telefone (ou email) válido são obrigatórios.', 'error' ),
+		'nc_cobrar'      => array( 'Consulta marcada. Cobre agora o pagamento.', 'success' ),
 		'nc_existe'      => array( 'Já existe uma pessoa com esse email. Use “Usar esta ficha” para reaproveitar em vez de duplicar.', 'error' ),
 		'nc_invalido'    => array( 'Escolha o sector, o médico e a hora da consulta.', 'error' ),
 		'pg_mp_ok'       => array( 'Pagamento M-Pesa confirmado. Já pode emitir a fatura.', 'success' ),
 		'pg_mp_tel'      => array( 'Indique o número M-Pesa do cliente para cobrar.', 'error' ),
 		'pg_mp_falhou'   => array( 'O pagamento M-Pesa não foi concluído. Tente de novo ou receba por outro meio.', 'error' ),
+		'pg_recebido'    => array( 'Pagamento recebido com sucesso.', 'success' ),
+		'pg_falhou'      => array( 'Não foi possível registar o pagamento. Tente de novo.', 'error' ),
 		'rc_msg_lida'    => array( 'Mensagem marcada como lida.', 'success' ),
 		'rc_checkin_ok'  => array( 'Presença confirmada. O paciente entrou na fila de atendimento.', 'success' ),
 		'rc_reagendada'  => array( 'Consulta reagendada. Aguarda nova confirmação do médico.', 'success' ),
@@ -121,7 +124,7 @@ function clinica_render_flash(): void {
 
 	$mensagem = $flash[0];
 	// Avisos com motivo exato (ex.: M-Pesa) trazem o texto num transient.
-	if ( 'pg_mp_falhou' === $code ) {
+	if ( in_array( $code, array( 'pg_mp_falhou', 'pg_recebido', 'pg_falhou' ), true ) ) {
 		$chave = 'clinica_flash_dyn_' . get_current_user_id();
 		$dyn   = get_transient( $chave );
 		if ( $dyn ) {
@@ -167,7 +170,7 @@ function clinica_flash_estilos(): void {
 	?>
 	<style>
 	.cl-toastwrap{position:fixed;top:18px;right:18px;z-index:99999;display:flex;flex-direction:column;gap:10px;width:360px;max-width:calc(100vw - 32px);pointer-events:none}
-	.cl-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:11px;padding:14px 14px 14px 16px;background:#fff;border:1px solid #E6EAF0;border-left:4px solid #4E7E9B;border-radius:13px;box-shadow:0 14px 36px rgba(15,23,42,.18);font-size:14px;font-weight:600;line-height:1.45;color:#1f2933;opacity:0;transform:translateY(-12px);transition:opacity .28s ease,transform .28s ease}
+	.cl-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:11px;padding:13px 14px;background:#fff;border:1px solid #DDE4E9;border-left:3px solid #4E7E9B;border-radius:8px;box-shadow:0 10px 24px rgba(15,23,42,.10);font-size:13px;font-weight:600;line-height:1.45;color:#1f2933;opacity:0;transform:translateY(-8px);transition:opacity .2s ease,transform .2s ease}
 	.cl-toast.is-on{opacity:1;transform:translateY(0)}
 	.cl-toast__i{flex:none;margin-top:1px}
 	.cl-toast__i svg{display:block;width:19px;height:19px}
@@ -217,9 +220,16 @@ function clinica_status_pill( string $status ): string {
 	$labels = array(
 		'pendente'   => 'Pendente',
 		'confirmada' => 'Confirmada',
+		'chegou'     => 'Na fila',
+		'chamada'    => 'Chamada',
+		'em_atendimento' => 'Em atendimento',
+		'pausada'    => 'Em pausa',
 		'cancelada'  => 'Cancelada',
 		'realizada'  => 'Realizada',
 		'faltou'     => 'Faltou',
+		'pago'       => 'Pago',
+		'falhou'     => 'Falhou',
+		'reembolsado' => 'Reembolsado',
 	);
 	$label = $labels[ $status ] ?? ucfirst( $status );
 	return sprintf(
@@ -338,7 +348,7 @@ function clinica_controller_medico(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Prescrever medicamento ---------------------------------------------
+	// Prescrever medicamento
 	if ( isset( $_POST['cl_prescrever'] ) ) {
 		if ( ! current_user_can( 'clinica_prescrever' ) || ! wp_verify_nonce( $_POST['cl_presc_nonce'] ?? '', 'cl_presc' ) ) {
 			clinica_redirect( 'negado' );
@@ -359,7 +369,7 @@ function clinica_controller_medico(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Anexar documento ao processo ---------------------------------------
+	// Anexar documento ao processo
 	if ( isset( $_POST['cl_documento'] ) ) {
 		if ( ! current_user_can( 'clinica_ver_processo' ) || ! wp_verify_nonce( $_POST['cl_doc_nonce'] ?? '', 'cl_doc' ) ) {
 			clinica_redirect( 'negado' );
@@ -376,7 +386,7 @@ function clinica_controller_medico(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Pedir exame ---------------------------------------------------------
+	// Pedir exame
 	if ( isset( $_POST['cl_exame'] ) ) {
 		if ( ! current_user_can( 'clinica_pedir_exames' ) || ! wp_verify_nonce( $_POST['cl_exame_nonce'] ?? '', 'cl_exame' ) ) {
 			clinica_redirect( 'negado' );
@@ -396,7 +406,7 @@ function clinica_controller_medico(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Fluxo de atendimento: chamar / iniciar / pausar / retomar ----------
+	// Fluxo de atendimento: chamar / iniciar / pausar / retomar
 	if ( isset( $_POST['cl_fluxo'] ) ) {
 		if ( ! current_user_can( 'clinica_atender' ) || ! wp_verify_nonce( $_POST['cl_fluxo_nonce'] ?? '', 'cl_fluxo' ) ) {
 			clinica_redirect( 'negado' );

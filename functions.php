@@ -61,14 +61,23 @@ $clinica_modulos = array(
 	'inc/direcao.php',              // nível executivo: metas + aprovações estratégicas
 	'inc/xlsx.php',                 // gerador de Excel real (.xlsx sem bibliotecas)
 	'inc/relatorios.php',           // relatórios executivos + exportação PDF/CSV
-	'inc/mpesa.php',                // experiência M-Pesa do Clesio (Clinica_Mpesa_Gateway, v1x)
-	'inc/mpesa-gateway.php',        // gateway M-Pesa que a receção usa (Clinica_Mpesa, v2)
-	'inc/contacto.php',             // formulário de contacto
+	// 'inc/mpesa.php' NÃO é carregado: é a experiência standalone do Clesio
+	// (corre-se no browser). Assim, editá-lo/parti-lo nunca derruba o site.
+	// O ficheiro inc/mpesa-gateway.php está reservado a testes manuais e não
+	// pode ser incluído no bootstrap: executa um pedido externo ao ser carregado.
+	// Clinica_Pagamentos usa o gateway inativo seguro quando a classe não existe.
+	'inc/rest-api.php',             // API REST clinica/v1 (n8n, Thunder Client)
+	'inc/webhooks.php',             // webhooks de saída (eventos -> n8n -> WhatsApp)
+	'inc/contacto-site.php',        // formulário de contacto (módulo WordPress)
 	'inc/recepcao.php',             // portal da secretária/receção
+	'inc/marcacao-rapida.php',      // marcação sem conta no site (nome + telefone)
+	'inc/legal.php',                // termos, privacidade, cookies + aviso de cookies
 	'inc/lembretes.php',            // cron do aviso 1h antes (usa repo + sms)
 
 	// 5) Apresentação
 	'inc/homepage-data.php',
+	'inc/graficos.php',             // gráficos dos portais (.gf-*), desenhados no servidor
+	'inc/loader.php',               // ecrã de carregamento (batimento) em todas as páginas
 	'inc/enqueue.php',
 );
 foreach ( $clinica_modulos as $modulo ) {

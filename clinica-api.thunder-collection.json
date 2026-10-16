@@ -1,0 +1,446 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "Clinica Vida API",
+  "collectionId": "col-clinica-vida",
+  "dateExported": "2026-08-03T15:34:13+02:00",
+  "version": "1.2",
+  "folders": [],
+  "requests": [
+    {
+      "_id": "req-f42c34ab4a13",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Auth · Login",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/auth/login",
+      "method": "POST",
+      "sortNum": 10000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"username\": \"recepcao\",\n    \"password\": \"teste1234\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-3e773d14e141",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Auth · Me",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/auth/me",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-f86e3845169d",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Consultas · Listar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/consultas?status=pendente",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-05c409c65109",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Consultas · Obter",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/consultas/27",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-5b19f31157e7",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Consultas · Criar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/consultas",
+      "method": "POST",
+      "sortNum": 50000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"paciente_id\": 8,\n    \"medico_id\": 14,\n    \"inicio\": \"2026-08-10 10:00\",\n    \"observacoes\": \"Teste\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-81e545201041",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Consultas · Confirmar/Estado",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/consultas/27",
+      "method": "PUT",
+      "sortNum": 60000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"status\": \"confirmada\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-0d1e4d24a5e5",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Consultas · Cancelar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/consultas/27",
+      "method": "DELETE",
+      "sortNum": 70000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"motivo\": \"cliente desistiu\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-1312238b52b9",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pacientes · Listar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pacientes?q=",
+      "method": "GET",
+      "sortNum": 80000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-bc9cc31af782",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pacientes · Obter",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pacientes/8",
+      "method": "GET",
+      "sortNum": 90000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-b4f38ce86f98",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pacientes · Criar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pacientes",
+      "method": "POST",
+      "sortNum": 100000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"nome\": \"Joao Sitoe\",\n    \"email\": \"joao.sitoe@mail.mz\",\n    \"telefone\": \"258841234567\",\n    \"genero\": \"M\",\n    \"data_nascimento\": \"1990-05-20\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-0cf18053b43f",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Medicos · Listar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/medicos",
+      "method": "GET",
+      "sortNum": 110000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-bd10119dde0c",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Medicos · Obter",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/medicos/14",
+      "method": "GET",
+      "sortNum": 120000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-ae1bc6f8aea0",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Especialidades · Listar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/especialidades",
+      "method": "GET",
+      "sortNum": 130000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-9992cd7d6c7c",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pagamentos · Listar",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pagamentos?estado=pendente",
+      "method": "GET",
+      "sortNum": 140000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-babdd3979ea9",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pagamentos · Obter",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pagamentos/7",
+      "method": "GET",
+      "sortNum": 150000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "none",
+        "raw": "",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-a88c91487d85",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pagamentos · Estado",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pagamentos/7",
+      "method": "PUT",
+      "sortNum": 160000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"estado\": \"pago\",\n    \"referencia\": \"Dinheiro\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-1e6ce5bfc38d",
+      "colId": "col-clinica-vida",
+      "containerId": "",
+      "name": "Pagamentos · Cobrar M-Pesa",
+      "url": "http://localhost/clinica/wp-json/clinica/v1/pagamentos/7/cobrar",
+      "method": "POST",
+      "sortNum": 170000,
+      "created": "2026-08-03T15:34:13+02:00",
+      "modified": "2026-08-03T15:34:13+02:00",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "value": "clv_b5e741785172a7b28e360f366bae9e6dd92d4605"
+        },
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "tests": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n    \"telefone\": \"258849596865\"\n}",
+        "form": []
+      }
+    }
+  ]
+}

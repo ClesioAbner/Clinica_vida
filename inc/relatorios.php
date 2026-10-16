@@ -15,10 +15,10 @@ defined( 'ABSPATH' ) || exit;
 
 final class Clinica_Relatorios {
 
-	/** Agrupamentos aceites para os relatórios por período. */
+	// Agrupamentos aceites para os relatórios por período. */
 	const GRUPOS = array( 'dia' => 'Diário', 'semana' => 'Semanal', 'mes' => 'Mensal' );
 
-	/** Expressão SQL e rótulo de um agrupamento temporal sobre uma coluna. */
+	// Expressão SQL e rótulo de um agrupamento temporal sobre uma coluna. */
 	private static function bucket( string $col, string $grupo ): array {
 		switch ( $grupo ) {
 			case 'dia':
@@ -30,7 +30,7 @@ final class Clinica_Relatorios {
 		}
 	}
 
-	/** Rótulo legível de uma chave de período. */
+	// Rótulo legível de uma chave de período. */
 	private static function rotulo( string $chave, string $grupo ): string {
 		if ( 'dia' === $grupo ) {
 			return date_i18n( 'd/m/Y', strtotime( $chave ) );
@@ -46,7 +46,7 @@ final class Clinica_Relatorios {
 		return 'Sem. ' . $sem . ' · ' . $dt->format( 'd/m' );
 	}
 
-	/** Sequência das últimas N chaves de período (com zeros incluídos). */
+	//Sequência das últimas N chaves de período (com zeros incluídos). */
 	private static function chaves( string $grupo, int $n ): array {
 		$out = array();
 		for ( $i = $n - 1; $i >= 0; $i-- ) {
@@ -61,7 +61,7 @@ final class Clinica_Relatorios {
 		return $out;
 	}
 
-	/** Relatório financeiro: receita, nº de pagamentos e ticket médio por período. */
+	// Relatório financeiro: receita, nº de pagamentos e ticket médio por período. */
 	public static function financeiro( string $grupo = 'mes' ): array {
 		global $wpdb;
 		$P = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::TABELA : 'clinica_pagamentos';
@@ -92,13 +92,13 @@ final class Clinica_Relatorios {
 		}
 		return array(
 			'titulo' => 'Relatório financeiro (' . self::GRUPOS[ $grupo ] . ')',
-			'cols'   => array( 'Período', 'Receita', 'Pagamentos', 'Ticket médio' ),
+			'cols'   => array( 'Período', 'Receita', 'Pagamentos', 'Valor médio' ),
 			'tipos'  => array( 't', 'v', 'n', 'v' ),
 			'linhas' => $linhas,
 		);
 	}
 
-	/** Relatório por médico: consultas e receita nos últimos 90 dias. */
+	// Relatório por médico: consultas e receita nos últimos 90 dias. */
 	public static function medicos(): array {
 		global $wpdb;
 		$C = Clinica_Repo::T_CONSULTAS;
@@ -135,13 +135,13 @@ final class Clinica_Relatorios {
 		}
 		return array(
 			'titulo' => 'Relatório por médico (90 dias)',
-			'cols'   => array( 'Médico', 'Especialidade', 'Consultas', 'Receita', 'Ticket médio' ),
+			'cols'   => array( 'Médico', 'Especialidade', 'Consultas', 'Receita', 'Valor médio' ),
 			'tipos'  => array( 't', 't', 'n', 'v', 'v' ),
 			'linhas' => $linhas,
 		);
 	}
 
-	/** Relatório de pacientes: novos por período e consultas realizadas. */
+	// Relatório de pacientes: novos por período e consultas realizadas.
 	public static function pacientes( string $grupo = 'semana' ): array {
 		global $wpdb;
 		$C  = Clinica_Repo::T_CONSULTAS;
@@ -176,7 +176,7 @@ final class Clinica_Relatorios {
 		);
 	}
 
-	/** Resolve um relatório pelo tipo + agrupamento. */
+	// Resolve um relatório pelo tipo + agrupamento.
 	public static function obter( string $tipo, string $grupo ): array {
 		if ( 'medicos' === $tipo ) {
 			return self::medicos();
@@ -188,10 +188,10 @@ final class Clinica_Relatorios {
 	}
 }
 
-/**
- * Exporta um relatório em PDF ou CSV. Disparado por ?relatorio=TIPO na página
- * da Direção, antes de get_header(). Termina o pedido.
- */
+
+ //Exporta um relatório em PDF ou CSV. Disparado por ?relatorio=TIPO na página
+ // da Direção, antes de get_header(). Termina o pedido.
+ 
 function clinica_relatorio_exportar(): void {
 	if ( empty( $_GET['relatorio'] ) || ! current_user_can( 'clinica_ver_relatorios' ) ) {
 		return;
@@ -211,7 +211,9 @@ function clinica_relatorio_exportar(): void {
 		Clinica_Auditoria::registar( 'Direção: relatório exportado', $rel['titulo'] . ' · ' . strtoupper( $fmt ) );
 	}
 
-	// ---- CSV (abre no Excel) ----
+	//  CSV (abre no Excel) 
+
+
 	if ( 'csv' === $fmt ) {
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=UTF-8' );
@@ -231,12 +233,12 @@ function clinica_relatorio_exportar(): void {
 		exit;
 	}
 
-	// ---- Excel real (.xlsx via Office Open XML) ----
+	// Excel real (.xlsx via Office Open XML) 
 	if ( 'xls' === $fmt && class_exists( 'Clinica_Xlsx' ) ) {
 		Clinica_Xlsx::enviar( $rel['titulo'], $rel['cols'], $rel['linhas'], $rel['tipos'], $nome );
 	}
 
-	// ---- PDF (via Dompdf) ----
+	//  PDF (via Dompdf) 
 	if ( ! function_exists( 'clinica_pdf_saida' ) ) {
 		wp_die( esc_html__( 'Exportação PDF indisponível.', 'clinica' ) );
 	}

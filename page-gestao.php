@@ -63,23 +63,14 @@ foreach ( $futuras as $f ) {
 	$agenda_por_dia[ substr( $f['inicio'], 0, 10 ) ][] = $f;
 }
 
-// Agregados do overview: financeiro, atividade recente e sinais de atenção.
-// Níveis TÁTICO e EXECUTIVO: agregados de cache (§4 — não batem no transacional).
-$exec         = class_exists( 'Clinica_Analitica' ) ? Clinica_Analitica::executivo() : array( 'totais' => null, 'receita_esp' => array(), 'tendencia' => array(), 'em' => 0 );
-$tat          = class_exists( 'Clinica_Analitica' ) ? Clinica_Analitica::tatico() : array( 'por_especialidade' => array(), 'no_show_medico' => array(), 'em' => 0 );
-$pag          = $exec['totais'] ?: ( class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::totais() : array( 'pago_valor' => 0.0, 'pendente_valor' => 0.0, 'pago_n' => 0, 'pendente_n' => 0 ) );
+// Atividade recente e equipa. Os números do painel e das finanças vêm de
+// Clinica_Painel::dados() (cache curta por período), mais abaixo.
 $moeda        = class_exists( 'Clinica_Config' ) ? Clinica_Config::get( 'moeda', 'MZN' ) : 'MZN';
 $audit        = class_exists( 'Clinica_Auditoria' ) ? Clinica_Auditoria::listar( 6 ) : array();
 $med_inativos = count( $medicos ) - count( $med_ativos );
 $fmt_valor    = static function ( $v ) use ( $moeda ) { return number_format( (float) $v, 0, ',', ' ' ) . ' ' . $moeda; };
-// Taxa de faltas (no-show) sobre as consultas já encerradas.
-$encerradas   = (int) ( $kpis['realizada'] + $kpis['faltou'] );
-$taxa_faltas  = $encerradas > 0 ? (int) round( $kpis['faltou'] / $encerradas * 100 ) : 0;
 
-// KPIs do dashboard.
-$total_consultas = array_sum( $kpis );
-
-// ---- Gestão de Horários (sub-vista "horarios") — dados por médico selecionado ----
+// Gestão de Horários (sub-vista "horarios") — dados por médico selecionado
 global $wpdb;
 $ag_dias     = array( 1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta', 6 => 'Sábado', 7 => 'Domingo' );
 $ag_meds     = array();
@@ -113,21 +104,13 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 
 ?>
 <div class="hp">
-<div class="pm-shell pm-shell--admin">
+<div class="pm-shell pm-shell--admin mt">
 
 	<aside class="pm-side">
-		<div class="pm-side__brand">
-			<span class="pm-side__logo"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo2.png' ); ?>" alt=""></span>
-			<span class="pm-side__brandname">Clínica Vida</span>
-		</div>
-
-		<div class="pm-side__me">
-			<img src="<?php echo esc_url( $avatar ); ?>" alt="">
-			<div class="pm-side__meinfo">
-				<div class="pm-side__name"><?php echo esc_html( $primeiro ); ?></div>
-				<div class="pm-side__role">Administração</div>
-			</div>
-		</div>
+		<a class="mt-marca" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="28" height="28" alt="">
+			<span>Clínica Vida<i>.</i></span>
+		</a>
 
 		<nav class="pm-nav">
 			<span class="pm-nav__cap">Gestão</span>
@@ -160,7 +143,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 				</div>
 			</div>
 			<?php if ( $pode_propor ) : ?>
-				<a class="pm-nav__i" href="#" data-go="propostas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span>Propor à Direção</span><?php $np = 0; foreach ( $propostas as $pp ) { if ( 'pendente' === $pp['estado'] ) { $np++; } } if ( $np > 0 ) : ?><span class="pm-nav__badge"><?php echo (int) $np; ?></span><?php endif; ?></a>
+				<a class="pm-nav__i" href="#" data-go="propostas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 19V5M5 12l7-7 7 7"/></svg><span>Propor à Direção</span></a>
 			<?php endif; ?>
 			<a class="pm-nav__i" href="#" data-go="auditoria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Auditoria</span></a>
 			<?php if ( $pode_config ) : ?>
@@ -173,371 +156,457 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 
 	<main class="pm-main">
 
-		<header class="pm-top">
-			<div class="pm-top__l">
-				<span class="ad-eyebrow">Painel de Administração</span>
-				<h1 class="pm-welcome"><?php echo esc_html( $saudacao . ', ' . $primeiro ); ?></h1>
-				<p class="pm-date"><?php echo esc_html( ucfirst( $data_hoje ) ); ?></p>
+		<?php
+		// Período do painel (filtra os números e os gráficos da Visão geral).
+		$dp      = Clinica_Painel::dados( 0 );
+		$np_prop = 0;
+		foreach ( $propostas as $pp ) {
+			if ( 'pendente' === $pp['estado'] ) {
+				$np_prop++;
+			}
+		}
+		$mt_url = static fn( string $k ): string => add_query_arg( 'periodo', $k, remove_query_arg( array( 'periodo', 'cl' ) ) ) . '#painel';
+		?>
+		<!-- Topo: título da vista e período à esquerda; atalhos e saudação à direita -->
+		<header class="mt-topo">
+			<div class="mt-topo__l">
+				<h1 class="mt-topo__t" data-mt-titulo>Visão geral</h1>
+				<details class="mt-datas">
+					<summary>
+						<span><?php echo esc_html( date_i18n( 'j M Y', $dp['desde'] ) . ' – ' . date_i18n( 'j M Y', $agora ) ); ?></span>
+						<svg class="mt-datas__seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+					</summary>
+					<div class="mt-datas__menu">
+						<?php foreach ( Clinica_Analitica::PERIODOS_MEDICO as $k => $p ) : ?>
+							<a href="<?php echo esc_url( $mt_url( $k ) ); ?>"<?php echo $k === $dp['periodo'] ? ' aria-current="true"' : ''; ?>><?php echo esc_html( 'Últimos ' . $p['label'] ); ?></a>
+						<?php endforeach; ?>
+					</div>
+				</details>
 			</div>
-			<div class="pm-user">
-				<span class="pm-user__meta"><b><?php echo esc_html( $utilizador->display_name ); ?></b><small>Administração</small></span>
+			<div class="mt-topo__r">
+				<span class="mt-ola"><img src="<?php echo esc_url( $avatar ); ?>" width="34" height="34" alt=""><?php echo esc_html( 'Olá, ' . $primeiro . '!' ); ?></span>
 			</div>
 		</header>
 
 		<?php clinica_render_flash(); ?>
 
-		<!-- ============================ PAINEL ============================
-		     Três camadas num painel só. Cada bloco diz a que camada pertence,
-		     porque a cadência de atualização é diferente em cada uma:
-		     operacional 2 min, tático 1 hora, executivo 1 dia.
-		     ================================================================ -->
+		<!-- Painel
+		     Forma da referência "Mar Tech": cinco números com ícone e variação,
+		     atividade da clínica (gráfico + especialidades), pacientes por
+		     idade, faturação à direita (valor, curva e médicos), métodos de
+		     pagamento e atividade recente. Período no topo; só dados reais. -->
 		<?php
-		$oper = Clinica_Analitica::operacional();
-		$vol  = Clinica_Analitica::series_volume();
-
-		// Um painel vazio não diz nada a quem gere. Quando ainda não há
-		// atividade suficiente, os blocos passam a mostrar uma amostra, sempre
-		// assinalada no cabeçalho para nunca se confundir com o real.
-		$ativos = 0;
-		foreach ( $vol['mensal']['consultas'] as $n ) {
-			if ( $n > 0 ) {
-				$ativos++;
+		$at      = $dp['atual'];
+		$ant     = $dp['anterior'];
+		$var_txt = static function ( ?int $v, string $un = '%' ): string {
+			if ( null === $v ) {
+				return '';
 			}
-		}
-		$demo_vol = $ativos < 3;
-		if ( $demo_vol ) {
-			$vol['mensal']['consultas']  = array( 186, 164, 203, 178, 221, 195, 238, 210, 246, 229, 258, 241 );
-			$vol['mensal']['exames']     = array( 74, 62, 88, 71, 96, 83, 104, 91, 108, 97, 115, 106 );
-			$vol['semanal']['consultas'] = array( 48, 55, 43, 61, 52, 68, 57, 64, 49, 72, 60, 66 );
-			$vol['semanal']['exames']    = array( 19, 24, 17, 28, 22, 31, 25, 29, 20, 33, 26, 30 );
-			$vol['anual']['consultas']   = array( 1420, 1685, 1930, 2246, 2569 );
-			$vol['anual']['exames']      = array( 540, 663, 792, 948, 1105 );
-		}
-
-		$demo_dia = 0 === (int) $oper['consultas']['hoje'];
-		if ( $demo_dia ) {
-			$oper['ocupacao']     = 78;
-			$oper['consultas']    = array( 'hoje' => 38, 'semana' => $oper['consultas']['semana'], 'mes' => $oper['consultas']['mes'] );
-			$oper['atendidos']    = 24;
-			$oper['espera']       = 5;
-			$oper['a_decorrer']   = 3;
-			$oper['espera_min']   = 14;
-			$oper['consulta_min'] = 26;
-			$oper['canceladas']   = 2;
-			$oper['faltas']       = 1;
-		}
-
-		// Variação face ao mês anterior. Sem base de comparação não se inventa
-		// uma percentagem.
-		$var = static function ( $agora, $antes ) {
-			if ( $antes <= 0 ) {
-				return null;
-			}
-			return round( ( $agora - $antes ) / $antes * 100 );
+			return '<span class="mt-delta mt-delta--' . ( $v >= 0 ? 'bom' : 'mau' ) . '">' . esc_html( ( $v >= 0 ? '+' : '−' ) . abs( $v ) . $un ) . ' <span>vs período anterior</span></span>';
 		};
+		$total_esp = array_sum( array_column( $dp['por_esp'], 'marcadas' ) );
+		$total_met = array_sum( array_column( $dp['metodos'], 'v' ) );
+		$nomes_met = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::METODOS : array();
+		$mt_kpis   = array(
+			array( 'feito', number_format_i18n( $at['realizadas'] ), Clinica_Painel::var_pct( $at['realizadas'], $ant['realizadas'] ), 'Consultas realizadas', 'agenda' ),
+			array( 'paciente', number_format_i18n( $dp['novos']['atual'] ), Clinica_Painel::var_pct( $dp['novos']['atual'], $dp['novos']['anterior'] ), 'Novos pacientes', 'agenda' ),
+			array( 'financeiro', Clinica_Grafico::compacto( $at['faturado'] ), Clinica_Painel::var_pct( $at['faturado'], $ant['faturado'] ), 'Faturado (' . Clinica_Grafico::moeda_codigo() . ')', 'financas' ),
+			array( 'tendencia', Clinica_Grafico::pct( $dp['comparencia'] ), null === $dp['comparencia'] || null === $dp['comparencia_ant'] ? null : (int) round( $dp['comparencia'] - $dp['comparencia_ant'] ), 'Taxa de comparência', 'agenda' ),
+			array( 'medico', number_format_i18n( count( $med_ativos ) ), null, 'Médicos ativos', 'equipa' ),
+		);
 		?>
+		<section class="mt-painel pm-view" data-view="painel">
 
-		<section class="ad-kpis pm-view" data-view="painel">
-			<?php
-			// A ligação diz para onde vai. Onde ainda não existe destino, não
-			// se põe ligação nenhuma: um botão que promete um relatório e abre
-			// outra coisa é pior do que não ter botão.
-			$kp = array(
-				array(
-					'l' => 'Pacientes registados',
-					'n' => number_format_i18n( $oper['pacientes'] ),
-					'v' => $var( $oper['pacientes'], $oper['anterior']['pacientes'] ),
-					'p' => 'Total acumulado',
-				),
-				array(
-					'l'  => 'Consultas do mês',
-					'n'  => number_format_i18n( $oper['consultas']['mes'] ),
-					'v'  => $var( $oper['consultas']['mes'], $oper['anterior']['consultas'] ),
-					'p'  => ucfirst( date_i18n( 'F', $agora ) ),
-					'go' => 'agenda',
-					'a'  => 'Ver agenda',
-				),
-				array(
-					'l' => 'Exames pedidos',
-					'n' => number_format_i18n( $oper['exames_mes'] ),
-					'v' => $var( $oper['exames_mes'], $oper['anterior']['exames'] ),
-					'p' => ucfirst( date_i18n( 'F', $agora ) ),
-				),
-				array(
-					'l'  => 'Receita do mês',
-					'n'  => $fmt_valor( $oper['receita']['mes'] ),
-					'v'  => $var( $oper['receita']['mes'], $oper['anterior']['receita'] ),
-					'p'  => ucfirst( date_i18n( 'F', $agora ) ),
-					'go' => 'financas',
-					'a'  => 'Ver finanças',
-					'sm' => true,
-				),
-			);
-			foreach ( $kp as $k ) : ?>
-				<div class="ad-kpi">
-					<div class="ad-kpi__t">
-						<span class="ad-kpi__l"><?php echo esc_html( $k['l'] ); ?></span>
-						<span class="ad-kpi__p"><?php echo esc_html( $k['p'] ); ?></span>
-					</div>
-					<strong class="ad-kpi__n<?php echo ! empty( $k['sm'] ) ? ' ad-kpi__n--sm' : ''; ?> ad-num" data-final="<?php echo esc_attr( $k['n'] ); ?>"><?php echo esc_html( $k['n'] ); ?></strong>
-					<div class="ad-kpi__f">
-						<?php if ( null === $k['v'] ) : ?>
-							<span class="ad-trend">Primeiro mês de registo</span>
-						<?php else : ?>
-							<span class="ad-trend">
-								<b class="ad-trend--<?php echo $k['v'] >= 0 ? 'up' : 'down'; ?>"><?php echo $k['v'] >= 0 ? '+' : '−'; ?><?php echo abs( (int) $k['v'] ); ?>%</b>
-								face ao mês anterior
-							</span>
-						<?php endif; ?>
-						<?php if ( ! empty( $k['go'] ) ) : ?>
-							<a class="ad-kpi__a" href="#" data-go="<?php echo esc_attr( $k['go'] ); ?>"><?php echo esc_html( $k['a'] ); ?></a>
-						<?php endif; ?>
-					</div>
-				</div>
-			<?php endforeach; ?>
-		</section>
-
-		<!-- Volume e procura: camada tática -->
-		<section class="ad-charts pm-view" data-view="painel">
-			<div class="ad-card">
-				<div class="ad-card__h">
-					<strong>Atividade</strong>
-					<span class="ad-legend">
-						<i class="ad-dot ad-dot--a"></i><span>Consultas</span>
-						<i class="ad-dot ad-dot--b"></i><span>Exames</span>
-					</span>
-					<?php if ( $demo_vol ) : ?><span class="ad-card__s">Dados de exemplo</span><?php endif; ?>
-					<div class="ad-tabs" id="ad-tabs">
-						<button type="button" class="ad-tab" data-esc="semanal">Semanal</button>
-						<button type="button" class="ad-tab is-active" data-esc="mensal">Mensal</button>
-						<button type="button" class="ad-tab" data-esc="anual">Anual</button>
-					</div>
-				</div>
-				<p class="ad-read" id="ad-read"></p>
-				<div class="ad-plot" id="ad-plot" data-series="<?php echo esc_attr( wp_json_encode( array(
-					'semanal' => $vol['semanal'],
-					'mensal'  => $vol['mensal'],
-					'anual'   => $vol['anual'],
-				) ) ); ?>">
-					<div class="ad-plot__y" id="ad-y"></div>
-					<div class="ad-plot__c">
-						<div class="ad-plot__bars" id="ad-bars"></div>
-						<div class="ad-plot__x" id="ad-x"></div>
-					</div>
-				</div>
-			</div>
-
-			<div class="ad-card">
-				<?php
-				$esp_top = array_slice( $tat['por_especialidade'], 0, 4 );
-				$esp_tot = 0;
-				foreach ( $esp_top as $e ) {
-					$esp_tot += (int) $e['total'];
-				}
-				// Um donut com um só sector não mostra distribuição nenhuma.
-				$demo_esp = count( $esp_top ) < 2 || $esp_tot < 8;
-				if ( $demo_esp ) {
-					$esp_top = array(
-						array( 'esp' => 'Clínica Geral', 'total' => 148 ),
-						array( 'esp' => 'Pediatria', 'total' => 96 ),
-						array( 'esp' => 'Cardiologia', 'total' => 71 ),
-						array( 'esp' => 'Dermatologia', 'total' => 44 ),
-					);
-					$esp_tot = 359;
-				}
-				$cores = array( '#33566B', '#4E7E9B', '#7BA7C1', '#C3D6E2' );
-				?>
-				<div class="ad-card__h">
-					<strong>Especialidades mais procuradas</strong>
-					<span class="ad-card__s"><?php echo $demo_esp ? 'Dados de exemplo' : 'Desde o início'; ?></span>
-				</div>
-				<div class="ad-donut-wrap">
-					<div class="ad-donut">
-						<?php
-						// Anel em SVG: cada sector é um arco próprio, e por isso
-						// pode desenhar-se sozinho. O perímetro é 100, para as
-						// percentagens entrarem diretas no stroke-dasharray.
-						// Começa a zero: quem roda o anel para o topo é o
-						// transform do SVG, não o deslocamento.
-						$off = 0;
-						?>
-						<svg class="ad-ring" viewBox="0 0 42 42" role="img" aria-label="Distribuição por especialidade">
-							<circle class="ad-ring__bg" cx="21" cy="21" r="15.9155"></circle>
-							<?php foreach ( $esp_top as $i => $e ) :
-								$pct  = (int) $e['total'] / $esp_tot * 100;
-								$dash = round( $pct, 2 );
-								$off -= $pct;
-							?>
-								<circle class="ad-ring__s" data-seg="<?php echo (int) $i; ?>"
-									cx="21" cy="21" r="15.9155"
-									stroke="<?php echo esc_attr( $cores[ $i % 4 ] ); ?>"
-									stroke-dasharray="0 100"
-									data-dash="<?php echo esc_attr( $dash . ' ' . round( 100 - $dash, 2 ) ); ?>"
-									stroke-dashoffset="<?php echo esc_attr( (string) round( $off + $pct, 2 ) ); ?>"></circle>
-							<?php endforeach; ?>
-						</svg>
-						<div class="ad-donut__c">
-							<span class="ad-num" data-n="<?php echo (int) $esp_tot; ?>">0</span>
-							<small>consultas</small>
-						</div>
-					</div>
-					<ul class="ad-legend2">
-						<?php foreach ( $esp_top as $i => $e ) : ?>
-							<li data-seg="<?php echo (int) $i; ?>">
-								<i class="ad-dot" style="background:<?php echo esc_attr( $cores[ $i % 4 ] ); ?>"></i>
-								<span><?php echo esc_html( $e['esp'] ); ?></span>
-								<b><?php echo esc_html( number_format( (int) $e['total'] / $esp_tot * 100, 1, ',', '' ) ); ?>%</b>
-							</li>
-						<?php endforeach; ?>
-					</ul>
-				</div>
-			</div>
-		</section>
-
-		<!-- O dia e quem o está a fazer -->
-		<section class="ad-grid2 pm-view" data-view="painel">
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Operação de hoje</strong><span class="ad-card__s"><?php echo $demo_dia ? "Dados de exemplo" : "Atualiza a cada 2 minutos"; ?></span></div>
-				<div class="ad-gauge">
-					<div class="ad-gauge__n"><span class="ad-num" data-n="<?php echo (int) $oper['ocupacao']; ?>">0</span>%</div>
-					<div class="ad-gauge__l">ocupação dos <?php echo (int) $oper['medicos_ativos']; ?> médicos ativos</div>
-					<div class="ad-gauge__bar"><span style="width:<?php echo (int) $oper['ocupacao']; ?>%"></span></div>
-				</div>
-				<dl class="ad-dl">
-					<div><dt>Consultas hoje</dt><dd><?php echo (int) $oper['consultas']['hoje']; ?></dd></div>
-					<div><dt>Já atendidos</dt><dd><?php echo (int) $oper['atendidos']; ?></dd></div>
-					<div><dt>Em espera</dt><dd><?php echo (int) $oper['espera']; ?></dd></div>
-					<div><dt>A decorrer</dt><dd><?php echo (int) $oper['a_decorrer']; ?></dd></div>
-					<div><dt>Tempo de espera</dt><dd><?php echo (int) $oper['espera_min']; ?> min</dd></div>
-					<div><dt>Duração média</dt><dd><?php echo (int) $oper['consulta_min']; ?> min</dd></div>
-					<div><dt>Canceladas</dt><dd><?php echo (int) $oper['canceladas']; ?></dd></div>
-					<div><dt>Faltas</dt><dd><?php echo (int) $oper['faltas']; ?></dd></div>
-				</dl>
-			</div>
-
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Médicos em atividade</strong><span class="ad-card__s"><?php echo $demo_dia ? "Dados de exemplo" : "Hoje"; ?></span></div>
-				<?php
-				// Carga de hoje por médico, a partir das consultas já carregadas.
-				$carga = array();
-				foreach ( $consultas as $c ) {
-					if ( substr( $c['inicio'], 0, 10 ) !== $hoje_ymd ) {
-						continue;
-					}
-					$n = $c['med_nome'];
-					if ( ! isset( $carga[ $n ] ) ) {
-						$carga[ $n ] = array( 'n' => 0, 'ativo' => false );
-					}
-					$carga[ $n ]['n']++;
-					if ( in_array( $c['status'], array( 'em_atendimento', 'pausada', 'chamada' ), true ) ) {
-						$carga[ $n ]['ativo'] = true;
-					}
-				}
-				$lista_med = array_slice( $med_ativos, 0, 6 );
-				// Com o dia em amostra, a carga por médico acompanha, senão o
-				// cartão dizia 38 consultas e zero em cada médico.
-				if ( $demo_dia ) {
-					$amostra = array( array( 9, true ), array( 7, true ), array( 8, false ), array( 6, true ), array( 5, false ), array( 3, false ) );
-					$carga   = array();
-					foreach ( $lista_med as $i => $m ) {
-						$carga[ $m['nome'] ] = array( 'n' => $amostra[ $i % 6 ][0], 'ativo' => $amostra[ $i % 6 ][1] );
-					}
-				}
-				?>
-				<?php if ( $lista_med ) : ?>
-					<ul class="ad-docs">
-						<?php foreach ( $lista_med as $m ) :
-							$info   = $carga[ $m['nome'] ] ?? array( 'n' => 0, 'ativo' => false );
-							$estado = $info['ativo'] ? 'Em atendimento' : ( $info['n'] > 0 ? 'Com agenda' : 'Disponível' );
-							$cls    = $info['ativo'] ? 'on' : ( $info['n'] > 0 ? 'busy' : 'free' );
-						?>
-							<li class="ad-doc">
-								<div class="ad-doc__i">
-									<span class="ad-doc__n"><?php echo esc_html( $m['nome'] ); ?></span>
-									<span class="ad-doc__e"><?php echo esc_html( $m['esp_nome'] ?? '' ); ?></span>
-								</div>
-								<span class="ad-doc__p"><?php echo (int) $info['n']; ?> hoje</span>
-								<span class="ad-doc__s ad-doc__s--<?php echo $cls; ?>"><?php echo esc_html( $estado ); ?></span>
-							</li>
-						<?php endforeach; ?>
-					</ul>
-				<?php else : ?>
-					<p class="pm-empty">Sem médicos ativos</p>
-				<?php endif; ?>
-			</div>
-		</section>
-		<!-- ============================ FINANÇAS ============================
-		     Receita consolidada. Camada executiva: o valor vem dos agregados
-		     em cache, nunca de um SUM ao vivo sobre os pagamentos.
-		     ================================================================= -->
-		<section class="pm-view" data-view="financas" hidden>
-
-			<section class="ad-kpis">
-				<?php
-				$fin = array(
-					array( 'Receita de hoje', $fmt_valor( $oper['receita']['dia'] ), 'pagamentos confirmados hoje' ),
-					array( 'Receita da semana', $fmt_valor( $oper['receita']['semana'] ), 'semana em curso' ),
-					array( 'Receita do mês', $fmt_valor( $oper['receita']['mes'] ), 'mês em curso' ),
-					array( 'Por cobrar', $fmt_valor( $pag['pendente_valor'] ), (int) $pag['pendente_n'] . ' pagamentos pendentes' ),
-				);
-				foreach ( $fin as $c ) : ?>
-					<div class="ad-kpi">
-						<span class="ad-kpi__l"><?php echo esc_html( $c[0] ); ?></span>
-						<strong class="ad-kpi__n ad-kpi__n--sm"><?php echo esc_html( $c[1] ); ?></strong>
-						<div class="ad-kpi__f"><span class="ad-trend"><?php echo esc_html( $c[2] ); ?></span></div>
-					</div>
+			<div class="mt-kpis mt-kpis--texto">
+				<?php foreach ( $mt_kpis as $k ) : ?>
+					<a class="mt-kpi" href="#<?php echo esc_attr( $k[4] ); ?>" data-ir="<?php echo esc_attr( $k[4] ); ?>">
+						<span class="mt-kpi__l"><?php echo esc_html( $k[3] ); ?></span>
+						<span class="mt-kpi__n"><?php echo esc_html( $k[1] ); ?></span>
+						<?php echo $var_txt( $k[2], 'Taxa de comparência' === $k[3] ? ' p.p.' : '%' ); ?>
+					</a>
 				<?php endforeach; ?>
+			</div>
+
+			<div class="mt-esq">
+				<div class="mt-linha mt-linha--a">
+					<section class="mt-cartao mt-atividade" aria-labelledby="mt-g-ativ">
+						<div class="mt-cartao__cab">
+							<h2 class="mt-cartao__t" id="mt-g-ativ">Atividade da clínica</h2>
+							<div class="mt-cartao__fim">
+								<ul class="mt-legenda" aria-label="Legenda">
+									<li><i class="gf-chave gf-chave--barra gf-c--s1-claro"></i>Marcadas</li>
+									<li><i class="gf-chave gf-chave--barra gf-c--s1"></i>Realizadas</li>
+								</ul>
+							</div>
+						</div>
+						<?php
+						echo Clinica_Grafico::colunas(
+							array(
+								'titulo'   => 'Consultas ' . $dp['por_unidade'],
+								'rotulos'  => $dp['rotulos'],
+								'longos'   => $dp['longos'],
+								'saltar'   => $dp['saltar'],
+								'agrupado' => true,
+								'legenda'  => false,
+								'series'   => array(
+									array( 'nome' => 'Marcadas', 'valores' => $dp['serie']['marcadas'], 'cor' => 's1-claro' ),
+									array( 'nome' => 'Realizadas', 'valores' => $dp['serie']['realizadas'], 'cor' => 's1' ),
+								),
+								'formato'  => static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v ),
+								'eixo'     => static fn( $v ) => number_format_i18n( (int) $v ),
+								'vazio'    => 'Sem consultas nos últimos ' . $dp['label'] . '.',
+							)
+						);
+						?>
+						<dl class="mt-resumo">
+							<div><dt>Marcadas</dt><dd><?php echo esc_html( number_format_i18n( $at['marcadas'] ) ); ?></dd></div>
+							<div><dt>Realizadas</dt><dd><?php echo esc_html( number_format_i18n( $at['realizadas'] ) ); ?></dd></div>
+							<div><dt>Canceladas</dt><dd><?php echo esc_html( number_format_i18n( $at['canceladas'] ) ); ?></dd></div>
+							<div><dt>Faltas</dt><dd><?php echo esc_html( number_format_i18n( $at['faltas'] ) ); ?></dd></div>
+						</dl>
+					</section>
+
+					<section class="mt-cartao mt-idade" aria-labelledby="mt-g-idade">
+						<div class="mt-cartao__cab">
+							<h2 class="mt-cartao__t" id="mt-g-idade">Comparência e cobrança</h2>
+						</div>
+						<?php
+						echo Clinica_Grafico::aneis(
+							array(
+								'titulo' => 'Comparência e cobrança no período',
+								'itens'  => array(
+									array(
+										'rotulo' => 'Comparência',
+										'pct'    => $dp['comparencia'],
+										'cor'    => 'c1',
+										'det'    => sprintf( '%d realizadas, %d faltas', $at['realizadas'], $at['faltas'] ),
+									),
+									array(
+										'rotulo' => 'Cobrança',
+										'pct'    => $dp['cobranca'],
+										'cor'    => 'c2',
+									),
+								),
+							)
+						);
+						?>
+					</section>
+				</div>
+
+				<div class="mt-linha mt-linha--b">
+					<section class="mt-cartao" aria-labelledby="mt-g-met">
+						<div class="mt-cartao__cab">
+							<h2 class="mt-cartao__t" id="mt-g-met">Métodos de pagamento</h2>
+						</div>
+						<?php if ( $dp['metodos'] ) : ?>
+							<ul class="mt-icones">
+								<?php foreach ( $dp['metodos'] as $m => $v ) : ?>
+									<li><span><?php echo esc_html( $nomes_met[ $m ] ?? ucfirst( (string) $m ) ); ?></span><span class="mt-mudo"><?php echo esc_html( Clinica_Grafico::moeda( $v['v'] ) ); ?></span><b><?php echo (int) round( $total_met ? $v['v'] / $total_met * 100 : 0 ); ?>%</b></li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="mt-vazio">Sem pagamentos neste período.</p>
+						<?php endif; ?>
+						<a class="mt-ver" href="#financas" data-ir="financas">Ver finanças</a>
+					</section>
+
+					<section class="mt-cartao" aria-labelledby="mt-g-rec">
+						<div class="mt-cartao__cab">
+							<h2 class="mt-cartao__t" id="mt-g-rec">Atividade recente</h2>
+						</div>
+						<?php if ( $audit ) : ?>
+							<ul class="mt-icones mt-icones--feed">
+								<?php foreach ( array_slice( $audit, 0, 5 ) as $ev ) : ?>
+									<li><span><b><?php echo esc_html( $ev['acao'] ); ?></b> <?php echo esc_html( $ev['user_nome'] ?: 'Sistema' ); ?></span><span class="mt-mudo"><?php echo esc_html( 'há ' . human_time_diff( strtotime( $ev['criado_em'] ), $agora ) ); ?></span></li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="mt-vazio">Sem atividade registada.</p>
+						<?php endif; ?>
+						<a class="mt-ver" href="#auditoria" data-ir="auditoria">Ver auditoria</a>
+					</section>
+				</div>
+			</div>
+
+			<section class="mt-cartao mt-receita" aria-labelledby="mt-g-fat">
+				<div class="mt-cartao__cab">
+					<h2 class="mt-cartao__t" id="mt-g-fat">Faturação</h2>
+				</div>
+				<div class="mt-receita__caixa">
+					<span><?php echo esc_html( 'Faturado nos últimos ' . $dp['label'] ); ?></span>
+					<b><?php echo esc_html( Clinica_Grafico::moeda( $at['faturado'] ) ); ?></b>
+				<?php
+				echo Clinica_Grafico::linhas(
+					array(
+						'titulo'   => 'Faturado ' . $dp['por_unidade'],
+						'rotulos'  => $dp['rotulos'],
+						'longos'   => $dp['longos'],
+						'saltar'   => $dp['saltar'] * 2,
+						'suave'    => true,
+						'final'    => false,
+						'com_eixo' => false,
+						'minimo'   => 1000,
+						'series'   => array( array( 'nome' => 'Faturado', 'valores' => $dp['serie_faturado'], 'cor' => 'c1' ) ),
+						'formato'  => static fn( $v ) => Clinica_Grafico::moeda( (float) $v ),
+						'vazio'    => 'Sem faturação.',
+					)
+				);
+				?>
+				</div>
+				<?php if ( $dp['por_medico'] ) : ?>
+					<ul class="mt-pessoas">
+						<?php
+						$med_fat = $dp['por_medico'];
+						uasort( $med_fat, static fn( $x, $y ) => $y['faturado'] <=> $x['faturado'] );
+						foreach ( array_slice( $med_fat, 0, 4, true ) as $nome => $m ) :
+							?>
+							<li>
+								<span class="mt-pessoas__t"><b><?php echo esc_html( $nome ); ?></b><small><?php echo esc_html( $m['especialidade'] ); ?></small></span>
+								<span class="mt-pessoas__v"><?php echo esc_html( Clinica_Grafico::moeda( $m['faturado'] ) ); ?></span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+				<a class="mt-ver" href="#financas" data-ir="financas">Ver finanças</a>
 			</section>
 
-			<section class="ad-charts">
-				<div class="ad-card">
-					<div class="ad-card__h"><strong>Receita por especialidade</strong></div>
-					<?php if ( $exec['receita_esp'] ) : ?>
-						<?php
-						$rmax = 0;
-						foreach ( $exec['receita_esp'] as $r ) {
-							$rmax = max( $rmax, (float) $r['receita'] );
-						}
-						$rmax = max( 1, $rmax );
-						?>
-						<ul class="ad-bars">
-							<?php foreach ( $exec['receita_esp'] as $r ) : ?>
-								<li>
-									<span class="ad-bars__l"><?php echo esc_html( $r['esp'] ); ?></span>
-									<span class="ad-bars__t"><span style="width:<?php echo (int) round( (float) $r['receita'] / $rmax * 100 ); ?>%"></span></span>
-									<b class="ad-bars__v"><?php echo esc_html( $fmt_valor( $r['receita'] ) ); ?></b>
+		</section>
+
+		<!-- Finanças
+		     Forma da referência "FinEdge" (vidro sobre fundo teal suave):
+		     cabeçalho com pesquisa, avisos e período; cinco números; evolução
+		     da receita, receita por especialidade e pagamentos recentes; o
+		     cartão da clínica, métodos de pagamento e fluxo de cobrança.
+		     Animações com Motion (Framer Motion em JS) em assets/js/financas.js. -->
+		<?php
+		$fa       = $dp['atual'];
+		$fant     = $dp['anterior'];
+		$nomes_mt = class_exists( 'Clinica_Pagamentos' ) ? Clinica_Pagamentos::METODOS : array();
+		$mzn      = static fn( $v ) => Clinica_Grafico::moeda( (float) $v );
+		$contra   = 'vs ' . $dp['label'] . ' anteriores';
+		$fx_var   = static function ( ?int $v, bool $sobe_bom = true ) use ( $contra ): string {
+			if ( null === $v ) {
+				return '';
+			}
+			$bom = ( $v >= 0 ) === $sobe_bom;
+			return '<span class="fx-var" title="' . esc_attr( $contra ) . '"><b class="fx-var--' . ( $bom ? 'bom' : 'mau' ) . '">' . ( $v >= 0 ? '↑' : '↓' ) . ' ' . esc_html( abs( $v ) . '%' ) . '</b></span>';
+		};
+		$total_mt = array_sum( array_column( $dp['metodos'], 'v' ) );
+		$cartao   = $dp['metodos']['cartao'] ?? array( 'n' => 0, 'v' => 0.0 );
+		$moveis   = ( $dp['metodos']['mpesa']['v'] ?? 0 ) + ( $dp['metodos']['emola']['v'] ?? 0 );
+		// Receita por especialidade: até quatro fatias; o resto junta-se em "Outras".
+		$esp_f = $dp['por_esp'];
+		uasort( $esp_f, static fn( $x, $y ) => $y['faturado'] <=> $x['faturado'] );
+		$esp_f = array_filter( $esp_f, static fn( $e ) => $e['faturado'] > 0 );
+		if ( count( $esp_f ) > 4 ) {
+			$resto = array_slice( $esp_f, 3, null, true );
+			$esp_f = array_slice( $esp_f, 0, 3, true ) + array( 'Outras' => array( 'faturado' => array_sum( array_column( $resto, 'faturado' ) ) ) );
+		}
+		$esp_tot   = array_sum( array_column( $esp_f, 'faturado' ) );
+		$fx_kpis   = array(
+			array( 'financeiro', 'menta', 'Faturado', $fa['faturado'], $fx_var( Clinica_Painel::var_pct( $fa['faturado'], $fant['faturado'] ) ) ),
+			array( 'dinheiro', 'menta', 'Recebido', $fa['recebido'], $fx_var( Clinica_Painel::var_pct( $fa['recebido'], $fant['recebido'] ) ) ),
+			array( 'pendente', 'terra', 'Por receber', $fa['por_receber'], $fx_var( Clinica_Painel::var_pct( $fa['por_receber'], $fant['por_receber'] ), false ) ),
+		);
+		?>
+		<section class="pm-view fx" data-view="financas" hidden>
+
+			<header class="fx-topo">
+				<div>
+					<h1 class="fx-topo__t">Finanças</h1>
+				</div>
+				<?php Clinica_Painel::filtro( 'financas', $dp['periodo'] ); ?>
+			</header>
+
+			<div class="fx-kpis" data-fx-grupo>
+				<?php foreach ( $fx_kpis as $k ) : ?>
+					<div class="fx-cartao fx-kpi">
+						<div class="fx-kpi__t">
+							<span class="fx-kpi__l"><?php echo esc_html( $k[2] ); ?></span>
+							<b class="fx-kpi__v" data-fx-n="<?php echo esc_attr( (string) round( (float) $k[3] ) ); ?>" data-fx-suf=" <?php echo esc_attr( $moeda ); ?>"><?php echo esc_html( $mzn( $k[3] ) ); ?></b>
+							<?php echo $k[4]; ?>
+						</div>
+					</div>
+				<?php endforeach; ?>
+				<div class="fx-cartao fx-kpi">
+					<div class="fx-kpi__t">
+						<span class="fx-kpi__l">Cobrança</span>
+						<b class="fx-kpi__v"<?php echo null !== $dp['cobranca'] ? ' data-fx-n="' . esc_attr( (string) round( (float) $dp['cobranca'] ) ) . '" data-fx-suf="%"' : ''; ?>><?php echo esc_html( Clinica_Grafico::pct( $dp['cobranca'] ) ); ?></b>
+					</div>
+				</div>
+				<div class="fx-cartao fx-kpi">
+					<div class="fx-kpi__t">
+						<span class="fx-kpi__l">Prazo de cobrança</span>
+						<b class="fx-kpi__v"><?php echo esc_html( null === $dp['prazo'] ? '—' : number_format( (float) $dp['prazo'], 1, ',', ' ' ) . ' dias' ); ?></b>
+					</div>
+				</div>
+			</div>
+
+			<div class="fx-linha fx-linha--a" data-fx-grupo>
+				<section class="fx-cartao fx-saldo" aria-labelledby="fx-t-saldo">
+					<div class="fx-cab">
+						<h2 class="fx-cab__t" id="fx-t-saldo">Evolução da receita</h2>
+					</div>
+					<p class="fx-grande"><b data-fx-n="<?php echo esc_attr( (string) round( (float) $fa['recebido'] ) ); ?>" data-fx-suf=" <?php echo esc_attr( $moeda ); ?>"><?php echo esc_html( $mzn( $fa['recebido'] ) ); ?></b><?php echo $fx_var( Clinica_Painel::var_pct( $fa['recebido'], $fant['recebido'] ) ); ?></p>
+					<?php
+					echo Clinica_Grafico::linhas(
+						array(
+							'titulo'  => 'Recebido ' . $dp['por_unidade'],
+							'rotulos' => $dp['rotulos'],
+							'longos'  => $dp['longos'],
+							'saltar'  => $dp['saltar'],
+							'suave'   => true,
+							'final'   => false,
+							'minimo'  => 1000,
+							'series'  => array( array( 'nome' => 'Recebido', 'valores' => $dp['serie']['recebido'], 'cor' => 'c1' ) ),
+							'formato' => $mzn,
+							'vazio'   => 'Sem receita nos últimos ' . $dp['label'] . '.',
+						)
+					);
+					?>
+				</section>
+
+				<section class="fx-cartao fx-categorias" aria-labelledby="fx-t-cat">
+					<div class="fx-cab"><h2 class="fx-cab__t" id="fx-t-cat">Receita por especialidade</h2></div>
+					<?php
+					// Um anel por especialidade (parte do total); acima de três, as
+					// restantes juntam-se em "Outras".
+					$aneis = array();
+					$ci    = 0;
+					$esp_a = $esp_f;
+					if ( count( $esp_a ) > 3 ) {
+						$resto = array_slice( $esp_a, 2, null, true );
+						$esp_a = array_slice( $esp_a, 0, 2, true ) + array( 'Outras' => array( 'faturado' => array_sum( array_column( $resto, 'faturado' ) ) ) );
+					}
+					foreach ( $esp_a as $nome => $e ) {
+						$aneis[] = array(
+							'rotulo' => $nome,
+							'pct'    => $esp_tot ? $e['faturado'] / $esp_tot * 100 : null,
+							'cor'    => array( 'c1', 'c2', 'c3' )[ $ci++ ],
+						);
+					}
+					if ( $aneis ) {
+						echo Clinica_Grafico::aneis( array( 'titulo' => 'Receita por especialidade', 'itens' => $aneis ) );
+					} else {
+						echo '<p class="fx-vazio">Sem receita neste período.</p>';
+					}
+					?>
+				</section>
+
+				<section class="fx-cartao fx-transacoes" id="fx-pagamentos" aria-labelledby="fx-t-tr">
+					<div class="fx-cab">
+						<h2 class="fx-cab__t" id="fx-t-tr">Pagamentos recentes</h2>
+						<?php if ( count( $dp['pagamentos'] ) > 5 ) : ?><button type="button" class="fx-pilula fx-pilula--btn" data-fx-todos aria-expanded="false">Ver todos</button><?php endif; ?>
+					</div>
+					<?php if ( $dp['pagamentos'] ) : ?>
+						<ul class="fx-lista" id="fx-lista">
+							<?php foreach ( $dp['pagamentos'] as $i => $pg ) :
+								$pago = 'pago' === $pg['estado'];
+								?>
+								<li class="fx-item<?php echo $i >= 5 ? ' is-extra' : ''; ?>" data-q="<?php echo esc_attr( mb_strtolower( $pg['paciente'] . ' ' . $pg['medico'] ) ); ?>"<?php echo $i >= 5 ? ' hidden' : ''; ?>>
+									<span class="fx-item__t"><b><?php echo esc_html( $pg['paciente'] ); ?></b><small><?php echo esc_html( date_i18n( 'j M', strtotime( $pg['inicio'] ) ) ); ?></small></span>
+									<span class="fx-item__v<?php echo $pago ? ' is-entrada' : ''; ?>"><?php echo esc_html( ( $pago ? '+ ' : '' ) . $mzn( $pg['valor'] ) ); ?><?php echo $pago ? '' : '<small>Pendente</small>'; ?></span>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<p class="fx-vazio" id="fx-lista-nada" hidden>Nenhum pagamento com esse nome.</p>
+					<?php else : ?>
+						<p class="fx-vazio">Sem pagamentos neste período.</p>
+					<?php endif; ?>
+				</section>
+			</div>
+
+			<div class="fx-linha fx-linha--b" data-fx-grupo>
+				<section class="fx-cartao fx-cartoes" aria-labelledby="fx-t-cart">
+					<div class="fx-cab">
+						<h2 class="fx-cab__t" id="fx-t-cart">Contas de recebimento</h2>
+					</div>
+					<div class="fx-carrossel" data-fx-carrossel>
+						<div class="fx-carrossel__pista">
+							<div class="fx-slide" data-fx-slide>
+								<div class="fx-bci" data-fx-inclina role="img" aria-label="Cartão BCI Classic Visa da Clínica Vida">
+									<span class="fx-bci__petala fx-bci__petala--a" aria-hidden="true"></span>
+									<span class="fx-bci__petala fx-bci__petala--b" aria-hidden="true"></span>
+									<span class="fx-bci__brilho" aria-hidden="true"></span>
+									<span class="fx-bci__marca" aria-hidden="true">
+										<svg viewBox="0 0 40 24"><ellipse cx="11" cy="14" rx="4.2" ry="9" transform="rotate(-38 11 14)"/><ellipse cx="20" cy="10" rx="4.2" ry="9.5"/><ellipse cx="29" cy="14" rx="4.2" ry="9" transform="rotate(38 29 14)"/></svg>
+										<b>BCI</b><i>Classic</i>
+									</span>
+									<span class="fx-bci__chip" aria-hidden="true"><i></i><i></i><i></i></span>
+									<svg class="fx-bci__nfc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7a7 7 0 0 1 0 10M11.5 5a10 10 0 0 1 0 14M15 3a13 13 0 0 1 0 18"/></svg>
+									<span class="fx-bci__num">4338 •••• •••• 9010</span>
+									<span class="fx-bci__nome">CLÍNICA VIDA</span>
+									<span class="fx-bci__val"><small>VALID<br>THRU</small>05/27</span>
+									<span class="fx-bci__visa">VISA</span>
+								</div>
+								<div class="fx-cartao-info">
+									<span>Cartão</span>
+									<b><?php echo esc_html( $mzn( $cartao['v'] ) ); ?></b>
+								</div>
+							</div>
+							<div class="fx-slide" data-fx-slide hidden>
+								<div class="fx-movel" data-fx-inclina>
+									<span class="fx-movel__marca">Carteiras móveis</span>
+									<span class="fx-movel__chip" aria-hidden="true"></span>
+									<span class="fx-movel__nomes">M-Pesa · e-Mola</span>
+									<span class="fx-movel__rodape"><span>Clínica Vida</span><b><?php echo esc_html( $mzn( $moveis ) ); ?></b></span>
+								</div>
+								<div class="fx-cartao-info">
+									<span>Carteiras móveis</span>
+									<b><?php echo esc_html( $mzn( $moveis ) ); ?></b>
+								</div>
+							</div>
+						</div>
+						<div class="fx-pontos" role="tablist" aria-label="Contas">
+							<button type="button" role="tab" aria-selected="true" aria-label="Cartão bancário" data-fx-ir="0"></button>
+							<button type="button" role="tab" aria-selected="false" aria-label="Carteiras móveis" data-fx-ir="1"></button>
+						</div>
+					</div>
+				</section>
+
+				<section class="fx-cartao fx-metodos" aria-labelledby="fx-t-met">
+					<div class="fx-cab"><h2 class="fx-cab__t" id="fx-t-met">Métodos de pagamento</h2></div>
+					<?php if ( $dp['metodos'] ) : ?>
+						<ul class="fx-lista">
+							<?php foreach ( $dp['metodos'] as $m => $v ) : ?>
+								<li class="fx-item">
+									<span class="fx-item__t"><b><?php echo esc_html( $nomes_mt[ $m ] ?? ucfirst( (string) $m ) ); ?></b></span>
+									<span class="fx-item__n fx-quota"><?php echo esc_html( number_format( $total_mt ? $v['v'] / $total_mt * 100 : 0, 0, ',', ' ' ) . '%' ); ?></span>
+									<span class="fx-item__v"><?php echo esc_html( $mzn( $v['v'] ) ); ?></span>
 								</li>
 							<?php endforeach; ?>
 						</ul>
 					<?php else : ?>
-						<p class="pm-empty">Ainda não há pagamentos confirmados</p>
+						<p class="fx-vazio">Sem pagamentos recebidos neste período.</p>
 					<?php endif; ?>
-				</div>
+				</section>
 
-				<div class="ad-card">
-					<div class="ad-card__h"><strong>Cobrança</strong></div>
-					<?php
-					$total_fat = (float) $pag['pago_valor'] + (float) $pag['pendente_valor'];
-					$pct_pago  = $total_fat > 0 ? round( (float) $pag['pago_valor'] / $total_fat * 100 ) : 0;
-					?>
-					<div class="ad-gauge">
-						<div class="ad-gauge__n"><?php echo (int) $pct_pago; ?>%</div>
-						<div class="ad-gauge__l">do faturado já foi cobrado</div>
-						<div class="ad-gauge__bar"><span style="width:<?php echo (int) $pct_pago; ?>%"></span></div>
+				<section class="fx-cartao fx-fluxo" aria-labelledby="fx-t-fluxo">
+					<div class="fx-cab">
+						<h2 class="fx-cab__t" id="fx-t-fluxo">Fluxo de cobrança</h2>
 					</div>
-					<dl class="ad-dl">
-						<div><dt>Recebido</dt><dd><?php echo esc_html( $fmt_valor( $pag['pago_valor'] ) ); ?></dd></div>
-						<div><dt>Pagamentos</dt><dd><?php echo (int) $pag['pago_n']; ?></dd></div>
-						<div><dt>Por cobrar</dt><dd><?php echo esc_html( $fmt_valor( $pag['pendente_valor'] ) ); ?></dd></div>
-						<div><dt>Pendentes</dt><dd><?php echo (int) $pag['pendente_n']; ?></dd></div>
-					</dl>
-				</div>
-			</section>
+					<?php
+					echo Clinica_Grafico::divergente(
+						array(
+							'titulo'  => 'Recebido e por receber ' . $dp['por_unidade'],
+							'rotulos' => $dp['rotulos'],
+							'longos'  => $dp['longos'],
+							'saltar'  => $dp['saltar'],
+							'minimo'  => 1000,
+							'cima'    => array( 'nome' => 'Recebido', 'valores' => $dp['serie']['recebido'], 'cor' => 'c1' ),
+							'baixo'   => array( 'nome' => 'Por receber', 'valores' => $dp['serie']['por_receber'], 'cor' => 'c2' ),
+							'formato' => $mzn,
+							'vazio'   => 'Sem movimentos neste período.',
+						)
+					);
+					?>
+				</section>
+			</div>
 		</section>
-		<!-- =========================== AUDITORIA ===========================
+
+		<!-- Auditoria
 		     A Administração consulta os registos. A investigação técnica é do
-		     departamento de IT, por isso aqui só se lê, não se apaga.
-		     ================================================================= -->
+		     departamento de IT, por isso aqui só se lê, não se apaga. -->
 		<section class="pm-view" data-view="auditoria" hidden>
 
 			<?php $audit_full = class_exists( 'Clinica_Auditoria' ) ? Clinica_Auditoria::listar( 60 ) : array(); ?>
@@ -569,7 +638,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 				<?php endif; ?>
 			</div>
 		</section>
-		<!-- ========================= EQUIPA MÉDICA ========================= -->
+		<!-- Equipa médica -->
 		<section class="pm-view" data-view="equipa" hidden>
 			<?php
 			// Carga do mês por médico: sem isto a lista diz quem existe, mas não
@@ -589,48 +658,6 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 			}
 			$sem_medico = count( $especialidades ) - count( $esp_cobertas );
 			?>
-
-			<section class="ad-kpis ge-resumo">
-				<?php
-				$rs = array(
-					array(
-						'l' => 'Médicos ativos',
-						'n' => (string) count( $med_ativos ),
-						'p' => 'Em serviço',
-						't' => count( $medicos ) . ' no total',
-					),
-					array(
-						'l' => 'Médicos inativos',
-						'n' => (string) $med_inativos,
-						'p' => 'Fora de serviço',
-						't' => $med_inativos ? 'Não recebem marcações' : 'Toda a equipa em serviço',
-					),
-					array(
-						'l' => 'Especialidades cobertas',
-						'n' => count( $esp_cobertas ) . '/' . count( $especialidades ),
-						'p' => 'Cobertura',
-						't' => $sem_medico > 0 ? $sem_medico . ' sem médico ativo' : 'Todas com médico',
-					),
-					array(
-						'l' => 'Consultas do mês',
-						'n' => (string) array_sum( $carga_mes ),
-						'p' => ucfirst( date_i18n( 'F', $agora ) ),
-						't' => count( $med_ativos ) > 0
-							? round( array_sum( $carga_mes ) / count( $med_ativos ) ) . ' por médico em média'
-							: 'Sem médicos ativos',
-					),
-				);
-				foreach ( $rs as $r ) : ?>
-					<div class="ad-kpi">
-						<div class="ad-kpi__t">
-							<span class="ad-kpi__l"><?php echo esc_html( $r['l'] ); ?></span>
-							<span class="ad-kpi__p"><?php echo esc_html( $r['p'] ); ?></span>
-						</div>
-						<strong class="ad-kpi__n"><?php echo esc_html( $r['n'] ); ?></strong>
-						<div class="ad-kpi__f"><span class="ad-trend"><?php echo esc_html( $r['t'] ); ?></span></div>
-					</div>
-				<?php endforeach; ?>
-			</section>
 
 			<div class="ge-toolbar">
 				<input type="search" id="med-search" class="ge-search" placeholder="Procurar por nome, email ou nº de ordem" aria-label="Procurar médico">
@@ -691,158 +718,168 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 			<?php endif; ?>
 		</section>
 
-		<!-- ===================== NOVO MÉDICO (página dedicada) =====================
-		     A ordem dos grupos é a da conversa real: quem é a pessoa, o que faz
-		     na clínica, e como entra no sistema. As credenciais ficam no fim
-		     porque são o único ponto que exige explicação.
-		     ========================================================================= -->
-		<section class="pm-view" data-view="novo-medico" hidden>
-			<div class="ad-actions">
-				<a class="ge-btn ge-btn--ghost ge-btn--back" href="#" data-go="equipa">← Voltar à equipa</a>
+		<!-- Novo médico (página dedicada)
+		     Três passos à esquerda (quem é, o que faz na clínica, como entra no
+		     sistema) e, à direita, a fotografia e a pré-visualização de como o
+		     médico vai aparecer, que se atualiza enquanto se escreve. -->
+		<section class="pm-view mt-novo" data-view="novo-medico" hidden>
+			<div class="mt-barra">
+				<a class="mt-voltar" href="#equipa" data-go="equipa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Voltar à equipa</a>
 			</div>
 
-			<form method="post" class="ge-nform" enctype="multipart/form-data">
+			<form method="post" class="mt-novo__form" enctype="multipart/form-data" id="mt-novo-form">
 				<?php wp_nonce_field( 'ge_med', 'ge_nonce' ); ?>
 				<input type="hidden" name="ge_action" value="med_criar">
 
-				<div class="ge-nform__body">
-					<div class="ge-nform__main">
-						<div class="ge-nform__grp">
-							<div class="ge-nform__gh">
-								<h3 class="ge-nform__gt">Identificação</h3>
-								<span class="ge-nform__gn">1 de 3</span>
-							</div>
-							<div class="ge-grid">
-								<label class="ge-field ge-field--wide">
-									<span>Nome completo</span>
-									<input type="text" name="nome" required placeholder="Ex.: Ana Come">
-									<small>Sem o título. O sistema trata disso ao mostrar o nome.</small>
-								</label>
-								<label class="ge-field ge-field--wide">
-									<span>Telefone</span>
-									<input type="tel" name="telefone" placeholder="+258 84 000 0000">
-								</label>
-							</div>
-						</div>
-
-						<div class="ge-nform__grp">
-							<div class="ge-nform__gh">
-								<h3 class="ge-nform__gt">Atividade clínica</h3>
-								<span class="ge-nform__gn">2 de 3</span>
-							</div>
-							<div class="ge-grid">
-								<label class="ge-field ge-field--wide">
-									<span>Especialidade</span>
-									<select name="especialidade_id" required data-combo data-combo-ph="Escreva para procurar">
-										<option value="">Selecione</option>
-										<?php foreach ( $esp_ativas as $e ) : ?><option value="<?php echo (int) $e['id']; ?>"><?php echo esc_html( $e['nome'] ); ?></option><?php endforeach; ?>
-									</select>
-									<small>Define em que agenda o médico aparece ao paciente.</small>
-								</label>
-								<label class="ge-field">
-									<span>Nº de ordem</span>
-									<input type="text" name="num_ordem" placeholder="OM-0000">
-								</label>
-								<label class="ge-field">
-									<span>Consultório</span>
-									<input type="text" name="sala" placeholder="Ex.: Consultório 3">
-								</label>
-							</div>
-						</div>
-
-						<div class="ge-nform__grp">
-							<div class="ge-nform__gh">
-								<h3 class="ge-nform__gt">Acesso ao sistema</h3>
-								<span class="ge-nform__gn">3 de 3</span>
-							</div>
-							<div class="ge-grid">
-								<label class="ge-field">
-									<span>Email</span>
-									<input type="email" name="email" required placeholder="nome@clinica.mz">
-								</label>
-								<label class="ge-field">
-									<span>Palavra-passe</span>
-									<input type="password" name="pwd" minlength="6" required placeholder="Mínimo 6 caracteres">
-								</label>
-							</div>
-							<p class="ge-nform__nota">São estes os dados com que o médico entra no portal. A conta fica ativa
-							de imediato e passa a receber marcações. Entregue a palavra-passe em mão e peça que a mude.</p>
-						</div>
-					</div>
-
-					<aside class="ge-nform__side">
-						<div class="ge-nform__gh">
-							<h3 class="ge-nform__gt">Fotografia</h3>
-						</div>
-						<div class="ge-foto">
-							<span class="ge-foto__frame">
-								<img class="ge-foto__preview" id="med-foto-preview" src="" alt="" hidden>
-								<span class="ge-foto__ph" id="med-foto-ph">Sem foto</span>
-							</span>
-							<label class="ge-foto__btn">
-								<span>Escolher imagem</span>
-								<input type="file" name="foto" accept="image/*" id="med-foto-input" hidden>
+				<div class="mt-novo__corpo">
+					<section class="mt-cartao mt-passo" aria-labelledby="mt-n1">
+						<div class="mt-passo__cab"><h2 class="mt-cartao__t" id="mt-n1">Identificação</h2></div>
+						<div class="mt-form">
+							<label class="ge-field mt-form__larga">
+								<span>Nome completo</span>
+								<input type="text" name="nome" required placeholder="Ex.: Ana Come" data-ver="nome">
 							</label>
-							<p class="ge-foto__hint">JPG ou PNG, de preferência quadrada. Aparece na lista da equipa e na
-							marcação do paciente.</p>
+							<label class="ge-field mt-form__larga">
+								<span>Telefone</span>
+								<input type="tel" name="telefone" placeholder="+258 84 000 0000">
+							</label>
 						</div>
-					</aside>
+					</section>
+
+					<section class="mt-cartao mt-passo" aria-labelledby="mt-n2">
+						<div class="mt-passo__cab"><h2 class="mt-cartao__t" id="mt-n2">Atividade clínica</h2></div>
+						<div class="mt-form">
+							<label class="ge-field mt-form__larga">
+								<span>Especialidade</span>
+								<select name="especialidade_id" required data-combo data-combo-ph="Escreva para procurar" data-ver="esp">
+									<option value="">Selecione</option>
+									<?php foreach ( $esp_ativas as $e ) : ?><option value="<?php echo (int) $e['id']; ?>"><?php echo esc_html( $e['nome'] ); ?></option><?php endforeach; ?>
+								</select>
+							</label>
+							<label class="ge-field">
+								<span>Nº de ordem</span>
+								<input type="text" name="num_ordem" placeholder="OM-0000" data-ver="ordem">
+							</label>
+							<label class="ge-field">
+								<span>Consultório</span>
+								<input type="text" name="sala" placeholder="Ex.: Consultório 3" data-ver="sala">
+							</label>
+						</div>
+					</section>
+
+					<section class="mt-cartao mt-passo" aria-labelledby="mt-n3">
+						<div class="mt-passo__cab"><h2 class="mt-cartao__t" id="mt-n3">Acesso ao sistema</h2></div>
+						<div class="mt-form">
+							<label class="ge-field">
+								<span>Email</span>
+								<input type="email" name="email" required placeholder="nome@clinica.mz">
+							</label>
+							<label class="ge-field">
+								<span>Palavra-passe</span>
+								<input type="password" name="pwd" minlength="6" required placeholder="Mínimo 6 caracteres">
+							</label>
+						</div>
+					</section>
 				</div>
 
-				<div class="ge-nform__foot">
-					<span class="ge-nform__req">Os campos sem indicação são opcionais</span>
-					<a class="ge-btn ge-btn--ghost" href="#" data-go="equipa">Cancelar</a>
+				<aside class="mt-novo__lado">
+					<section class="mt-cartao mt-previa" aria-labelledby="mt-nv">
+						<h2 class="mt-cartao__t" id="mt-nv">Pré-visualização</h2>
+						<div class="mt-previa__foto">
+							<img class="ge-foto__preview" id="med-foto-preview" src="" alt="" hidden>
+							<span class="mt-previa__ini" id="med-foto-ph" aria-hidden="true">?</span>
+						</div>
+						<p class="mt-previa__nome" data-ver-saida="nome">Nome do médico</p>
+						<p class="mt-previa__esp" data-ver-saida="esp">Especialidade</p>
+						<dl class="mt-previa__dados">
+							<div><dt>Nº de ordem</dt><dd data-ver-saida="ordem">—</dd></div>
+							<div><dt>Consultório</dt><dd data-ver-saida="sala">—</dd></div>
+						</dl>
+						<label class="ge-btn ge-btn--ghost mt-previa__btn">
+							Escolher fotografia
+							<input type="file" name="foto" accept="image/*" id="med-foto-input" hidden>
+						</label>
+					</section>
+				</aside>
+
+				<div class="mt-novo__pe">
+					<a class="ge-btn ge-btn--ghost" href="#equipa" data-go="equipa">Cancelar</a>
 					<button type="submit" class="ge-btn ge-btn--primary">Criar médico</button>
 				</div>
 			</form>
 		</section>
 
-		<!-- ========================= ESPECIALIDADES ========================= -->
-		<section class="pm-view" data-view="especialidades" hidden>
-			<div class="ad-actions">
-				<a class="ge-btn ge-btn--primary" href="#" data-go="nova-especialidade">+ Nova especialidade</a>
+		<!-- Especialidades
+		     Uma linha por especialidade: nome e descrição, a equipa que a faz,
+		     a procura e o faturado do período do painel, o estado e a edição
+		     (que abre por baixo da linha, sem sair da página). -->
+		<?php
+		$med_por_esp = array();
+		foreach ( $medicos as $m ) {
+			if ( (int) $m['ativo'] === 1 ) {
+				$med_por_esp[ $m['esp_nome'] ][] = $m['nome'];
+			}
+		}
+		?>
+		<section class="pm-view mt-esp" data-view="especialidades" hidden>
+			<div class="mt-barra">
+				<label class="mt-procura">
+					<span class="db-sr">Procurar especialidade</span>
+					<input type="search" id="mt-esp-q" placeholder="Procurar especialidade">
+				</label>
+				<span class="mt-mudo"><?php echo esc_html( sprintf( '%d especialidades', count( $especialidades ) ) ); ?></span>
+				<a class="ge-btn ge-btn--primary" href="#nova-especialidade" data-go="nova-especialidade">Nova especialidade</a>
 			</div>
-				<div class="ge-tbl">
-					<div class="ge-tbl__head">
-						<span>Especialidade</span><span>Descrição</span><span>Médicos</span><span>Estado</span><span></span>
-					</div>
-					<?php foreach ( $especialidades as $e ) :
-						$n = (int) ( $cont_med[ (int) $e['id'] ] ?? 0 );
-					?>
-						<details class="ge-tr">
-							<summary class="ge-tr__row">
-								<span class="ge-tr__name"><?php echo esc_html( $e['nome'] ); ?></span>
-								<span class="ge-tr__desc"><?php echo esc_html( $e['descricao'] ?: '—' ); ?></span>
-								<span class="ge-tr__med"><?php echo $n; ?></span>
-								<span><span class="ge-status ge-status--<?php echo $e['ativo'] ? 'on' : 'off'; ?>"><?php echo $e['ativo'] ? 'Ativa' : 'Inativa'; ?></span></span>
-								<span class="ge-tr__edit">Editar</span>
-							</summary>
-							<div class="ge-tr__panel">
-								<form method="post" class="ge-form">
-									<?php wp_nonce_field( 'ge_esp', 'ge_nonce' ); ?>
-									<input type="hidden" name="ge_action" value="esp_editar">
-									<input type="hidden" name="id" value="<?php echo (int) $e['id']; ?>">
-									<div class="ge-grid">
+
+			<div class="mt-cartao mt-tabela-cartao">
+				<?php if ( $especialidades ) : ?>
+					<div class="mt-tabela mt-tabela--esp" id="mt-esp-lista">
+						<div class="mt-tabela__cab"><span>Especialidade</span><span>Equipa</span><span class="r">Consultas</span><span class="r">Faturado</span><span>Estado</span><span class="r">Ação</span></div>
+						<?php foreach ( $especialidades as $e ) :
+							$equipa = $med_por_esp[ $e['nome'] ] ?? array();
+							$proc   = $dp['por_esp'][ $e['nome'] ] ?? array( 'marcadas' => 0, 'faturado' => 0 );
+							?>
+							<details class="mt-esp__item" data-q="<?php echo esc_attr( mb_strtolower( $e['nome'] . ' ' . $e['descricao'] ) ); ?>">
+								<summary class="mt-tabela__linha">
+									<span class="mt-esp__nome">
+										<span><b><?php echo esc_html( $e['nome'] ); ?></b><small><?php echo esc_html( $e['descricao'] ?: 'Sem descrição' ); ?></small></span>
+									</span>
+									<span class="mt-esp__equipa"><?php echo $equipa ? esc_html( implode( ', ', $equipa ) ) : '<span class="mt-mudo">Sem médico ativo</span>'; ?></span>
+									<span class="r mt-hora"><?php echo (int) $proc['marcadas']; ?></span>
+									<span class="r mt-hora"><?php echo esc_html( Clinica_Grafico::moeda( (float) $proc['faturado'] ) ); ?></span>
+									<span><span class="mt-estado mt-estado--<?php echo $e['ativo'] ? 'ativa' : 'inativa'; ?>"><?php echo $e['ativo'] ? 'Ativa' : 'Inativa'; ?></span></span>
+									<span class="r"><span class="mt-editar">Editar</span></span>
+								</summary>
+								<div class="mt-esp__painel">
+									<form method="post" class="mt-esp__form">
+										<?php wp_nonce_field( 'ge_esp', 'ge_nonce' ); ?>
+										<input type="hidden" name="ge_action" value="esp_editar">
+										<input type="hidden" name="id" value="<?php echo (int) $e['id']; ?>">
 										<label class="ge-field"><span>Nome</span><input type="text" name="nome" value="<?php echo esc_attr( $e['nome'] ); ?>"></label>
-										<label class="ge-field ge-field--wide"><span>Descrição</span><input type="text" name="descricao" value="<?php echo esc_attr( $e['descricao'] ); ?>"></label>
+										<label class="ge-field mt-esp__desc"><span>Descrição</span><input type="text" name="descricao" value="<?php echo esc_attr( $e['descricao'] ); ?>"></label>
 										<label class="ge-check"><input type="checkbox" name="ativo" value="1" <?php checked( (int) $e['ativo'], 1 ); ?>> Ativa</label>
-									</div>
-									<button class="ge-btn ge-btn--primary" type="submit">Guardar alterações</button>
-								</form>
-								<form method="post" class="ge-tr__del" onsubmit="return confirm('Remover esta especialidade?');">
-									<?php wp_nonce_field( 'ge_esp', 'ge_nonce' ); ?>
-									<input type="hidden" name="ge_action" value="esp_apagar">
-									<input type="hidden" name="id" value="<?php echo (int) $e['id']; ?>">
-									<button class="ge-act ge-act--danger" type="submit">Remover especialidade</button>
-								</form>
-							</div>
-						</details>
-					<?php endforeach; ?>
-					<?php if ( ! $especialidades ) : ?><p class="ge-empty">Ainda não há especialidades.</p><?php endif; ?>
-				</div>
+										<div class="mt-esp__acoes">
+											<button class="ge-btn ge-btn--primary" type="submit">Guardar alterações</button>
+										</div>
+									</form>
+									<form method="post" class="mt-esp__apagar" onsubmit="return confirm('Remover esta especialidade?');">
+										<?php wp_nonce_field( 'ge_esp', 'ge_nonce' ); ?>
+										<input type="hidden" name="ge_action" value="esp_apagar">
+										<input type="hidden" name="id" value="<?php echo (int) $e['id']; ?>">
+										<button class="ge-btn ge-btn--ghost" type="submit">Remover especialidade</button>
+									</form>
+								</div>
+							</details>
+						<?php endforeach; ?>
+					</div>
+					<p class="mt-vazio mt-filtro-vazio" id="mt-esp-nada" hidden>Nenhuma especialidade encontrada.</p>
+				<?php else : ?>
+					<p class="mt-vazio">Sem especialidades.</p>
+				<?php endif; ?>
+			</div>
 		</section>
 
-		<!-- ==================== NOVA ESPECIALIDADE (página dedicada) ==================== -->
+		<!-- Nova especialidade (página dedicada) -->
 		<section class="pm-view" data-view="nova-especialidade" hidden>
 			<div class="ad-actions">
 				<a class="ge-btn ge-btn--ghost ge-btn--back" href="#" data-go="especialidades">← Voltar às especialidades</a>
@@ -872,49 +909,125 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 			</form>
 		</section>
 
-		<!-- ============================= AGENDA ============================= -->
-		<section class="pm-view" data-view="agenda" hidden>
-			<div class="ad-actions">
+		<!-- Agenda
+		     Calendário do mês à esquerda (dias com consultas marcados) e as
+		     próximas consultas da clínica à direita, por dia, com filtros por
+		     médico e por estado. Resumo do dia e da semana na barra de cima. -->
+		<?php
+		$ag_hoje  = count( array_filter( $consultas, static fn( $c ) => substr( $c['inicio'], 0, 10 ) === $hoje_ymd && 'cancelada' !== $c['status'] ) );
+		$ag_7d    = count( array_filter( $futuras, static fn( $c ) => strtotime( $c['inicio'] ) < strtotime( '+7 day', $agora ) ) );
+		$ag_pend  = count( array_filter( $futuras, static fn( $c ) => 'pendente' === $c['status'] ) );
+		$ag_meds  = array_values( array_unique( array_filter( array_column( $futuras, 'med_nome' ) ) ) );
+		sort( $ag_meds );
+		$ag_meses = array();
+		for ( $mi = 0; $mi < 3; $mi++ ) {
+			$ag_meses[] = strtotime( date( 'Y-m-01', strtotime( "first day of +{$mi} month", $agora ) ) );
+		}
+		$ag_sem = array( 'S', 'T', 'Q', 'Q', 'S', 'S', 'D' );
+		?>
+		<section class="pm-view mt-agenda" data-view="agenda" hidden>
+
+			<div class="mt-barra">
+				<dl class="mt-barra__resumo">
+					<div><dt>Hoje</dt><dd><?php echo (int) $ag_hoje; ?></dd></div>
+					<div><dt>Próximos 7 dias</dt><dd><?php echo (int) $ag_7d; ?></dd></div>
+					<div><dt>Por confirmar</dt><dd><?php echo (int) $ag_pend; ?></dd></div>
+					<div><dt>Médicos com agenda</dt><dd><?php echo count( $ag_meds ); ?></dd></div>
+				</dl>
 				<?php if ( $pode_agenda ) : ?>
-					<a class="ge-btn ge-btn--primary" href="#" data-go="horarios">Gerir horários e folgas</a>
+					<a class="ge-btn ge-btn--primary" href="#horarios" data-go="horarios">Horários e folgas</a>
 				<?php endif; ?>
 			</div>
-				<?php if ( $agenda_por_dia ) : ?>
-					<div class="pm-agenda">
-						<?php foreach ( $agenda_por_dia as $dia => $items ) :
-							$ts = strtotime( $dia );
-							$is_hoje = ( $dia === $hoje_ymd );
-						?>
-							<div class="pm-agenda__day">
-								<div class="pm-agenda__date">
-									<span class="pm-agenda__dnum"><?php echo esc_html( date_i18n( 'j', $ts ) ); ?></span>
-									<span class="pm-agenda__dwrap">
-										<span class="pm-agenda__dweek"><?php echo esc_html( date_i18n( 'l', $ts ) ); ?><?php echo $is_hoje ? ' · Hoje' : ''; ?></span>
-										<span class="pm-agenda__dmon"><?php echo esc_html( date_i18n( 'F Y', $ts ) ); ?></span>
-									</span>
-									<span class="pm-agenda__dcount"><?php echo count( $items ); ?> consulta<?php echo 1 === count( $items ) ? '' : 's'; ?></span>
-								</div>
-								<div class="pm-agenda__slots">
-									<?php foreach ( $items as $f ) : ?>
-										<div class="pm-agenda__slot">
-											<span class="pm-agenda__time"><?php echo esc_html( $fmt_hora( $f['inicio'] ) ); ?></span>
-											<div class="pm-agenda__info">
-												<div class="pm-agenda__name"><?php echo esc_html( $f['pac_nome'] ); ?></div>
-												<div class="pm-agenda__meta"><?php echo esc_html( $f['esp_nome'] ); ?><?php echo ! empty( $f['med_nome'] ) ? ' · ' . esc_html( $f['med_nome'] ) : ''; ?></div>
-											</div>
-											<span class="pm-st pm-st--<?php echo esc_attr( $f['status'] ); ?>"><?php echo esc_html( $labels[ $f['status'] ] ?? $f['status'] ); ?></span>
-										</div>
-									<?php endforeach; ?>
-								</div>
-							</div>
-						<?php endforeach; ?>
+
+			<div class="mt-agenda__grelha">
+				<section class="mt-cartao mt-mes" aria-label="Calendário">
+					<div class="mt-mes__nav">
+						<button type="button" class="mt-mes__seta" data-mes="-1" aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+						<span class="mt-mes__t" aria-live="polite"><?php echo esc_html( ucfirst( date_i18n( 'F Y', $ag_meses[0] ) ) ); ?></span>
+						<button type="button" class="mt-mes__seta" data-mes="1" aria-label="Mês seguinte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
 					</div>
-				<?php else : ?>
-					<p class="pm-empty">Sem consultas agendadas.</p>
-				<?php endif; ?>
+					<?php foreach ( $ag_meses as $mi => $m_ts ) :
+						$m_dias = (int) date( 't', $m_ts );
+						$m_off  = (int) date( 'N', $m_ts ) - 1;
+						?>
+						<div class="mt-mes__grelha" data-titulo="<?php echo esc_attr( ucfirst( date_i18n( 'F Y', $m_ts ) ) ); ?>"<?php echo $mi ? ' hidden' : ''; ?>>
+							<?php foreach ( $ag_sem as $sn ) : ?><span class="mt-mes__sem"><?php echo esc_html( $sn ); ?></span><?php endforeach; ?>
+							<?php for ( $b = 0; $b < $m_off; $b++ ) : ?><span></span><?php endfor; ?>
+							<?php for ( $dd = 1; $dd <= $m_dias; $dd++ ) :
+								$ymd = date( 'Y-m-', $m_ts ) . str_pad( (string) $dd, 2, '0', STR_PAD_LEFT );
+								$n_d = count( $agenda_por_dia[ $ymd ] ?? array() );
+								$cls = 'mt-mes__dia' . ( $ymd === $hoje_ymd ? ' is-hoje' : '' ) . ( $n_d ? ' tem' : '' ) . ( $ymd < $hoje_ymd ? ' is-passado' : '' );
+								if ( $n_d ) :
+									?>
+									<a class="<?php echo esc_attr( $cls ); ?>" href="#mt-ag-<?php echo esc_attr( $ymd ); ?>" aria-label="<?php echo esc_attr( date_i18n( 'j \d\e F', strtotime( $ymd ) ) . ', ' . sprintf( _n( '%d consulta', '%d consultas', $n_d, 'clinica' ), $n_d ) ); ?>"><?php echo (int) $dd; ?></a>
+								<?php else : ?>
+									<span class="<?php echo esc_attr( $cls ); ?>"><?php echo (int) $dd; ?></span>
+								<?php endif; ?>
+							<?php endfor; ?>
+						</div>
+					<?php endforeach; ?>
+					<ul class="mt-mes__legenda">
+						<li><i class="mt-mes__ponto"></i>Dia com consultas</li>
+						<li><i class="mt-mes__anel"></i>Hoje</li>
+					</ul>
+				</section>
+
+				<section class="mt-cartao mt-tabela-cartao" aria-labelledby="mt-ag-t">
+					<div class="mt-cartao__cab">
+						<h2 class="mt-cartao__t" id="mt-ag-t">Próximas consultas</h2>
+						<div class="mt-ferramentas">
+							<label class="mt-select">
+								<span class="db-sr">Filtrar por médico</span>
+								<select id="mt-ag-med">
+									<option value="">Todos os médicos</option>
+									<?php foreach ( $ag_meds as $nm ) : ?>
+										<option value="<?php echo esc_attr( $nm ); ?>"><?php echo esc_html( $nm ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</label>
+							<label class="mt-select">
+								<span class="db-sr">Filtrar por estado</span>
+								<select id="mt-ag-est">
+									<option value="">Todos os estados</option>
+									<option value="pendente">Por confirmar</option>
+									<option value="confirmada">Confirmadas</option>
+								</select>
+							</label>
+						</div>
+					</div>
+
+					<?php if ( $agenda_por_dia ) : ?>
+						<div class="mt-tabela mt-tabela--agenda" id="mt-ag-lista">
+							<div class="mt-tabela__cab">
+								<span>Hora</span><span>Paciente</span><span>Médico</span><span>Especialidade</span><span>Estado</span>
+							</div>
+							<?php foreach ( $agenda_por_dia as $dia => $items ) :
+								$ts_d = strtotime( $dia );
+								?>
+								<div class="mt-tabela__dia" id="mt-ag-<?php echo esc_attr( $dia ); ?>" data-dia="<?php echo esc_attr( $dia ); ?>">
+									<span class="mt-tabela__diat"><?php echo esc_html( ucfirst( date_i18n( 'l, j \d\e F', $ts_d ) ) . ( $dia === $hoje_ymd ? ' · Hoje' : '' ) ); ?></span>
+									<span class="mt-tabela__dian"><?php echo esc_html( sprintf( _n( '%d consulta', '%d consultas', count( $items ), 'clinica' ), count( $items ) ) ); ?></span>
+								</div>
+								<?php foreach ( $items as $f ) : ?>
+									<div class="mt-tabela__linha" data-dia="<?php echo esc_attr( $dia ); ?>" data-med="<?php echo esc_attr( $f['med_nome'] ?? '' ); ?>" data-est="<?php echo esc_attr( $f['status'] ); ?>">
+										<span class="mt-hora"><?php echo esc_html( $fmt_hora( $f['inicio'] ) ); ?></span>
+										<span class="mt-pessoa"><b><?php echo esc_html( $f['pac_nome'] ); ?></b></span>
+										<span><?php echo esc_html( $f['med_nome'] ?? '' ); ?></span>
+										<span class="mt-mudo"><?php echo esc_html( $f['esp_nome'] ); ?></span>
+										<span><span class="mt-estado mt-estado--<?php echo esc_attr( $f['status'] ); ?>"><?php echo esc_html( 'pendente' === $f['status'] ? 'Por confirmar' : ( $labels[ $f['status'] ] ?? $f['status'] ) ); ?></span></span>
+									</div>
+								<?php endforeach; ?>
+							<?php endforeach; ?>
+						</div>
+						<p class="mt-vazio mt-filtro-vazio" id="mt-ag-nada" hidden>Sem consultas com estes filtros.</p>
+					<?php else : ?>
+						<p class="mt-vazio">Sem consultas agendadas.</p>
+					<?php endif; ?>
+				</section>
+			</div>
 		</section>
 
-		<!-- ==================== HORÁRIOS E FOLGAS (agenda no shell) ==================== -->
+		<!-- Horários e folgas (agenda no shell) -->
 		<?php if ( $pode_agenda ) : ?>
 		<section class="pm-view" data-view="horarios" hidden>
 
@@ -928,7 +1041,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 					<label class="ge-field"><span>Médico</span>
 						<select name="medico" data-combo data-combo-ph="Escreva para procurar" onchange="this.form.submit()">
 							<?php foreach ( $ag_meds as $m ) : ?>
-								<option value="<?php echo (int) $m['id']; ?>" <?php selected( (int) $m['id'], $ag_sel ); ?>><?php echo esc_html( $ag_nome( $m['nome'] ) . ' — ' . $m['esp'] ); ?></option>
+								<option value="<?php echo (int) $m['id']; ?>" <?php selected( (int) $m['id'], $ag_sel ); ?>><?php echo esc_html( $ag_nome( $m['nome'] ) . ' · ' . $m['esp'] ); ?></option>
 							<?php endforeach; ?>
 						</select>
 					</label>
@@ -945,7 +1058,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 					</form>
 					<div class="gh-grid">
 						<div class="ad-panel gh-col-wide">
-							<div class="ad-panel__head"><h3>Horário semanal — <?php echo esc_html( $ag_nome( $ag_sel_med['nome'] ) ); ?></h3></div>
+							<div class="ad-panel__head"><h3>Horário semanal de <?php echo esc_html( $ag_nome( $ag_sel_med['nome'] ) ); ?></h3></div>
 							<form method="post" class="gh-addrow">
 								<?php wp_nonce_field( 'ag_manage', 'ag_nonce' ); ?>
 								<input type="hidden" name="ag_action" value="hor_add">
@@ -1043,7 +1156,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		</section>
 		<?php endif; ?>
 
-		<!-- ============================ DEFINIÇÕES ============================ -->
+		<!-- Definições -->
 		<?php if ( $pode_config ) : ?>
 		<section class="pm-view" data-view="definicoes" hidden>
 			<form method="post" class="ad-cfg ad-panel">
@@ -1058,8 +1171,8 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 					<div class="ad-grp__f">
 						<label class="ge-field"><span>Abertura</span><input type="time" name="hora_abertura" value="<?php echo esc_attr( Clinica_Config::get( 'hora_abertura', '08:00' ) ); ?>"></label>
 						<label class="ge-field"><span>Fecho</span><input type="time" name="hora_fecho" value="<?php echo esc_attr( Clinica_Config::get( 'hora_fecho', '20:00' ) ); ?>"></label>
-						<label class="ge-field"><span>Almoço — início</span><input type="time" name="intervalo_inicio" value="<?php echo esc_attr( Clinica_Config::get( 'intervalo_inicio', '13:00' ) ); ?>"></label>
-						<label class="ge-field"><span>Almoço — fim</span><input type="time" name="intervalo_fim" value="<?php echo esc_attr( Clinica_Config::get( 'intervalo_fim', '14:00' ) ); ?>"></label>
+						<label class="ge-field"><span>Almoço (início)</span><input type="time" name="intervalo_inicio" value="<?php echo esc_attr( Clinica_Config::get( 'intervalo_inicio', '13:00' ) ); ?>"></label>
+						<label class="ge-field"><span>Almoço (fim)</span><input type="time" name="intervalo_fim" value="<?php echo esc_attr( Clinica_Config::get( 'intervalo_fim', '14:00' ) ); ?>"></label>
 					</div>
 				</div>
 
@@ -1078,7 +1191,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 				<div class="ad-grp">
 					<div class="ad-grp__t">
 						<h3>Limites de carga</h3>
-						<p>Travões de segurança: quando o limite é atingido, deixam de aparecer vagas — mesmo com o médico livre.</p>
+						<p>Travões de segurança: quando o limite é atingido, deixam de aparecer vagas, mesmo com o médico livre.</p>
 					</div>
 					<div class="ad-grp__f">
 						<label class="ge-field"><span>Máx. por dia</span><input type="number" min="1" name="max_consultas_dia" value="<?php echo esc_attr( Clinica_Config::int( 'max_consultas_dia', 40 ) ); ?>"></label>
@@ -1095,6 +1208,19 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 						<label class="ge-field"><span>Valor da consulta</span><input type="number" min="0" name="valor_consulta_padrao" value="<?php echo esc_attr( Clinica_Config::int( 'valor_consulta_padrao', 1000 ) ); ?>"></label>
 						<label class="ge-field"><span>Moeda</span><input type="text" name="moeda" maxlength="6" value="<?php echo esc_attr( Clinica_Config::get( 'moeda', 'MZN' ) ); ?>"></label>
 						<label class="ge-check ad-grp__ck"><input type="checkbox" name="pagamento_obrigatorio" value="1" <?php checked( Clinica_Config::bool( 'pagamento_obrigatorio' ), true ); ?>> Exigir pagamento antes da consulta</label>
+					</div>
+				</div>
+
+				<div class="ad-grp">
+					<div class="ad-grp__t">
+						<h3>Redes sociais</h3>
+						<p>Aparecem no rodapé do site. Sem endereço, a rede não aparece; o WhatsApp usa o primeiro telefone da clínica se ficar vazio.</p>
+					</div>
+					<div class="ad-grp__f">
+						<label class="ge-field"><span>WhatsApp (número ou link)</span><input type="text" name="rede_whatsapp" inputmode="tel" placeholder="+258 84 000 0000" value="<?php echo esc_attr( Clinica_Config::get( 'rede_whatsapp', '' ) ); ?>"></label>
+						<label class="ge-field"><span>Facebook</span><input type="url" name="rede_facebook" placeholder="https://www.facebook.com/…" value="<?php echo esc_attr( Clinica_Config::get( 'rede_facebook', '' ) ); ?>"></label>
+						<label class="ge-field"><span>Instagram</span><input type="url" name="rede_instagram" placeholder="https://www.instagram.com/…" value="<?php echo esc_attr( Clinica_Config::get( 'rede_instagram', '' ) ); ?>"></label>
+						<label class="ge-field"><span>TikTok</span><input type="url" name="rede_tiktok" placeholder="https://www.tiktok.com/@…" value="<?php echo esc_attr( Clinica_Config::get( 'rede_tiktok', '' ) ); ?>"></label>
 					</div>
 				</div>
 
@@ -1119,69 +1245,92 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 			</div>
 		</div>
 
-		<!-- =================== PROPOR À DIREÇÃO (Gestão -> Direção) ===================
-		     Comunicação entre portais: a Gestão submete um pedido estratégico que
-		     sobe à Direção para decisão. A Gestão vê aqui o estado da resposta.
-		     =========================================================================== -->
-		<section class="pm-view" data-view="propostas" hidden>
-			<?php if ( $pode_propor ) : ?>
-				<div class="ad-card ge-propor">
-					<div class="ad-card__h"><strong>Propor uma decisão à Direção</strong><span class="ad-card__s">Sobe para aprovação</span></div>
-					<form method="post">
-						<?php wp_nonce_field( 'dir_propor', 'dir_nonce' ); ?>
-						<input type="hidden" name="dir_action" value="propor">
-						<div class="ge-grid">
-							<label class="ge-field ge-field--wide"><span>O que propõe</span><input type="text" name="titulo" required placeholder="Ex.: Abrir especialidade de Oftalmologia"></label>
-							<label class="ge-field"><span>Tipo</span>
+		<!-- Propor à Direção (Gestão -> Direção)
+		     Formulário à esquerda, como funciona e o resumo à direita, e a lista
+		     das propostas em baixo, com filtro por estado. A Gestão submete; a
+		     Direção decide; a resposta volta a aparecer aqui. -->
+		<?php
+		$pr_cont = array( 'pendente' => 0, 'aprovado' => 0, 'rejeitado' => 0 );
+		foreach ( $propostas as $pp ) {
+			if ( isset( $pr_cont[ $pp['estado'] ] ) ) {
+				$pr_cont[ $pp['estado'] ]++;
+			}
+		}
+		$pr_tipos = array(
+			'especialidade' => 'Nova especialidade',
+			'orcamento'     => 'Orçamento',
+			'investimento'  => 'Investimento em equipamento',
+			'contratacao'   => 'Contratação',
+			'precos'        => 'Alteração de preços',
+			'geral'         => 'Geral',
+		);
+		?>
+		<section class="pm-view mt-prop" data-view="propostas" hidden>
+			<div class="mt-prop__topo">
+				<?php if ( $pode_propor ) : ?>
+					<section class="mt-cartao mt-prop__form" aria-labelledby="mt-pr-t">
+						<div class="mt-cartao__cab">
+							<h2 class="mt-cartao__t" id="mt-pr-t">Nova proposta</h2>
+						</div>
+						<form method="post" class="mt-form">
+							<?php wp_nonce_field( 'dir_propor', 'dir_nonce' ); ?>
+							<input type="hidden" name="dir_action" value="propor">
+							<label class="ge-field mt-form__larga"><span>O que propõe</span><input type="text" name="titulo" required placeholder="Ex.: Abrir a especialidade de Oftalmologia"></label>
+							<label class="ge-field"><span>Tipo de decisão</span>
 								<select name="tipo">
-									<option value="especialidade">Nova especialidade</option>
-									<option value="orcamento">Orçamento</option>
-									<option value="investimento">Investimento em equipamento</option>
-									<option value="contratacao">Contratação</option>
-									<option value="precos">Alteração de preços</option>
-									<option value="geral">Geral</option>
+									<?php foreach ( $pr_tipos as $k => $rot ) : ?><option value="<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $rot ); ?></option><?php endforeach; ?>
 								</select>
 							</label>
-							<label class="ge-field"><span>Valor estimado (<?php echo esc_html( $moeda ); ?>, opcional)</span><input type="number" name="valor" min="0" step="any" placeholder="0"></label>
-							<label class="ge-field ge-field--wide"><span>Justificação</span><textarea name="detalhe" rows="3" placeholder="Contexto, impacto esperado e porque precisa da decisão da Direção"></textarea></label>
-						</div>
-						<div class="ge-propor__foot"><button type="submit" class="ge-btn ge-btn--primary">Enviar à Direção</button></div>
-					</form>
-				</div>
-			<?php endif; ?>
+							<label class="ge-field"><span>Valor estimado (<?php echo esc_html( $moeda ); ?>)</span><input type="number" name="valor" min="0" step="any" placeholder="Opcional"></label>
+							<label class="ge-field mt-form__larga"><span>Justificação</span><textarea name="detalhe" rows="5" placeholder="Contexto, impacto e custo"></textarea></label>
+							<div class="mt-form__pe mt-form__larga">
+								<button type="submit" class="ge-btn ge-btn--primary">Enviar à Direção</button>
+							</div>
+						</form>
+					</section>
+				<?php endif; ?>
 
-			<div class="ad-card">
-				<div class="ad-card__h"><strong>Propostas submetidas</strong><span class="ad-card__s"><?php echo count( $propostas ); ?> no total</span></div>
+				<aside class="mt-prop__lado">
+					<section class="mt-cartao" aria-label="Resumo das propostas">
+						<dl class="mt-prop__resumo">
+							<div><dt>Pendentes</dt><dd><?php echo (int) $pr_cont['pendente']; ?></dd></div>
+							<div><dt>Aprovadas</dt><dd><?php echo (int) $pr_cont['aprovado']; ?></dd></div>
+							<div><dt>Rejeitadas</dt><dd><?php echo (int) $pr_cont['rejeitado']; ?></dd></div>
+						</dl>
+					</section>
+				</aside>
+			</div>
+
+			<section class="mt-cartao mt-tabela-cartao" aria-labelledby="mt-pr-lista">
+				<div class="mt-cartao__cab">
+					<h2 class="mt-cartao__t" id="mt-pr-lista">Propostas submetidas</h2>
+					<?php if ( $propostas ) : ?>
+						<nav class="mt-abas" id="mt-pr-abas" aria-label="Filtrar por estado">
+							<button type="button" data-est="" aria-pressed="true">Todas <span><?php echo count( $propostas ); ?></span></button>
+							<button type="button" data-est="pendente" aria-pressed="false">Pendentes <span><?php echo (int) $pr_cont['pendente']; ?></span></button>
+							<button type="button" data-est="aprovado" aria-pressed="false">Aprovadas <span><?php echo (int) $pr_cont['aprovado']; ?></span></button>
+							<button type="button" data-est="rejeitado" aria-pressed="false">Rejeitadas <span><?php echo (int) $pr_cont['rejeitado']; ?></span></button>
+						</nav>
+					<?php endif; ?>
+				</div>
 				<?php if ( $propostas ) : ?>
-					<div class="ge-prop-wrap">
-						<table class="ge-prop">
-							<thead>
-								<tr><th>Proposta</th><th>Tipo</th><th class="r">Valor</th><th>Estado</th><th class="r">Submetida</th></tr>
-							</thead>
-							<tbody>
-								<?php foreach ( $propostas as $p ) : ?>
-									<tr>
-										<td class="ge-prop__k">
-											<b><?php echo esc_html( $p['titulo'] ); ?></b>
-											<?php if ( ! empty( $p['detalhe'] ) ) : ?><small><?php echo esc_html( $p['detalhe'] ); ?></small><?php endif; ?>
-											<?php if ( 'pendente' !== $p['estado'] && $p['decisor'] ) : ?><small>Decidido por <?php echo esc_html( $p['decisor'] ); ?><?php echo ! empty( $p['nota'] ) ? ' · ' . esc_html( $p['nota'] ) : ''; ?></small><?php endif; ?>
-										</td>
-										<td><?php echo esc_html( ucfirst( $p['tipo'] ) ); ?></td>
-										<td class="r"><?php echo null !== $p['valor'] ? esc_html( $fmt_valor( $p['valor'] ) ) : '—'; ?></td>
-										<td><span class="ge-pest ge-pest--<?php echo esc_attr( $p['estado'] ); ?>"><?php echo esc_html( $prop_labels[ $p['estado'] ] ?? $p['estado'] ); ?></span></td>
-										<td class="r"><?php echo esc_html( date_i18n( 'd/m/Y', strtotime( $p['criado_em'] ) ) ); ?></td>
-									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
+					<div class="mt-tabela mt-tabela--prop" id="mt-pr-tab">
+						<div class="mt-tabela__cab"><span>Proposta</span><span>Tipo</span><span class="r">Valor</span><span>Estado</span><span>Decisão</span><span class="r">Submetida</span></div>
+						<?php foreach ( $propostas as $p ) : ?>
+							<div class="mt-tabela__linha" data-est="<?php echo esc_attr( $p['estado'] ); ?>">
+								<span class="mt-prop__k"><b><?php echo esc_html( $p['titulo'] ); ?></b><?php if ( ! empty( $p['detalhe'] ) ) : ?><small><?php echo esc_html( wp_trim_words( $p['detalhe'], 18, '…' ) ); ?></small><?php endif; ?></span>
+								<span class="mt-mudo"><?php echo esc_html( $pr_tipos[ $p['tipo'] ] ?? ucfirst( $p['tipo'] ) ); ?></span>
+								<span class="r mt-hora"><?php echo null !== $p['valor'] ? esc_html( $fmt_valor( $p['valor'] ) ) : '—'; ?></span>
+								<span><span class="mt-estado mt-estado--<?php echo esc_attr( $p['estado'] ); ?>"><?php echo esc_html( $prop_labels[ $p['estado'] ] ?? $p['estado'] ); ?></span></span>
+								<span class="mt-mudo"><?php echo 'pendente' !== $p['estado'] && $p['decisor'] ? esc_html( $p['decisor'] . ( ! empty( $p['nota'] ) ? ' · ' . $p['nota'] : '' ) ) : 'A aguardar'; ?></span>
+								<span class="r mt-mudo"><?php echo esc_html( date_i18n( 'd/m/Y', strtotime( $p['criado_em'] ) ) ); ?></span>
+							</div>
+						<?php endforeach; ?>
 					</div>
 				<?php else : ?>
-					<div class="pm-blank">
-						<p class="pm-blank__t">Ainda não submeteu nenhuma proposta</p>
-						<p class="pm-blank__s">Use o formulário acima para enviar um pedido estratégico à Direção.</p>
-					</div>
+					<p class="mt-vazio">Sem propostas submetidas.</p>
 				<?php endif; ?>
-			</div>
+			</section>
 		</section>
 
 	</main>
@@ -1190,7 +1339,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 </div>
 <script>
 ( function () {
-	// --- Navegação de vistas + submenu da barra lateral ---
+	// Navegação de vistas + submenu da barra lateral
 	var side = document.querySelector( '.pm-side' );
 	if ( ! side ) { return; }
 	var items = side.querySelectorAll( '[data-go]' );
@@ -1204,8 +1353,18 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		}
 		return null;
 	}
+	var titulos = {
+		painel: 'Visão geral', equipa: 'Equipa médica', 'novo-medico': 'Novo médico',
+		especialidades: 'Especialidades', 'nova-especialidade': 'Nova especialidade',
+		agenda: 'Agenda da clínica', horarios: 'Horários e folgas', financas: 'Finanças',
+		propostas: 'Propor à Direção', auditoria: 'Auditoria', definicoes: 'Definições'
+	};
+	var tituloEl = document.querySelector( '[data-mt-titulo]' );
 	function show( v ) {
 		views.forEach( function ( s ) { s.hidden = ( s.dataset.view !== v ); } );
+		if ( tituloEl ) { tituloEl.textContent = titulos[ v ] || 'Gestão'; }
+		if ( shell ) { shell.setAttribute( 'data-vista', v ); }
+		document.dispatchEvent( new CustomEvent( 'clinica:vista', { detail: v } ) );
 		items.forEach( function ( i ) { i.classList.toggle( 'is-active', i.dataset.go === v ); } );
 		var atual = grupoDe( v );
 		groups.forEach( function ( g ) {
@@ -1216,6 +1375,10 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		window.scrollTo( 0, 0 );
 	}
 	clickers.forEach( function ( i ) { i.addEventListener( 'click', function ( e ) { e.preventDefault(); show( i.dataset.go ); } ); } );
+	// Atalhos dentro das vistas (cartões e ligações dos painéis).
+	document.querySelectorAll( '[data-ir]' ).forEach( function ( a ) {
+		a.addEventListener( 'click', function ( e ) { e.preventDefault(); show( a.dataset.ir ); } );
+	} );
 	// Cabeçalhos de grupo: clicar abre/fecha o submenu (acordeão, um aberto de cada vez).
 	side.querySelectorAll( '[data-toggle]' ).forEach( function ( t ) {
 		t.addEventListener( 'click', function ( e ) {
@@ -1232,9 +1395,16 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 	else if ( /[?&]cl=med_criado/.test( location.search ) ) { inicial = 'equipa'; }
 	else if ( /[?&]cl=esp_criada/.test( location.search ) ) { inicial = 'especialidades'; }
 	else if ( /[?&]medico=/.test( location.search ) || /[?&]cl=ag_/.test( location.search ) ) { inicial = 'horarios'; }
+	// O filtro de período recarrega a página com #painel ou #financas: volta lá.
+	var marca = ( location.hash || '' ).replace( '#', '' );
+	if ( 'painel' === inicial && marca && document.querySelector( '.pm-view[data-view="' + marca + '"]' ) ) { inicial = marca; }
 	show( inicial );
+	window.addEventListener( 'hashchange', function () {
+		var v = ( location.hash || '' ).replace( '#', '' );
+		if ( v && document.querySelector( '.pm-view[data-view="' + v + '"]' ) ) { show( v ); }
+	} );
 
-	// --- Filtro da equipa: pesquisa (texto) + categoria (especialidade) ---
+	// Filtro da equipa: pesquisa (texto) + categoria (especialidade)
 	var busca = document.getElementById( 'med-search' ),
 		cat = document.getElementById( 'med-filter' ),
 		tbl = document.getElementById( 'med-tbl' ),
@@ -1255,7 +1425,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		if ( cat ) { cat.addEventListener( 'change', filtrar ); }
 	}
 
-	// --- Confirmação no sistema antes de desativar (em vez do confirm do browser) ---
+	// Confirmação no sistema antes de desativar (em vez do confirm do browser)
 	var cmodal = document.getElementById( 'ge-confirm' );
 	if ( cmodal ) {
 		var pendente = null;
@@ -1277,7 +1447,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		document.addEventListener( 'keydown', function ( e ) { if ( 'Escape' === e.key && ! cmodal.hidden ) { cfechar(); } } );
 	}
 
-	// --- Pré-visualização da foto do novo médico ---
+	// Pré-visualização da foto do novo médico
 	var fInput = document.getElementById( 'med-foto-input' ),
 		fPrev = document.getElementById( 'med-foto-preview' ),
 		fPh = document.getElementById( 'med-foto-ph' );
@@ -1291,88 +1461,91 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		} );
 	}
 
-	// --- Gráfico de atividade: barras agrupadas, três escalas ---
+	// Agenda da clínica: filtros por médico e estado; meses do calendário
 	( function () {
-		var plot = document.getElementById( 'ad-plot' );
-		if ( ! plot ) { return; }
-		var series, barras = document.getElementById( 'ad-bars' ),
-			eixoX = document.getElementById( 'ad-x' ),
-			eixoY = document.getElementById( 'ad-y' ),
-			leitura = document.getElementById( 'ad-read' ),
-			repouso = '',
-			tabs = document.getElementById( 'ad-tabs' );
-		try { series = JSON.parse( plot.dataset.series ); } catch ( e ) { return; }
-
-		function desenhar( escala ) {
-			var d = series[ escala ];
-			if ( ! d ) { return; }
-			var max = 1, i;
-			for ( i = 0; i < d.consultas.length; i++ ) {
-				max = Math.max( max, d.consultas[ i ], d.exames[ i ] );
-			}
-			// Topo redondo, para o eixo não dar números estranhos.
-			var passo = Math.pow( 10, Math.floor( Math.log( max ) / Math.LN10 ) );
-			max = Math.ceil( max / passo ) * passo;
-
-			eixoY.innerHTML = '';
-			for ( i = 4; i >= 0; i-- ) {
-				var y = document.createElement( 'span' );
-				y.textContent = Math.round( max * i / 4 );
-				eixoY.appendChild( y );
-			}
-
-			var tc = 0, te = 0;
-			for ( i = 0; i < d.consultas.length; i++ ) { tc += d.consultas[ i ]; te += d.exames[ i ]; }
-			repouso = tc.toLocaleString( 'pt-PT' ) + ' consultas e ' + te.toLocaleString( 'pt-PT' ) + ' exames no período';
-			if ( leitura ) { leitura.textContent = repouso; }
-			barras.innerHTML = '';
-			eixoX.innerHTML = '';
-			d.labels.forEach( function ( rotulo, k ) {
-				var g = document.createElement( 'div' );
-				g.className = 'ad-mes';
-				g.dataset.r = rotulo;
-				g.dataset.c = d.consultas[ k ];
-				g.dataset.e = d.exames[ k ];
-				[ 'a', 'b' ].forEach( function ( serie, j ) {
-					var v = j === 0 ? d.consultas[ k ] : d.exames[ k ];
-					var b = document.createElement( 'span' );
-					b.className = 'ad-bar ad-bar--' + serie;
-					b.style.height = Math.round( v / max * 100 ) + '%';
-					b.style.animationDelay = ( k * 0.035 + j * 0.015 ).toFixed( 3 ) + 's';
-					g.appendChild( b );
-				} );
-				barras.appendChild( g );
-
-				var x = document.createElement( 'span' );
-				// Em escala semanal só se rotula de duas em duas, para não amontoar.
-				x.textContent = ( 'semanal' === escala && k % 2 !== 0 ) ? '' : rotulo;
-				eixoX.appendChild( x );
+		var lista = document.getElementById( 'mt-ag-lista' );
+		var med = document.getElementById( 'mt-ag-med' ), est = document.getElementById( 'mt-ag-est' );
+		var nada = document.getElementById( 'mt-ag-nada' );
+		function filtrar() {
+			if ( ! lista ) { return; }
+			var m = med ? med.value : '', e = est ? est.value : '', dias = {}, n = 0;
+			lista.querySelectorAll( '.mt-tabela__linha' ).forEach( function ( l ) {
+				var ok = ( ! m || l.dataset.med === m ) && ( ! e || l.dataset.est === e );
+				l.hidden = ! ok;
+				if ( ok ) { dias[ l.dataset.dia ] = true; n++; }
 			} );
+			lista.querySelectorAll( '.mt-tabela__dia' ).forEach( function ( d ) { d.hidden = ! dias[ d.dataset.dia ]; } );
+			if ( nada ) { nada.hidden = n > 0; }
 		}
+		if ( med ) { med.addEventListener( 'change', filtrar ); }
+		if ( est ) { est.addEventListener( 'change', filtrar ); }
 
-		if ( leitura ) {
-			barras.addEventListener( 'mouseover', function ( e ) {
-				var g = e.target.closest( '.ad-mes' );
-				if ( ! g ) { return; }
-				leitura.innerHTML = '<b>' + g.dataset.r + '</b> ' + g.dataset.c + ' consultas, ' + g.dataset.e + ' exames';
-			} );
-			barras.addEventListener( 'mouseleave', function () { leitura.textContent = repouso; } );
+		var caixa = document.querySelector( '.mt-mes' );
+		if ( ! caixa ) { return; }
+		var meses = caixa.querySelectorAll( '.mt-mes__grelha' ), titulo = caixa.querySelector( '.mt-mes__t' );
+		var setas = caixa.querySelectorAll( '[data-mes]' ), i = 0;
+		function ir( k ) {
+			i = Math.max( 0, Math.min( meses.length - 1, k ) );
+			meses.forEach( function ( m, x ) { m.hidden = x !== i; } );
+			titulo.textContent = meses[ i ].dataset.titulo;
+			setas[0].disabled = 0 === i;
+			setas[1].disabled = meses.length - 1 === i;
 		}
-
-		if ( tabs ) {
-			tabs.addEventListener( 'click', function ( e ) {
-				var b = e.target.closest( '.ad-tab' );
-				if ( ! b ) { return; }
-				tabs.querySelectorAll( '.ad-tab' ).forEach( function ( o ) {
-					o.classList.toggle( 'is-active', o === b );
-				} );
-				desenhar( b.dataset.esc );
-			} );
-		}
-		desenhar( 'mensal' );
+		setas.forEach( function ( b ) { b.addEventListener( 'click', function () { ir( i + parseInt( b.dataset.mes, 10 ) ); } ); } );
+		ir( 0 );
 	} )();
 
-	// --- Pesquisa no registo de auditoria ---
+	// Especialidades: pesquisa por nome ou descrição
+	( function () {
+		var q = document.getElementById( 'mt-esp-q' ), lista = document.getElementById( 'mt-esp-lista' );
+		var nada = document.getElementById( 'mt-esp-nada' );
+		if ( ! q || ! lista ) { return; }
+		q.addEventListener( 'input', function () {
+			var t = q.value.trim().toLowerCase(), n = 0;
+			lista.querySelectorAll( '.mt-esp__item' ).forEach( function ( it ) {
+				var ok = ! t || ( it.dataset.q || '' ).indexOf( t ) !== -1;
+				it.hidden = ! ok;
+				if ( ok ) { n++; }
+			} );
+			if ( nada ) { nada.hidden = n > 0; }
+		} );
+	} )();
+
+	// Propostas: abas por estado
+	( function () {
+		var abas = document.getElementById( 'mt-pr-abas' ), tab = document.getElementById( 'mt-pr-tab' );
+		if ( ! abas || ! tab ) { return; }
+		abas.addEventListener( 'click', function ( e ) {
+			var b = e.target.closest( 'button' );
+			if ( ! b ) { return; }
+			abas.querySelectorAll( 'button' ).forEach( function ( o ) { o.setAttribute( 'aria-pressed', o === b ? 'true' : 'false' ); } );
+			tab.querySelectorAll( '.mt-tabela__linha' ).forEach( function ( l ) { l.hidden = !! b.dataset.est && l.dataset.est !== b.dataset.est; } );
+		} );
+	} )();
+
+	// Novo médico: pré-visualização enquanto se escreve
+	( function () {
+		var f = document.getElementById( 'mt-novo-form' );
+		if ( ! f ) { return; }
+		var vazio = { nome: 'Nome do médico', esp: 'Especialidade', ordem: '—', sala: '—' };
+		var ini = document.getElementById( 'med-foto-ph' );
+		function atualizar( campo ) {
+			var k = campo.dataset.ver, v = campo.value.trim();
+			if ( 'SELECT' === campo.tagName ) { v = campo.value ? campo.options[ campo.selectedIndex ].text : ''; }
+			var saida = f.querySelector( '[data-ver-saida="' + k + '"]' );
+			if ( saida ) { saida.textContent = v || vazio[ k ]; }
+			if ( 'nome' === k && ini ) {
+				var p = v.split( /\s+/ ).filter( Boolean );
+				ini.textContent = p.length ? ( p[0][0] + ( p.length > 1 ? p[ p.length - 1 ][0] : '' ) ).toUpperCase() : '?';
+			}
+		}
+		f.querySelectorAll( '[data-ver]' ).forEach( function ( c ) {
+			c.addEventListener( 'input', function () { atualizar( c ); } );
+			c.addEventListener( 'change', function () { atualizar( c ); } );
+		} );
+	} )();
+
+	// Pesquisa no registo de auditoria
 	( function () {
 		var q = document.getElementById( 'ad-audit-q' ),
 			lista = document.getElementById( 'ad-audit-list' ),
@@ -1389,7 +1562,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		} );
 	} )();
 
-	// --- Animações do painel ---
+	// Animações do painel
 	( function () {
 		var suave = ! window.matchMedia || ! window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
 
@@ -1508,7 +1681,7 @@ $ag_base  = remove_query_arg( array( 'cl' ) );
 		tocar();
 	} )();
 
-	// --- Combobox pesquisável ---
+	// Combobox pesquisável
 	// Melhora um <select> existente: mantém-no no DOM (escondido) para o
 	// formulário continuar a submeter na mesma e para funcionar sem JS.
 	( function () {

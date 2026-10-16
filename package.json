@@ -1,0 +1,15 @@
+{
+  "name": "clinica-vida",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tema WordPress da Clínica Vida: site público e portais da clínica.",
+  "author": "Eclesio Abner Pembelane <eclesioabner@gmail.com>",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}

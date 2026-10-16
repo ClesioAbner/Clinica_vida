@@ -1,6 +1,10 @@
 <?php
 /**
- * Sobre · A nossa história + missão, visão e valores (editorial, sem badges).
+ * Sobre · A nossa história — bloco editorial (.cv-editorial): título à
+ * esquerda, texto à direita, como o FAQ da página "visit us" da referência.
+ *
+ * As especialidades citadas vêm da BD (antes estavam escritas à mão e já não
+ * batiam certo com as que existem).
  *
  * @package Clinica
  */
@@ -8,44 +12,23 @@
 declare( strict_types = 1 );
 defined( 'ABSPATH' ) || exit;
 
-$pilares = array(
-	array(
-		'rotulo' => 'Missão',
-		'texto'  => 'Oferecer a cada pessoa que nos procura um cuidado próximo, competente e acessível, do primeiro contacto ao acompanhamento continuado.',
-	),
-	array(
-		'rotulo' => 'Visão',
-		'texto'  => 'Ser uma referência de confiança na saúde em Maputo, reconhecida pela qualidade clínica e pela forma como tratamos quem cuidamos.',
-	),
-	array(
-		'rotulo' => 'Valores',
-		'texto'  => 'Rigor clínico, escuta honesta, respeito pela pessoa e transparência em cada decisão e em cada explicação que damos.',
-	),
-);
+$nomes = array_map( static fn( array $e ): string => mb_strtolower( $e['nome'] ), Clinica_Repo::especialidades() );
+$lista = count( $nomes ) > 1 ? implode( ', ', array_slice( $nomes, 0, -1 ) ) . ' e ' . end( $nomes ) : implode( '', $nomes );
 ?>
-<section class="sob-historia" data-screen="SobreHistoria">
-	<div class="sob-container">
+<section id="historia" class="cv-sec cv-editorial" aria-labelledby="sob-historia-titulo">
+	<div class="hp-container cv-editorial__grelha">
 
-		<div class="sob-historia__grid">
-			<div class="sob-historia__aside">
-				<div class="sob-eyebrow">A Nossa História</div>
-				<h2 class="sob-historia__title">Construída para cuidar de perto</h2>
-			</div>
-
-			<div class="sob-historia__body">
-				<p>A Clínica Vida abriu portas em Sommerschield, no coração de Maputo, para responder a uma necessidade concreta: um sítio onde marcar uma consulta fosse simples e onde o médico tivesse tempo para ouvir.</p>
-				<p>Hoje reunimos várias especialidades sob o mesmo teto — cardiologia, pediatria, ortopedia, neurologia, medicina interna e medicina geral — para que uma família encontre num só lugar a maior parte do que precisa, sem andar de porta em porta.</p>
-				<p>Acreditamos que a boa medicina se faz de duas coisas que não se compram: competência e atenção. É esse o equilíbrio que procuramos em cada consulta, todos os dias.</p>
-			</div>
+		<div class="cv-head cv-head--esq" data-revelar>
+			<p class="cv-eyebrow">A nossa história</p>
+			<h2 id="sob-historia-titulo" class="cv-h2">Um sítio onde o médico tem tempo para ouvir</h2>
 		</div>
 
-		<div class="sob-pilares">
-			<?php foreach ( $pilares as $p ) : ?>
-				<div class="sob-pilar">
-					<div class="sob-pilar__rotulo"><?php echo esc_html( $p['rotulo'] ); ?></div>
-					<p class="sob-pilar__texto"><?php echo esc_html( $p['texto'] ); ?></p>
-				</div>
-			<?php endforeach; ?>
+		<div class="cv-editorial__texto" data-revelar-grupo>
+			<p>A Clínica Vida abriu portas em Sommerschield, no coração de Maputo, para responder a uma necessidade concreta: um sítio onde marcar uma consulta fosse simples e onde o médico tivesse tempo para ouvir.</p>
+			<?php if ( $lista ) : ?>
+				<p>Hoje reunimos sob o mesmo teto <?php echo esc_html( $lista ); ?>. Assim, uma família encontra num só lugar a maior parte do que precisa, sem andar de porta em porta.</p>
+			<?php endif; ?>
+			<p>Acreditamos que a boa medicina se faz de duas coisas que não se compram: competência e atenção. É esse o equilíbrio que procuramos em cada consulta, todos os dias.</p>
 		</div>
 
 	</div>

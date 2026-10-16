@@ -1,0 +1,18 @@
+{
+  "useTabs": true,
+  "tabWidth": 4,
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": "*.css",
+      "options": { "singleQuote": false }
+    },
+    {
+      "files": ["*.json", "*.md"],
+      "options": { "useTabs": false, "tabWidth": 2 }
+    }
+  ]
+}

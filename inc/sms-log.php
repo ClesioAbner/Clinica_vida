@@ -46,7 +46,7 @@ final class Clinica_Sms_Log {
 		update_option( 'clinica_sms_db', self::DB_VERSION );
 	}
 
-	/** ADAPTAR AO FORNECEDOR — cada um inventa os seus estados. */
+	// ADAPTAR AO FORNECEDOR — cada um inventa os seus estados. */
 	public static function traduzir( string $bruto ): string {
 		return match ( strtolower( trim( $bruto ) ) ) {
 			'delivered', 'delivrd', 'success', 'entregue' => 'entregue',

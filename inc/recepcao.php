@@ -143,7 +143,7 @@ function clinica_recepcao_render_recibo( int $pagamento_id ): void {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title><?php echo esc_html( $numero . ' — Clínica Vida' ); ?></title>
+	<title><?php echo esc_html( $numero . ' · Clínica Vida' ); ?></title>
 	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 	<link rel="stylesheet" href="<?php echo esc_url( CLINICA_URI . '/assets/css/recibo.css?v=' . ( function_exists( 'clinica_asset_version' ) ? clinica_asset_version( 'assets/css/recibo.css' ) : '1' ) ); ?>">
 </head>
@@ -365,7 +365,7 @@ function clinica_controller_recepcao(): void {
 	}
 	$acao = sanitize_key( $_POST['rc_action'] );
 
-	// ---- Confirmar marcação / faltou (NUNCA "realizada": isso é do médico) --
+	// Confirmar marcação / faltou (NUNCA "realizada": isso é do médico)
 	if ( 'checkin' === $acao ) {
 		if ( ! current_user_can( 'clinica_confirmar_presenca' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_checkin' ) ) {
 			clinica_redirect( 'negado' );
@@ -383,7 +383,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( 'estado' );
 	}
 
-	// ---- Confirmação de presença (check-in / chegada) -----------------------
+	// Confirmação de presença (check-in / chegada)
 	if ( 'presenca' === $acao ) {
 		if ( ! current_user_can( 'clinica_confirmar_presenca' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_checkin' ) ) {
 			clinica_redirect( 'negado' );
@@ -396,7 +396,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Reagendar consulta -------------------------------------------------
+	// Reagendar consulta
 	if ( 'reagendar' === $acao ) {
 		if ( ! current_user_can( 'clinica_gerir_agenda' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_reag' ) ) {
 			clinica_redirect( 'negado' );
@@ -417,7 +417,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Cancelar consulta --------------------------------------------------
+	// Cancelar consulta
 	if ( 'cancelar' === $acao ) {
 		if ( ! current_user_can( 'clinica_gerir_agenda' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_canc' ) ) {
 			clinica_redirect( 'negado' );
@@ -430,7 +430,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Atualizar dados do paciente (administrativo, nunca clínico) --------
+	// Atualizar dados do paciente (administrativo, nunca clínico)
 	if ( 'paciente_editar' === $acao ) {
 		if ( ! current_user_can( 'clinica_cadastrar_paciente' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_pac_ed' ) ) {
 			clinica_redirect( 'negado' );
@@ -452,7 +452,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( 'rc_pac_ed_ok' );
 	}
 
-	// ---- Marcar consulta para um paciente -----------------------------------
+	// Marcar consulta para um paciente
 	if ( 'marcar' === $acao ) {
 		if ( ! current_user_can( 'clinica_marcar' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_marcar' ) ) {
 			clinica_redirect( 'negado' );
@@ -480,7 +480,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( $code );
 	}
 
-	// ---- Registar novo paciente ---------------------------------------------
+	// Registar novo paciente
 	if ( 'paciente_criar' === $acao ) {
 		if ( ! current_user_can( 'clinica_cadastrar_paciente' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_pac' ) ) {
 			clinica_redirect( 'negado' );
@@ -525,7 +525,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( 'rc_pac_ok' );
 	}
 
-	// ---- Nova consulta (walk-in): registar a pessoa + marcar a consulta -----
+	// Nova consulta (walk-in): registar a pessoa + marcar a consulta
 	if ( 'nova_consulta' === $acao ) {
 		if ( ! current_user_can( 'clinica_cadastrar_paciente' ) || ! current_user_can( 'clinica_marcar' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_nc' ) ) {
 			clinica_redirect( 'negado' );
@@ -551,9 +551,24 @@ function clinica_controller_recepcao(): void {
 		} else {
 			$nome  = Clinica_Input::texto( $_POST, 'nome' );
 			$email = Clinica_Input::email( $_POST, 'email' );
-			if ( '' === $nome || '' === $email ) {
+			$tel_n = class_exists( 'Clinica_Marcacao_Rapida' ) ? Clinica_Marcacao_Rapida::telefone( Clinica_Input::texto( $_POST, 'telefone' ) ) : null;
+			if ( mb_strlen( $nome ) < 3 || ( '' === $email && ! $tel_n ) ) {
 				clinica_redirect( 'nc_dados' );
 			}
+		}
+		// Pessoa nova sem email: ficha com conta interna (sem acesso), pelo telefone.
+		if ( ! $reuse && '' === $email ) {
+			$pid = Clinica_Marcacao_Rapida::paciente_para( $nome, (string) $tel_n, 'balcao' );
+			if ( ! $pid ) {
+				clinica_redirect( 'nc_dados' );
+			}
+			Clinica_Repo::guardar_perfil_paciente( $pid, array(
+				'bi'              => Clinica_Input::texto( $_POST, 'bi' ),
+				'genero'          => Clinica_Input::texto( $_POST, 'genero' ),
+				'endereco'        => Clinica_Input::texto( $_POST, 'endereco' ),
+				'data_nascimento' => Clinica_Input::texto( $_POST, 'data_nascimento' ),
+			) );
+		} elseif ( ! $reuse ) {
 			if ( email_exists( $email ) ) {
 				clinica_redirect( 'nc_existe' );
 			}
@@ -576,7 +591,7 @@ function clinica_controller_recepcao(): void {
 			Clinica_Repo::guardar_perfil_paciente( $pid, array(
 				'bi'              => Clinica_Input::texto( $_POST, 'bi' ),
 				'genero'          => Clinica_Input::texto( $_POST, 'genero' ),
-				'telefone'        => Clinica_Input::texto( $_POST, 'telefone' ),
+				'telefone'        => $tel_n ?: Clinica_Input::texto( $_POST, 'telefone' ),
 				'endereco'        => Clinica_Input::texto( $_POST, 'endereco' ),
 				'data_nascimento' => Clinica_Input::texto( $_POST, 'data_nascimento' ),
 			) );
@@ -588,27 +603,59 @@ function clinica_controller_recepcao(): void {
 			'medico_id'    => $medico_id,
 			'inicio'       => $inicio,
 			'observacoes'  => $sintomas,
+			'origem'       => 'balcao',
 		) );
 		if ( $ok && class_exists( 'Clinica_Auditoria' ) ) {
 			Clinica_Auditoria::registar( 'Receção: nova consulta (walk-in)', $nome );
 		}
+		// "Cobrar logo a seguir": abre a Caixa já com o pagamento desta consulta.
+		if ( $ok && ! empty( $_POST['cobrar_ja'] ) && current_user_can( 'clinica_confirmar_pagamento' ) ) {
+			global $wpdb;
+			$pg_id = (int) $wpdb->get_var( $wpdb->prepare(
+				"SELECT p.id FROM " . Clinica_Pagamentos::TABELA . " p JOIN " . Clinica_Repo::T_CONSULTAS . " c ON c.id = p.consulta_id
+				 WHERE p.paciente_id = %d AND p.estado = 'pendente' AND c.medico_id = %d AND c.inicio = %s ORDER BY p.id DESC LIMIT 1",
+				$pid,
+				$medico_id,
+				$inicio
+			) );
+			if ( $pg_id ) {
+				wp_safe_redirect( add_query_arg( array( 'cl' => 'nc_cobrar', 'pg' => $pg_id ), remove_query_arg( array( 'cl', 'pg', 'id' ) ) ) );
+				exit;
+			}
+		}
 		clinica_redirect( $ok ? 'nc_ok' : $code );
 	}
 
-	// ---- Confirmar pagamento (receção financeira) ---------------------------
+	// Confirmar pagamento (receção financeira)
 	if ( 'pagamento' === $acao ) {
 		if ( ! current_user_can( 'clinica_confirmar_pagamento' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_pg' ) ) {
 			clinica_redirect( 'negado' );
 		}
-		$id = Clinica_Input::inteiro( $_POST, 'id' );
-		Clinica_Pagamentos::definir_estado( $id, 'pago', Clinica_Input::texto( $_POST, 'referencia' ) );
-		if ( class_exists( 'Clinica_Auditoria' ) ) {
-			Clinica_Auditoria::registar( 'Receção: pagamento confirmado', '#' . $id );
+		$id     = Clinica_Input::inteiro( $_POST, 'id' );
+		$metodo = Clinica_Input::chave( $_POST, 'metodo' );
+		// Registo manual do que já foi recebido (numerário, cartão, e-Mola e o
+		// M-Pesa enviado para o número da clínica). A cobrança M-Pesa com pedido
+		// de PIN tem o seu próprio fluxo (pg_cobrar).
+		if ( ! isset( Clinica_Pagamentos::METODOS[ $metodo ] ) ) {
+			$metodo = 'numerario';
 		}
-		clinica_redirect( 'pg_ok' );
+		$rotulo = Clinica_Pagamentos::METODOS[ $metodo ];
+		$ref    = mb_substr( Clinica_Input::texto( $_POST, 'referencia' ), 0, 64 );
+		$ok     = Clinica_Pagamentos::definir_estado( $id, 'pago', '' !== $ref ? $ref : $rotulo, $metodo );
+		if ( class_exists( 'Clinica_Auditoria' ) ) {
+			Clinica_Auditoria::registar( 'Receção: pagamento ' . ( $ok ? 'confirmado' : 'falhou' ) . ' (' . $rotulo . ')', '#' . $id );
+		}
+		if ( $ok ) {
+			clinica_flash_dinamico( 'Pagamento em ' . $rotulo . ' recebido com sucesso.' );
+			// Volta à Caixa com o pagamento feito: ecrã de sucesso e recibo à mão.
+			wp_safe_redirect( add_query_arg( array( 'cl' => 'pg_recebido', 'pago' => $id ), remove_query_arg( array( 'cl', 'pago', 'pg', 'id', 'recibo' ) ) ) . '#pagamentos' );
+			exit;
+		}
+		clinica_flash_dinamico( 'Não foi possível registar o pagamento em ' . $rotulo . '.' );
+		clinica_redirect( 'pg_falhou' );
 	}
 
-	// ---- Cobrar via M-Pesa: empurra o pedido de PIN para o telemóvel --------
+	// Cobrar via M-Pesa: empurra o pedido de PIN para o telemóvel
 	// Síncrono por natureza: o cliente tem de introduzir o PIN. Só marca 'pago'
 	// se o M-Pesa confirmar (INS-0); qualquer recusa mantém o pagamento pendente.
 	if ( 'pg_cobrar' === $acao ) {
@@ -628,7 +675,7 @@ function clinica_controller_recepcao(): void {
 		clinica_redirect( 'pg_mp_falhou' );
 	}
 
-	// ---- Marcar mensagem como lida ------------------------------------------
+	// Marcar mensagem como lida
 	if ( 'msg_lida' === $acao ) {
 		if ( ! current_user_can( 'clinica_ver_mensagens' ) || ! Clinica_Input::nonce_ok( $_POST, 'rc_nonce', 'rc_msg' ) ) {
 			clinica_redirect( 'negado' );

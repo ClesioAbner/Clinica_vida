@@ -1,0 +1,139 @@
+/*
+ * Aviso de cookies (cartão da referência Uiverse, nas cores da clínica), no
+ * canto inferior esquerdo, a entrar pela esquerda. Começa escondido;
+ * cookies.js mostra-o a quem ainda não escolheu ou a quem carrega em
+ * «Preferências de cookies» no rodapé.
+ */
+.cv-cookies {
+	position: fixed;
+	left: 24px;
+	bottom: 24px;
+	z-index: 180;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 13px;
+	width: 300px;
+	min-height: 220px;
+	padding: 20px 30px;
+	overflow: hidden;
+	border-radius: 16px;
+	background: #fff;
+	box-shadow:
+		2px 2px 20px rgba(0, 0, 0, 0.062),
+		0 22px 48px -24px rgba(9, 41, 43, 0.45);
+	text-align: center;
+	opacity: 0;
+	transform: translateX(-24px);
+	transition:
+		opacity 0.35s ease,
+		transform 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.cv-cookies[hidden] {
+	display: none;
+}
+
+.cv-cookies.is-visivel {
+	opacity: 1;
+	transform: none;
+}
+
+.cv-cookies__icone {
+	width: 50px;
+	height: 50px;
+}
+
+.cv-cookies__massa {
+	fill: rgb(97, 81, 81);
+}
+
+.cv-cookies__pepitas {
+	fill: #fff;
+}
+
+.cv-cookies__titulo {
+	margin: 0;
+	font-size: 1.2em;
+	font-weight: 800;
+	color: rgb(26, 26, 26);
+}
+
+.cv-cookies__texto {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.45;
+	color: rgb(99, 99, 99);
+}
+
+.hp .cv-cookies__texto a {
+	color: var(--ch-teal);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.cv-cookies__botoes {
+	display: flex;
+	flex-direction: row;
+	gap: 20px;
+}
+
+.cv-cookies__btn {
+	width: 92px;
+	height: 36px;
+	border: none;
+	border-radius: 20px;
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.cv-cookies__btn:focus-visible {
+	outline: 2px solid var(--ch-teal);
+	outline-offset: 2px;
+}
+
+.cv-cookies__btn--aceitar {
+	background: var(--ch-escuro);
+	color: rgb(241, 241, 241);
+}
+
+.cv-cookies__btn--aceitar:hover {
+	background: var(--ch-teal);
+}
+
+.cv-cookies__btn--recusar {
+	background: rgb(218, 218, 218);
+	color: rgb(46, 46, 46);
+}
+
+.cv-cookies__btn--recusar:hover {
+	background: #ebebeb;
+}
+
+@media (max-width: 640px) {
+	.cv-cookies {
+		left: 12px;
+		bottom: calc(12px + env(safe-area-inset-bottom));
+		width: min(300px, calc(100vw - 24px));
+		min-height: 0;
+		padding: 20px 22px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cv-cookies {
+		transform: none;
+		transition: opacity 0.2s;
+	}
+}
+
+@media print {
+	.cv-cookies {
+		display: none !important;
+	}
+}

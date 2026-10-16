@@ -57,7 +57,7 @@ function clinica_controller_auth(): void {
 	}
 	$acao = sanitize_key( $_POST['auth_action'] );
 
-	// ---- Iniciar sessão -----------------------------------------------------
+	// Iniciar sessão
 	if ( 'login' === $acao ) {
 		if ( ! Clinica_Input::nonce_ok( $_POST, 'auth_nonce', 'auth_login' ) ) {
 			clinica_auth_redirect( 'invalido', 'login' );
@@ -78,7 +78,7 @@ function clinica_controller_auth(): void {
 		exit;
 	}
 
-	// ---- Criar conta --------------------------------------------------------
+	// Criar conta
 	if ( 'register' === $acao ) {
 		if ( ! Clinica_Input::nonce_ok( $_POST, 'auth_nonce', 'auth_register' ) ) {
 			clinica_auth_redirect( 'invalido', 'reg' );

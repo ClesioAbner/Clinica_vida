@@ -1,0 +1,117 @@
+/*
+ * Ecrã de carregamento: o batimento da Clínica Vida por cima da página até ao
+ * evento load. Fica invisível sem a classe html.cv-carregando (posta pelo
+ * loader.js), por isso sem JS a página nunca fica tapada. O conteúdo entra com
+ * atraso para que, em páginas rápidas, só se veja o fundo a desvanecer.
+ */
+.cv-loader {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483000;
+	display: grid;
+	place-items: center;
+	background: #fff;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+		visibility 0s linear 0.4s;
+}
+
+html.cv-carregando .cv-loader {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+	transition: none;
+}
+
+.cv-loader__caixa {
+	display: grid;
+	justify-items: center;
+	gap: 18px;
+	animation: cv-loader-surge 0.35s ease 0.18s both;
+}
+
+.cv-loader__marca {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font:
+		600 15px/1 "Inter",
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		sans-serif;
+	letter-spacing: 0.01em;
+	color: #09292b;
+}
+
+.cv-loader__marca img {
+	width: 28px;
+	height: 28px;
+}
+
+.cv-loader__pulso polyline {
+	fill: none;
+	stroke-width: 3;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.cv-loader__fundo {
+	stroke: rgba(1, 141, 135, 0.2);
+}
+
+.cv-loader__frente {
+	stroke: #018d87;
+	stroke-dasharray: 48, 144;
+	stroke-dashoffset: 192;
+	animation: cv-loader-pulso 1.4s linear infinite;
+}
+
+.cv-loader__texto {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+@keyframes cv-loader-pulso {
+	72.5% {
+		opacity: 0;
+	}
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@keyframes cv-loader-surge {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cv-loader {
+		transition: visibility 0s;
+	}
+
+	.cv-loader__caixa,
+	.cv-loader__frente {
+		animation: none;
+	}
+
+	.cv-loader__frente {
+		stroke-dasharray: none;
+	}
+}
+
+@media print {
+	.cv-loader {
+		display: none;
+	}
+}

@@ -1,0 +1,1767 @@
+/* Portal do médico — forma da referência "MEDIX" com as cores da clínica
+   Topo com marca, pesquisa, avisos e perfil; barra de ícones escura em
+   pílula; painel com saudação, quatro números com ícone, gráfico com
+   pílulas, retornos e pacientes de hoje; à direita a agenda da semana e a
+   próxima consulta. Petróleo #09292B, teal #155E63, menta #EAFFE3.
+   Peças partilhadas (.db-*, .gf-*) em dashboard.css. */
+
+.hp .pm-shell.mx {
+	--mx-fundo: #f1f4f3;
+	--mx-cartao: #ffffff;
+	--mx-tinta: #0b1f20;
+	--mx-tinta-2: #4b5b59;
+	--mx-mudo: #77837f;
+	--mx-linha: #e7ecea;
+	--mx-suave: #f5f7f6;
+	--mx-raio: 18px;
+	/* Nos painéis o título é sans, como na referência. */
+	--hp-serif: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+	display: grid;
+	grid-template-columns: 72px minmax(0, 1fr);
+	grid-template-rows: 72px minmax(0, 1fr);
+	grid-template-areas: "topo topo" "rail main";
+	gap: 0 18px;
+	min-height: 100vh;
+	padding: 0 24px 24px 18px;
+	background: var(--mx-fundo);
+	color: var(--mx-tinta);
+	font-family:
+		"Inter",
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		sans-serif;
+}
+
+/* Topo */
+.mx-topo {
+	grid-area: topo;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 0 0 0 6px;
+}
+.mx-marca {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	text-decoration: none;
+}
+.hp .mx-marca,
+.hp .mx-marca:hover {
+	color: var(--mx-tinta);
+}
+.mx-marca img {
+	width: 30px;
+	height: 30px;
+	padding: 4px;
+	border-radius: 9px;
+	background: var(--ch-escuro);
+}
+.mx-marca span {
+	font-size: 19px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	text-transform: uppercase;
+}
+.mx-topo__acoes {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+.mx-icone {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 50%;
+	background: #fff;
+	transition:
+		background 0.15s,
+		border-color 0.15s;
+}
+.hp .mx-icone {
+	color: var(--mx-tinta);
+}
+.hp .mx-icone:hover {
+	border-color: #cfd8d5;
+	background: var(--mx-suave);
+}
+.mx-icone svg,
+.mx-perfil__seta {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-icone__ponto {
+	position: absolute;
+	top: 9px;
+	right: 10px;
+	width: 8px;
+	height: 8px;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--gf-c2, #d26b46);
+	box-sizing: content-box;
+}
+
+.mx-perfil {
+	position: relative;
+}
+.mx-perfil summary {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 4px 8px 4px 4px;
+	border-radius: 999px;
+	list-style: none;
+	cursor: pointer;
+}
+.mx-perfil summary::-webkit-details-marker {
+	display: none;
+}
+.mx-perfil summary:hover {
+	background: rgba(255, 255, 255, 0.7);
+}
+.mx-perfil img {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+.mx-perfil__t {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+}
+.mx-perfil__t b {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+.mx-perfil__t small {
+	font-size: 12px;
+	color: var(--mx-mudo);
+}
+.mx-perfil[open] .mx-perfil__seta {
+	transform: rotate(180deg);
+}
+.mx-perfil__menu {
+	position: absolute;
+	z-index: 30;
+	top: calc(100% + 8px);
+	right: 0;
+	display: grid;
+	min-width: 190px;
+	padding: 6px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 14px;
+	background: #fff;
+	box-shadow: 0 16px 40px rgba(9, 41, 43, 0.12);
+}
+.mx-perfil__menu a {
+	padding: 10px 12px;
+	border-radius: 9px;
+	font-size: 14px;
+	text-decoration: none;
+}
+.hp .mx-perfil__menu a {
+	color: var(--mx-tinta);
+}
+.hp .mx-perfil__menu a:hover {
+	background: var(--mx-suave);
+}
+
+/* Barra de ícones: pílula petróleo, ativo num círculo menta */
+.hp .pm-shell.mx .mx-rail {
+	grid-area: rail;
+	position: sticky;
+	top: 16px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 24px;
+	width: 60px;
+	height: calc(100vh - 104px);
+	min-height: 420px;
+	margin: 0;
+	padding: 12px 0;
+	overflow: visible;
+	border: 0;
+	border-radius: 30px;
+	background: var(--ch-escuro);
+	box-shadow: 0 10px 30px rgba(9, 41, 43, 0.18);
+}
+.mx-rail__nav,
+.mx-rail__fim {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+}
+.hp .pm-shell.mx .mx-rail .pm-nav__i {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 42px;
+	height: 42px;
+	min-height: 0;
+	margin: 0;
+	padding: 0;
+	border-radius: 50%;
+	background: transparent;
+	box-shadow: none;
+	color: rgba(255, 255, 255, 0.66);
+}
+.hp .pm-shell.mx .mx-rail .pm-nav__i svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.hp .pm-shell.mx .mx-rail .pm-nav__i:hover {
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+}
+.hp .pm-shell.mx .mx-rail .pm-nav__i.is-active {
+	background: var(--ch-menta);
+	color: var(--ch-escuro);
+	box-shadow: none;
+}
+.mx-dica {
+	position: absolute;
+	left: calc(100% + 12px);
+	top: 50%;
+	z-index: 40;
+	padding: 6px 10px;
+	border-radius: 8px;
+	background: var(--ch-escuro);
+	color: #fff;
+	font-size: 12.5px;
+	font-weight: 500;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transform: translate(-4px, -50%);
+	transition:
+		opacity 0.15s,
+		transform 0.15s;
+}
+.pm-nav__i:hover .mx-dica,
+.pm-nav__i:focus-visible .mx-dica {
+	opacity: 1;
+	transform: translate(0, -50%);
+}
+
+/* Área principal */
+.hp .pm-shell.mx .mx-main {
+	grid-area: main;
+	min-width: 0;
+	margin: 0;
+	padding: 4px 0 0;
+	border-radius: 0;
+	background: transparent;
+}
+.mx-sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.mx-painel {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+	grid-template-areas: "ola agenda" "kpis agenda" "grafico proxima" "baixo proxima";
+	grid-template-rows: auto auto auto 1fr;
+	gap: 16px 18px;
+	align-items: start;
+}
+.mx-ola {
+	grid-area: ola;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 16px;
+	padding-top: 2px;
+}
+.mx-ola__t {
+	margin: 0;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: -0.025em;
+	color: var(--mx-tinta);
+}
+.mx-ola__s {
+	margin: 6px 0 0;
+	font-size: 13.5px;
+	color: var(--mx-mudo);
+}
+.mx-select {
+	position: relative;
+	display: inline-flex;
+	flex: none;
+}
+.mx-select select {
+	min-height: 38px;
+	padding: 0 36px 0 14px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 12px;
+	background: #fff;
+	color: var(--mx-tinta);
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 500;
+	cursor: pointer;
+	appearance: none;
+}
+.mx-select svg {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: var(--mx-tinta-2);
+	stroke-width: 2;
+	stroke-linecap: round;
+	transform: translateY(-50%);
+	pointer-events: none;
+}
+
+/* Quatro números com ícone. */
+.mx-kpis {
+	grid-area: kpis;
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 14px;
+}
+.mx-kpi {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	padding: 16px 16px 18px;
+	border-radius: var(--mx-raio);
+	background: var(--mx-cartao);
+	text-decoration: none;
+	transition: box-shadow 0.16s;
+}
+a.mx-kpi:hover {
+	box-shadow: 0 8px 22px rgba(9, 41, 43, 0.07);
+}
+.mx-kpi__ic {
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	margin-bottom: 10px;
+	border-radius: 50%;
+}
+.mx-kpi__ic svg {
+	width: 19px;
+	height: 19px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-kpi__ic--menta {
+	background: var(--ch-menta);
+	color: var(--ch-teal);
+}
+.mx-kpi__ic--terra {
+	background: #fbe9e1;
+	color: #b4532f;
+}
+.mx-kpi__ic--areia {
+	background: var(--ch-creme, #f2eae1);
+	color: #7a5b33;
+}
+.mx-kpi__ic--agua {
+	background: #dcf0ee;
+	color: #016f6a;
+}
+.mx-kpi__l {
+	font-size: 13px;
+	color: var(--mx-tinta-2);
+}
+.mx-kpi__v {
+	font-size: 26px;
+	font-weight: 700;
+	line-height: 1.15;
+	letter-spacing: -0.02em;
+	color: var(--mx-tinta);
+	white-space: nowrap;
+}
+.mx-kpi__v small {
+	margin-left: 4px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--mx-mudo);
+}
+
+/* Cartão base. */
+.mx-cartao {
+	min-width: 0;
+	padding: 20px 22px;
+	border-radius: var(--mx-raio);
+	background: var(--mx-cartao);
+}
+.mx-cartao__cab {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 16px;
+}
+.mx-cartao__t {
+	margin: 0;
+	font-size: 16.5px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--mx-tinta);
+}
+.mx-cartao__ligacao {
+	font-size: 13px;
+	font-weight: 500;
+	text-decoration: none;
+}
+.hp .mx-cartao__ligacao {
+	color: var(--ch-teal);
+}
+.hp .mx-cartao__ligacao:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+/* Gráfico dos pacientes: pílulas à direita, números à esquerda. */
+.mx-grafico {
+	grid-area: grafico;
+}
+.mx-pilulas button {
+	min-height: 32px;
+	border: 0;
+	background: var(--mx-suave);
+	color: var(--mx-tinta-2);
+}
+.mx-pilulas button:hover {
+	background: #ecf0ee;
+}
+.mx-pilulas button[aria-pressed="true"] {
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.mx-grafico__corpo {
+	display: grid;
+	grid-template-columns: 170px minmax(0, 1fr);
+	gap: 18px;
+	align-items: start;
+}
+.mx-stats {
+	display: grid;
+	gap: 10px;
+}
+.mx-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 14px 16px;
+	border-radius: 14px;
+	background: var(--mx-suave);
+}
+.mx-stat strong {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 26px;
+	font-weight: 700;
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+	color: var(--mx-tinta);
+}
+.mx-stat > span {
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+.mx-stats__nota {
+	margin: 2px 2px 0;
+	font-size: 11.5px;
+	line-height: 1.45;
+	color: var(--mx-mudo);
+}
+.mx-delta {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 7px;
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0;
+}
+.mx-delta--c1 {
+	background: #dcf0ee;
+	color: #016f6a;
+}
+.mx-delta--c2 {
+	background: #fbe9e1;
+	color: #a84e2e;
+}
+.mx-grafico .gf-area {
+	grid-template-rows: 210px auto;
+}
+.mx-grafico .gf-dados {
+	margin-top: 10px;
+}
+
+/* Em baixo: retornos e pacientes. */
+.mx-baixo {
+	grid-area: baixo;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 16px;
+}
+.mx-eventos,
+.mx-pessoas {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.mx-evento {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: var(--mx-suave);
+}
+.mx-evento__t {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.mx-evento__t b {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+.mx-evento__t small {
+	overflow: hidden;
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mx-evento__ir {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: var(--ch-escuro);
+}
+.hp .mx-evento__ir {
+	color: #fff;
+}
+.mx-evento__ir svg {
+	width: 15px;
+	height: 15px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-pessoa {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 6px 0;
+}
+.mx-pessoa__av {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--ch-menta);
+	color: var(--ch-teal);
+	font-size: 13px;
+	font-weight: 600;
+}
+.mx-pessoa:nth-child(2n) .mx-pessoa__av {
+	background: #fbe9e1;
+	color: #a84e2e;
+}
+.mx-pessoa:nth-child(3n) .mx-pessoa__av {
+	background: var(--ch-creme, #f2eae1);
+	color: #7a5b33;
+}
+.mx-pessoa__t {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.mx-pessoa__t b {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mx-pessoa__t small {
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+.mx-pessoa__h {
+	flex: none;
+	font-size: 12.5px;
+	color: var(--mx-tinta-2);
+	font-variant-numeric: tabular-nums;
+}
+.mx-vazio {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px;
+	border-radius: 14px;
+	background: var(--mx-suave);
+}
+.mx-vazio__ic {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: #fff;
+	color: var(--ch-teal);
+}
+.mx-vazio__ic svg {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-vazio p {
+	margin: 0;
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--mx-mudo);
+}
+.mx-vazio b {
+	display: block;
+	margin-bottom: 2px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+
+/* Agenda da semana (direita, em cima). */
+.mx-agenda {
+	grid-area: agenda;
+}
+.mx-mais {
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+}
+.hp .mx-mais {
+	color: var(--mx-tinta-2);
+}
+.hp .mx-mais:hover {
+	background: var(--mx-suave);
+}
+.mx-mais svg {
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.4;
+	stroke-linecap: round;
+}
+.mx-cal__nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 12px;
+}
+.mx-cal__mes {
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--mx-tinta);
+}
+.mx-cal__seta {
+	display: grid;
+	place-items: center;
+	width: 28px;
+	height: 28px;
+	border: 0;
+	border-radius: 50%;
+	background: none;
+	color: var(--mx-tinta);
+	cursor: pointer;
+}
+.mx-cal__seta:hover {
+	background: var(--mx-suave);
+}
+.mx-cal__seta:disabled {
+	opacity: 0.3;
+	cursor: default;
+}
+.mx-cal__seta svg {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-cal [hidden] {
+	display: none !important;
+}
+.mx-cal__semana {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 2px;
+}
+.mx-cal__dia {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	cursor: pointer;
+}
+.mx-cal__sem {
+	font-size: 11.5px;
+	color: var(--mx-mudo);
+}
+.mx-cal__num {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	background: var(--mx-suave);
+	font-size: 12.5px;
+	font-weight: 500;
+	color: var(--mx-tinta);
+	font-variant-numeric: tabular-nums;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+.mx-cal__dia:hover .mx-cal__num {
+	background: #e6ecea;
+}
+.mx-cal__dia.tem::after {
+	content: "";
+	position: absolute;
+	bottom: -7px;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--gf-c2, #d26b46);
+}
+.mx-cal__dia.is-hoje .mx-cal__num {
+	box-shadow: inset 0 0 0 1.5px var(--ch-teal);
+}
+.mx-cal__dia.is-sel .mx-cal__num {
+	background: var(--ch-escuro);
+	color: #fff;
+	box-shadow: none;
+}
+.mx-cal__dia:focus-visible .mx-cal__num {
+	outline: 2px solid var(--ch-teal);
+	outline-offset: 2px;
+}
+.mx-cal__resumo {
+	margin-top: 18px;
+	padding-top: 12px;
+	border-top: 1px solid var(--mx-linha);
+}
+.mx-cal__data {
+	margin: 0 0 6px;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--mx-tinta-2);
+}
+.mx-cal__lista {
+	display: grid;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 13px;
+	color: var(--mx-tinta);
+}
+.mx-cal__lista time {
+	display: inline-block;
+	min-width: 44px;
+	color: var(--mx-mudo);
+	font-variant-numeric: tabular-nums;
+}
+.mx-cal__mais,
+.mx-cal__vazio {
+	margin: 0;
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+
+/* Próxima consulta (direita, em baixo): o cartão do "Upcoming Doctor". */
+.mx-proxima {
+	grid-area: proxima;
+	display: flex;
+	flex-direction: column;
+	align-self: stretch;
+}
+.mx-seta {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 50%;
+}
+.hp .mx-seta {
+	color: var(--mx-tinta);
+}
+.hp .mx-seta:hover {
+	background: var(--mx-suave);
+}
+.mx-seta svg {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-proxima__nome {
+	margin: 0 0 8px;
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	color: var(--mx-tinta);
+}
+.mx-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	align-self: flex-start;
+	padding: 5px 11px;
+	border-radius: 999px;
+	background: var(--ch-menta);
+	color: var(--ch-teal);
+	font-size: 12.5px;
+	font-weight: 600;
+}
+.mx-chip svg {
+	width: 14px;
+	height: 14px;
+	fill: currentColor;
+	stroke: none;
+}
+.mx-proxima__visual {
+	position: relative;
+	display: grid;
+	place-items: center;
+	height: 200px;
+	margin: 6px -22px 10px;
+	overflow: hidden;
+}
+.mx-proxima__traco {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+.mx-proxima__traco path {
+	fill: none;
+	stroke: var(--ch-menta);
+	stroke-width: 26;
+	stroke-linecap: round;
+}
+.mx-proxima__traco path + path {
+	stroke: #dcf0ee;
+	stroke-width: 14;
+}
+.mx-proxima__av {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 132px;
+	height: 132px;
+	border: 6px solid #fff;
+	border-radius: 50%;
+	background: var(--ch-escuro);
+	color: #fff;
+	font-size: 42px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	box-shadow: 0 14px 34px rgba(9, 41, 43, 0.18);
+}
+.mx-proxima__visual--foto img {
+	position: relative;
+	width: 170px;
+	height: 170px;
+	border: 6px solid #fff;
+	border-radius: 50%;
+	object-fit: cover;
+	box-shadow: 0 14px 34px rgba(9, 41, 43, 0.16);
+}
+.mx-proxima__sobre-t {
+	margin: 4px 0 4px;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+.mx-proxima__sobre {
+	margin: 0 0 14px;
+	font-size: 13px;
+	line-height: 1.55;
+	color: var(--mx-tinta-2);
+}
+.mx-proxima__sobre a {
+	font-weight: 600;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.hp .mx-proxima__sobre a {
+	color: var(--mx-tinta);
+}
+.mx-proxima__quando {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 18px;
+	margin: auto 0 14px;
+	padding-top: 12px;
+	border-top: 1px solid var(--mx-linha);
+	font-size: 13px;
+	color: var(--mx-tinta);
+}
+.mx-proxima__quando span {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+}
+.mx-proxima__quando svg {
+	width: 16px;
+	height: 16px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.mx-botao {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	margin-top: auto;
+	border-radius: 12px;
+	background: var(--ch-escuro);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	transition: background 0.16s;
+}
+.hp .mx-botao,
+.hp .mx-botao:hover {
+	color: #fff;
+}
+.hp .mx-botao:hover {
+	background: var(--ch-teal);
+}
+.mx-proxima__quando + .mx-botao {
+	margin-top: 0;
+}
+
+/* As outras vistas (Pacientes, Consultas, Agenda, Financeiro, Ficha,
+   Atender) no mesmo tom: cartões brancos, raio grande, títulos sans. */
+.hp .pm-shell.mx :where(.pm-panel, .db-cartao, .db-kpi) {
+	border: 0;
+	border-radius: var(--mx-raio);
+	box-shadow: none;
+}
+.hp .pm-shell.mx > .pm-main .pm-panel__head h3,
+.hp .pm-shell.mx .db-cartao__titulo {
+	font-size: 16.5px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	color: var(--mx-tinta);
+}
+.hp .pm-shell.mx .db-secao__titulo {
+	font-size: 24px;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+.hp .pm-shell.mx .db-secao {
+	margin-top: 0;
+}
+.hp .pm-shell.mx .db-periodo {
+	background: #fff;
+}
+.hp .pm-shell.mx .db-periodo a[aria-current="true"] {
+	background: var(--ch-escuro);
+	color: #fff;
+	box-shadow: none;
+}
+.hp .pm-shell.mx :where(.pm-fichahead__t, .pm-welcome) {
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+/* Vistas de trabalho (Consultas, Agenda, Pacientes) no tema do painel */
+.mx-vista__cab {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 14px 20px;
+	margin: 2px 0 18px;
+}
+.mx-vista__t {
+	margin: 0;
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: -0.025em;
+	color: var(--mx-tinta);
+}
+.mx-vista__s {
+	margin: 6px 0 0;
+	font-size: 13.5px;
+	color: var(--mx-mudo);
+}
+.mx-procura {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: min(320px, 100%);
+}
+.mx-procura .db-ic {
+	position: absolute;
+	left: 14px;
+	width: 18px;
+	height: 18px;
+	color: var(--mx-mudo);
+	pointer-events: none;
+}
+.hp .pm-shell.mx .mx-procura input {
+	width: 100%;
+	min-height: 42px;
+	padding: 0 14px 0 42px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 12px;
+	background: #fff;
+	color: var(--mx-tinta);
+	font: inherit;
+	font-size: 14px;
+}
+.mx-procura input:focus {
+	border-color: var(--ch-teal);
+	outline: 3px solid rgba(21, 94, 99, 0.12);
+}
+
+/* Abas de estado em pílula, com o número ao lado. */
+.mx-abas {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0 0 14px;
+}
+.mx-aba {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 36px;
+	padding: 0 14px;
+	border-radius: 999px;
+	background: var(--mx-suave);
+	font-size: 13.5px;
+	font-weight: 500;
+	text-decoration: none;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+.hp .mx-aba {
+	color: var(--mx-tinta-2);
+}
+.hp .mx-aba:hover {
+	background: #e9eeec;
+	color: var(--mx-tinta);
+}
+.mx-aba span {
+	display: inline-grid;
+	place-items: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 6px;
+	border-radius: 999px;
+	background: #fff;
+	font-size: 11.5px;
+	font-weight: 600;
+	color: var(--mx-tinta-2);
+}
+.hp .mx-aba.is-ativa {
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.mx-aba.is-ativa span {
+	background: rgba(255, 255, 255, 0.16);
+	color: #fff;
+}
+
+/* Tabela de consultas: linhas largas, data em mosaico de calendário. */
+.mx-tabela-cartao {
+	padding: 18px 18px 10px;
+}
+.mx-tabela {
+	display: grid;
+}
+.mx-tabela__cab,
+.mx-tabela__linha {
+	display: grid;
+	grid-template-columns: 170px minmax(0, 1.6fr) 110px 150px minmax(170px, auto);
+	align-items: center;
+	gap: 14px;
+}
+.mx-tabela__cab {
+	padding: 0 12px 10px;
+	border-bottom: 1px solid var(--mx-linha);
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--mx-mudo);
+}
+.mx-tabela__cab .r,
+.mx-acao {
+	justify-content: flex-end;
+	text-align: right;
+}
+.mx-tabela__linha {
+	padding: 12px;
+	border-radius: 14px;
+	transition: background 0.15s;
+}
+.mx-tabela__linha + .mx-tabela__linha {
+	margin-top: 2px;
+}
+.mx-tabela__linha:hover {
+	background: var(--mx-suave);
+}
+.mx-tabela__linha.is-fechada .mx-pac__t b {
+	color: var(--mx-tinta-2);
+}
+.mx-data {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.mx-data__dia {
+	display: flex;
+	flex: none;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 50px;
+	border-radius: 12px;
+	background: var(--mx-suave);
+	line-height: 1;
+}
+.mx-tabela__linha:hover .mx-data__dia {
+	background: #fff;
+}
+.mx-data__dia b {
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--mx-tinta);
+}
+.mx-data__dia small {
+	margin-top: 3px;
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--ch-teal);
+}
+.mx-data__hora {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.mx-data__hora b {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+	font-variant-numeric: tabular-nums;
+}
+.mx-data__hora small {
+	font-size: 12px;
+	color: var(--mx-mudo);
+}
+.mx-pac {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+.mx-pac__av {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	background: var(--ch-menta);
+	color: var(--ch-teal);
+	font-size: 13px;
+	font-weight: 600;
+}
+.mx-pac__t {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.mx-pac__t b {
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mx-pac__t small {
+	overflow: hidden;
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.mx-chegada {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13.5px;
+	font-weight: 500;
+	color: var(--mx-tinta);
+	font-variant-numeric: tabular-nums;
+}
+.mx-chegada .db-ic {
+	width: 16px;
+	height: 16px;
+	color: var(--ch-teal);
+}
+.mx-mudo {
+	color: var(--mx-mudo);
+}
+.mx-acao {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.mx-acao__espera {
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+.mx-acao__ficha {
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+}
+.hp .mx-acao__ficha {
+	color: var(--ch-teal);
+}
+.hp .mx-acao__ficha:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.hp .pm-shell.mx .pm-act {
+	min-height: 36px;
+	padding: 0 16px;
+	border: 0;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 600;
+}
+.hp .pm-shell.mx .pm-act--ok {
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.hp .pm-shell.mx .pm-act--ok:hover {
+	background: var(--ch-teal);
+}
+.hp .pm-shell.mx .pm-act--ico {
+	width: 36px;
+	padding: 0;
+	border: 1px solid var(--mx-linha);
+	background: #fff;
+	color: var(--mx-tinta-2);
+}
+.mx-vazio--meio {
+	justify-content: center;
+	margin: 8px 0 10px;
+	padding: 26px 18px;
+}
+.mx-vazio[hidden] {
+	display: none;
+}
+
+/* Agenda: calendário do mês + linha do tempo por dia. */
+.mx-agenda-grelha {
+	display: grid;
+	grid-template-columns: 330px minmax(0, 1fr);
+	gap: 18px;
+	align-items: stretch;
+}
+.mx-linhatempo {
+	display: flex;
+	flex-direction: column;
+}
+.mx-linhatempo > .mx-vazio--meio {
+	flex: 1;
+	align-items: center;
+	margin: 0;
+}
+.mx-mes {
+	position: sticky;
+	top: 16px;
+	align-self: start;
+}
+.mx-mes [hidden] {
+	display: none !important;
+}
+.mx-mes__t {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+.mx-mes__grelha {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 4px;
+}
+.mx-mes__sem {
+	padding: 4px 0 8px;
+	font-size: 11.5px;
+	font-weight: 500;
+	text-align: center;
+	color: var(--mx-mudo);
+}
+.mx-mes__dia {
+	position: relative;
+	display: grid;
+	place-items: center;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	font-size: 13px;
+	color: var(--mx-tinta);
+	text-decoration: none;
+	font-variant-numeric: tabular-nums;
+}
+.mx-mes__dia.is-passado {
+	color: #a9b3b0;
+}
+.mx-mes__dia.is-hoje {
+	box-shadow: inset 0 0 0 1.5px var(--ch-teal);
+	font-weight: 600;
+}
+.mx-mes__dia.tem {
+	background: var(--ch-escuro);
+	color: #fff;
+	font-weight: 600;
+}
+.hp a.mx-mes__dia.tem {
+	color: #fff;
+}
+.hp a.mx-mes__dia.tem:hover {
+	background: var(--ch-teal);
+}
+.mx-mes__legenda {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 18px;
+	margin: 16px 0 0;
+	padding: 14px 0 0;
+	border-top: 1px solid var(--mx-linha);
+	list-style: none;
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+.mx-mes__legenda li {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+.mx-mes__ponto,
+.mx-mes__anel {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+}
+.mx-mes__ponto {
+	background: var(--ch-escuro);
+}
+.mx-mes__anel {
+	box-shadow: inset 0 0 0 1.5px var(--ch-teal);
+}
+
+.mx-linhatempo {
+	padding: 22px 24px;
+}
+.mx-dia + .mx-dia {
+	margin-top: 22px;
+	padding-top: 22px;
+	border-top: 1px solid var(--mx-linha);
+}
+.mx-dia {
+	scroll-margin-top: 20px;
+}
+.mx-dia__cab {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0 0 14px;
+}
+.mx-dia__data {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 50px;
+	height: 54px;
+	border-radius: 14px;
+	background: var(--ch-escuro);
+	line-height: 1;
+}
+.mx-dia__data b {
+	font-size: 19px;
+	font-weight: 700;
+	color: #fff;
+}
+.mx-dia__data small {
+	margin-top: 3px;
+	font-size: 10.5px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--ch-menta);
+}
+.mx-dia__t {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.mx-dia__t b {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+}
+.mx-dia__t small {
+	font-size: 12.5px;
+	color: var(--mx-mudo);
+}
+.mx-tempo {
+	position: relative;
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0 0 0 0;
+	list-style: none;
+}
+.mx-tempo__i {
+	position: relative;
+	display: grid;
+	grid-template-columns: 62px minmax(0, 1fr);
+	align-items: center;
+	gap: 12px;
+}
+.mx-tempo__i::before {
+	content: "";
+	position: absolute;
+	left: 62px;
+	top: -10px;
+	bottom: -10px;
+	width: 2px;
+	background: var(--mx-linha);
+}
+.mx-tempo__i:first-child::before {
+	top: 50%;
+}
+.mx-tempo__i:last-child::before {
+	bottom: 50%;
+}
+.mx-tempo__i:only-child::before {
+	display: none;
+}
+.mx-tempo__h {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--mx-tinta);
+	text-align: right;
+	padding-right: 12px;
+	font-variant-numeric: tabular-nums;
+}
+.mx-tempo__c {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-left: 12px;
+	padding: 12px 14px;
+	border-radius: 14px;
+	background: var(--mx-suave);
+}
+.mx-tempo__c::before {
+	content: "";
+	position: absolute;
+	left: -17px;
+	top: 50%;
+	width: 10px;
+	height: 10px;
+	margin-top: -5px;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	background: var(--ch-teal);
+}
+.mx-tempo__c .mx-pac__t {
+	flex: 1;
+}
+.mx-tempo__c .mx-pac__av {
+	background: #fff;
+}
+
+/* Pacientes: a mesma linguagem da tabela de consultas. */
+.hp .pm-shell.mx .pm-ptbl__head {
+	border-bottom: 1px solid var(--mx-linha);
+	color: var(--mx-mudo);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0;
+	text-transform: none;
+}
+.hp .pm-shell.mx .pm-prow {
+	border-radius: 14px;
+	border-bottom: 0;
+}
+.hp .pm-shell.mx .pm-prow:hover {
+	background: var(--mx-suave);
+}
+.hp .pm-shell.mx .pm-pav {
+	width: 40px;
+	height: 40px;
+	background: var(--ch-menta);
+	color: var(--ch-teal);
+	font-weight: 600;
+}
+.hp .pm-shell.mx .pm-search {
+	min-height: 42px;
+	border: 1px solid var(--mx-linha);
+	border-radius: 12px;
+}
+
+/* Responsivo: a pílula vira barra inferior fixa no telemóvel */
+@media (max-width: 1240px) {
+	.mx-painel {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas: "ola" "kpis" "agenda" "grafico" "proxima" "baixo";
+		grid-template-rows: none;
+	}
+	.mx-agenda {
+		max-width: none;
+	}
+	.mx-proxima {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 220px;
+		column-gap: 24px;
+	}
+	.mx-proxima > * {
+		grid-column: 1;
+	}
+	.mx-proxima .mx-proxima__visual {
+		grid-column: 2;
+		grid-row: 1 / span 8;
+		margin: 0;
+		height: auto;
+		min-height: 220px;
+	}
+}
+@media (max-width: 1100px) {
+	.mx-agenda-grelha {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mx-mes {
+		position: static;
+	}
+	/* A tabela vira cartões: data e paciente em cima, chegada, estado e ação em baixo. */
+	.mx-tabela__cab {
+		display: none;
+	}
+	.mx-tabela__linha {
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas: "data pac estado" "data cheg acao";
+		gap: 6px 14px;
+		padding: 14px 12px;
+		border-bottom: 1px solid var(--mx-linha);
+		border-radius: 0;
+	}
+	.mx-tabela__linha > :nth-child(1) {
+		grid-area: data;
+	}
+	.mx-tabela__linha > :nth-child(2) {
+		grid-area: pac;
+	}
+	.mx-tabela__linha > :nth-child(3) {
+		grid-area: cheg;
+	}
+	.mx-tabela__linha > :nth-child(4) {
+		grid-area: estado;
+		justify-self: end;
+	}
+	.mx-tabela__linha > :nth-child(5) {
+		grid-area: acao;
+	}
+	.mx-data__hora {
+		display: none;
+	}
+	.mx-kpis {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.mx-grafico__corpo {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mx-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.mx-stats__nota {
+		grid-column: 1 / -1;
+	}
+}
+@media (max-width: 820px) {
+	.hp .pm-shell.mx {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: 64px auto;
+		grid-template-areas: "topo" "main";
+		padding: 0 14px 96px;
+		gap: 0;
+	}
+	.hp .pm-shell.mx .mx-rail {
+		position: fixed;
+		top: auto;
+		bottom: 12px;
+		left: 50%;
+		z-index: 50;
+		flex-direction: row;
+		gap: 4px;
+		width: max-content;
+		max-width: calc(100vw - 24px);
+		height: auto;
+		min-height: 0;
+		padding: 8px 10px;
+		transform: translateX(-50%);
+	}
+	.mx-rail__nav,
+	.mx-rail__fim {
+		flex-direction: row;
+		gap: 2px;
+	}
+	.mx-rail__fim {
+		padding-left: 6px;
+		border-left: 1px solid rgba(255, 255, 255, 0.16);
+	}
+	.mx-dica {
+		display: none;
+	}
+	.mx-perfil__t,
+	.mx-perfil__seta {
+		display: none;
+	}
+	.mx-marca span {
+		font-size: 16px;
+	}
+	.mx-baixo {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.mx-proxima {
+		display: flex;
+	}
+	.mx-proxima .mx-proxima__visual {
+		margin: 6px -22px 10px;
+		height: 190px;
+		min-height: 0;
+	}
+}
+@media (max-width: 520px) {
+	.mx-ola {
+		flex-direction: column;
+	}
+	.mx-ola__t {
+		font-size: 23px;
+	}
+	.mx-kpis {
+		gap: 10px;
+	}
+	.mx-kpi {
+		padding: 14px;
+	}
+	.mx-kpi__v {
+		font-size: 21px;
+	}
+	.mx-cartao {
+		padding: 18px 16px;
+	}
+	.mx-cartao__cab {
+		flex-wrap: wrap;
+	}
+	.mx-stat strong {
+		font-size: 22px;
+	}
+	.mx-cal__num {
+		width: 32px;
+		height: 32px;
+	}
+	.mx-marca span {
+		display: none;
+	}
+}

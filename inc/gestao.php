@@ -75,7 +75,7 @@ function clinica_controller_gestao(): void {
 	$acao = sanitize_key( $_POST['ge_action'] );
 	global $wpdb;
 
-	// ---- Especialidades -----------------------------------------------------
+	// Especialidades
 	if ( in_array( $acao, array( 'esp_criar', 'esp_editar', 'esp_apagar' ), true ) ) {
 		if ( ! current_user_can( 'clinica_gerir_especialidades' ) || ! Clinica_Input::nonce_ok( $_POST, 'ge_nonce', 'ge_esp' ) ) {
 			clinica_redirect( 'negado' );
@@ -195,7 +195,7 @@ function clinica_controller_gestao(): void {
 		}
 	}
 
-	// ---- Definições da clínica (regras de negócio na config) ----
+	// Definições da clínica (regras de negócio na config)
 	if ( 'cfg_save' === $acao ) {
 		if ( ! current_user_can( 'clinica_configurar' ) || ! Clinica_Input::nonce_ok( $_POST, 'ge_nonce', 'ge_cfg' ) ) {
 			clinica_redirect( 'negado' );
@@ -207,6 +207,14 @@ function clinica_controller_gestao(): void {
 			}
 		}
 		Clinica_Config::set( 'pagamento_obrigatorio', empty( $_POST['pagamento_obrigatorio'] ) ? '0' : '1' );
+		if ( isset( $_POST['rede_whatsapp'] ) ) {
+			Clinica_Config::set( 'rede_whatsapp', Clinica_Input::texto( $_POST, 'rede_whatsapp' ) );
+		}
+		foreach ( array( 'rede_facebook', 'rede_instagram', 'rede_tiktok' ) as $k ) {
+			if ( isset( $_POST[ $k ] ) ) {
+				Clinica_Config::set( $k, esc_url_raw( Clinica_Input::texto( $_POST, $k ) ) );
+			}
+		}
 		Clinica_Auditoria::registar( 'Definições da clínica atualizadas' );
 		clinica_redirect( 'cfg_ok' );
 	}

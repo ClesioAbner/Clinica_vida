@@ -1,0 +1,2267 @@
+/* Componentes partilhados do site público (classes .cv-*, "Clínica Vida")
+
+   Os blocos da referência ClinicHub, recriados uma vez e reutilizados:
+     base (secção, cabeçalho, botões) · etiqueta recortada · hero em moldura ·
+     reserva ("visit us": hero com formulário de vidro) · local ("our location") ·
+     passos ("how it works") · cartão de médico ("our team") · relatos
+     ("reviews": foto + cartão menta) · FAQ (cartão menta + acordeão) · leque.
+   Cada página monta-se com estes blocos (partials em pages/partials/) e só
+   guarda no seu CSS o que é exclusivo dela. Tokens --ch-* / --hp-serif vivem
+   no .hp do home.css. Carrega depois do home.css e antes do CSS de cada página. */
+
+/* Base */
+.cv-sec {
+	padding: 120px 32px;
+}
+.cv-head {
+	max-width: 760px;
+	margin: 0 auto 60px;
+	text-align: center;
+}
+.cv-head--esq {
+	margin-left: 0;
+	text-align: left;
+}
+.cv-eyebrow {
+	margin: 0 0 14px;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.2;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--ch-teal);
+}
+.cv-h2 {
+	margin: 0;
+	font-family: var(--hp-serif);
+	font-weight: 400;
+	font-size: 42px;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	color: var(--ch-texto);
+	text-wrap: balance;
+}
+.cv-head--claro .cv-eyebrow,
+.cv-head--claro .cv-h2 {
+	color: #fff;
+}
+.cv-h3 {
+	margin: 0;
+	font-family: var(--hp-serif);
+	font-weight: 400;
+	font-size: 32px;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	color: var(--ch-escuro);
+	text-wrap: balance;
+}
+
+/* Botão branco da referência (raio 12px, 50px de altura). --sombra: sobre fundos claros. */
+.cv-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 50px;
+	padding: 0 24px;
+	border-radius: var(--ch-r-botao);
+	background: #fff;
+	font-size: 16px;
+	font-weight: 500;
+	transition:
+		background 0.2s,
+		transform 0.2s,
+		box-shadow 0.2s;
+}
+.hp .cv-btn {
+	color: #000;
+}
+.hp .cv-btn:hover {
+	background: #eef3f2;
+	color: #000;
+	transform: translateY(-1px);
+}
+.cv-btn--sombra {
+	box-shadow: 0 8px 22px -12px rgba(9, 41, 43, 0.45);
+}
+/* Variante escura (sobre branco/menta), para CTAs principais fora de fotografias. */
+.cv-btn--escuro {
+	background: var(--ch-escuro);
+}
+.hp .cv-btn--escuro,
+.hp .cv-btn--escuro:hover {
+	color: #fff;
+}
+.hp .cv-btn--escuro:hover {
+	background: #0f3a3d;
+}
+
+/* Etiqueta "recortada": caixa branca num canto da fotografia, com as duas
+   curvas côncavas feitas por gradientes radiais (o branco "come" o canto). */
+.cv-tab {
+	--tab-r: 20px;
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	z-index: 2;
+	display: inline-flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 14px 18px 12px 20px;
+	border-top-left-radius: var(--tab-r);
+	background: #fff;
+	font-size: 16px;
+	font-weight: 500;
+	line-height: 1.25;
+	color: #000;
+}
+.cv-tab::before,
+.cv-tab::after {
+	content: "";
+	position: absolute;
+	width: var(--tab-r);
+	height: var(--tab-r);
+	pointer-events: none;
+	background: radial-gradient(
+		circle at 0 0,
+		transparent calc(var(--tab-r) - 0.5px),
+		#fff var(--tab-r)
+	);
+}
+.cv-tab::before {
+	left: calc(var(--tab-r) * -1);
+	bottom: 0;
+}
+.cv-tab::after {
+	right: 0;
+	top: calc(var(--tab-r) * -1);
+}
+/* Variante no canto inferior esquerdo (retratos da equipa). */
+.cv-tab--esq {
+	right: auto;
+	left: 0;
+	padding: 14px 20px 12px 18px;
+	border-top-left-radius: 0;
+	border-top-right-radius: var(--tab-r);
+}
+.cv-tab--esq::before,
+.cv-tab--esq::after {
+	background: radial-gradient(
+		circle at 100% 0,
+		transparent calc(var(--tab-r) - 0.5px),
+		#fff var(--tab-r)
+	);
+}
+.cv-tab--esq::before {
+	left: auto;
+	right: calc(var(--tab-r) * -1);
+}
+.cv-tab--esq::after {
+	right: auto;
+	left: 0;
+}
+.cv-tab strong {
+	font-weight: 500;
+}
+.cv-tab span {
+	font-weight: 400;
+	color: var(--ch-cinza);
+}
+/* Variante-botão (texto + círculo com seta), no canto de um cartão menta. */
+.cv-tab--botao {
+	flex-direction: row;
+	align-items: center;
+	gap: 14px;
+	padding: 16px 20px 16px 22px;
+	font-size: 20px;
+}
+.hp a.cv-tab--botao {
+	color: #000;
+}
+.cv-tab__seta {
+	display: grid;
+	place-items: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--ch-escuro);
+	color: #fff;
+	transition: transform 0.2s;
+}
+.cv-tab__seta svg {
+	width: 18px;
+	height: 18px;
+}
+.cv-tab--botao:hover .cv-tab__seta {
+	transform: translateX(3px);
+}
+
+/* Animações
+   Estado inicial dos elementos animados por assets/js/animacoes.js. Só vale
+   com html.hp-motion (posta no <head>), por isso sem JS nada fica escondido. */
+.hp-motion [data-revelar],
+.hp-motion [data-revelar-grupo] > *,
+.hp-motion [data-entrada],
+.hp-motion [data-colagem] [data-paralaxe] {
+	opacity: 0;
+}
+/* O leque (vagas onde as 4 fotos começam) só existe quando há animação.
+   As vagas são caixas invisíveis: o JS lê a posição e a inclinação
+   (data-leque-vaga = graus) e leva lá as cartas do bento. A 1.ª e a 4.ª
+   descem 10px, como cartas na mão. */
+/* O leque fica POR CIMA do título (como na referência) e não ocupa espaço no
+   fluxo: depois de as cartas descerem não sobra nenhum buraco. O pai
+   (.cv-leque-zona) dá a referência de posição. */
+.cv-leque-zona {
+	position: relative;
+}
+.cv-leque {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: -40px;
+	z-index: 0;
+	display: none;
+	justify-content: center;
+	height: 176px;
+	pointer-events: none;
+}
+.hp-motion .cv-leque {
+	display: flex;
+}
+.cv-leque__vaga {
+	width: 150px;
+	height: 150px;
+	margin: 0 5px;
+	visibility: hidden;
+}
+.cv-leque__vaga:first-child,
+.cv-leque__vaga:last-child {
+	margin-top: 10px;
+}
+/* Antes de o JS posicionar as cartas no leque, não se mostram no bento (evita um salto). */
+.hp-motion [data-leque-grelha]:not(.is-leque-pronto) [data-leque] {
+	opacity: 0;
+}
+.hp-motion [data-leque] {
+	z-index: 3;
+	will-change: transform;
+}
+
+/* Hero (fotografia em moldura)
+   Homepage e Especialidades: foto de ponta a ponta com 8px de margem, raio 20px,
+   véu escuro no canto do texto. */
+.cv-hero {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	margin: 8px;
+	height: calc(100svh - 16px);
+	min-height: 640px;
+	max-height: 980px;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.cv-hero__bg img {
+	position: absolute;
+	inset: 0;
+	z-index: -2;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: 50% 45%;
+}
+/* Véu: escurece o canto inferior esquerdo (texto) e deixa o resto da foto respirar. */
+.cv-hero::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background:
+		linear-gradient(
+			to top,
+			rgba(6, 22, 24, 0.78) 0%,
+			rgba(6, 22, 24, 0.32) 42%,
+			rgba(6, 22, 24, 0) 68%
+		),
+		linear-gradient(to right, rgba(6, 22, 24, 0.5) 0%, rgba(6, 22, 24, 0) 58%);
+}
+.cv-hero__inner {
+	position: absolute;
+	left: 32px;
+	right: 32px;
+	bottom: 60px;
+	margin: 0 auto;
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 48px;
+}
+.cv-hero__info {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 22px;
+	margin: 0 0 22px;
+	padding: 0;
+	list-style: none;
+	font-size: 15px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.92);
+}
+.cv-hero__info li {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+.cv-hero__info svg {
+	width: 18px;
+	height: 18px;
+	color: #ffd942;
+}
+.hp .cv-hero__info a {
+	color: inherit;
+}
+.cv-hero__title {
+	max-width: 620px;
+	margin: 0 0 32px;
+	font-family: var(--hp-serif);
+	font-weight: 400;
+	font-size: 50px;
+	line-height: 1.2;
+	color: #fff;
+	text-wrap: balance;
+}
+.cv-hero__card {
+	flex: none;
+	width: 267px;
+	display: block;
+}
+.hp .cv-hero__card {
+	color: #fff;
+}
+.cv-hero__thumb {
+	position: relative;
+	display: block;
+	aspect-ratio: 267 / 150;
+	border-radius: 10px;
+	overflow: hidden;
+}
+.cv-hero__thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cv-hero__card:hover .cv-hero__thumb img {
+	transform: scale(1.05);
+}
+.cv-hero__seta {
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: rgba(9, 20, 22, 0.55);
+	color: #fff;
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+}
+.cv-hero__seta svg {
+	width: 18px;
+	height: 18px;
+}
+.cv-hero__legenda {
+	display: block;
+	margin-top: 12px;
+	font-size: 14px;
+	line-height: 1.4;
+	color: rgba(255, 255, 255, 0.82);
+}
+
+/* Reserva ("visit us")
+   Hero com o título à esquerda e um formulário em vidro escuro à direita.
+   Neste hero a moldura cresce com o conteúdo (o formulário pode ser longo). */
+.cv-migalhas {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 18px;
+	font-size: 14px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.72);
+}
+.hp .cv-migalhas a {
+	color: rgba(255, 255, 255, 0.88);
+}
+.hp .cv-migalhas a:hover {
+	color: #fff;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.cv-migalhas [aria-current] {
+	color: #fff;
+}
+.cv-hero__lead {
+	max-width: 440px;
+	margin: -14px 0 0;
+	font-size: 18px;
+	line-height: 1.45;
+	color: rgba(255, 255, 255, 0.86);
+}
+
+.cv-hero--reserva {
+	display: flex;
+	align-items: flex-end;
+	height: auto;
+	min-height: calc(100svh - 16px);
+	max-height: none;
+	padding: 140px 0 60px;
+}
+.cv-hero--reserva .cv-hero__inner {
+	position: relative;
+	left: auto;
+	right: auto;
+	bottom: auto;
+	flex: 1;
+	align-items: flex-end;
+	padding: 0 32px;
+	box-sizing: content-box;
+}
+
+.cv-reserva {
+	flex: none;
+	width: 450px;
+}
+.cv-reserva--largo {
+	width: 520px;
+}
+/* Variante fora de fotografia: cartão petróleo sólido (mesmos campos claros). */
+.cv-reserva--solido {
+	width: auto;
+}
+.cv-reserva--solido .cv-reserva__form {
+	padding: 32px;
+	border: 0;
+	background: var(--ch-escuro);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+.cv-atalhos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.cv-reserva__form {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px 18px;
+	margin: 0;
+	padding: 24px;
+	border-radius: var(--ch-r-cartao);
+	color: #fff;
+	background: rgba(18, 18, 18, 0.5);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	-webkit-backdrop-filter: blur(18px) saturate(130%);
+	backdrop-filter: blur(18px) saturate(130%);
+}
+.cv-reserva__titulo {
+	grid-column: 1 / -1;
+	margin: 0;
+	font-family: var(--hp-serif);
+	font-size: 22px;
+	font-weight: 400;
+	color: #fff;
+}
+.cv-reserva__sub {
+	grid-column: 1 / -1;
+	margin: -10px 0 0;
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.7);
+}
+.cv-campo {
+	display: grid;
+	gap: 8px;
+	align-content: start;
+}
+.cv-campo--largo {
+	grid-column: 1 / -1;
+}
+.cv-campo > span,
+.cv-campo > label {
+	font-size: 13px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.82);
+}
+.cv-campo select,
+.cv-campo input,
+.cv-campo textarea {
+	width: 100%;
+	height: 44px;
+	padding: 0 12px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	font: inherit;
+	font-size: 16px; /* 16px: sem zoom no iOS */
+	color-scheme: dark;
+}
+.cv-campo textarea {
+	height: auto;
+	min-height: 76px;
+	padding: 10px 12px;
+	resize: vertical;
+}
+.cv-campo ::placeholder {
+	color: rgba(255, 255, 255, 0.45);
+}
+.cv-campo select option {
+	color: #000;
+}
+.cv-campo select:focus,
+.cv-campo input:focus,
+.cv-campo textarea:focus {
+	border-color: rgba(255, 255, 255, 0.55);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+.cv-reserva__enviar {
+	grid-column: 1 / -1;
+	width: 100%;
+	border: 0;
+	cursor: pointer;
+}
+.cv-reserva__nota {
+	grid-column: 1 / -1;
+	margin: -4px 0 0;
+	font-size: 13px;
+	line-height: 1.45;
+	color: rgba(255, 255, 255, 0.66);
+}
+.cv-reserva__nota strong {
+	color: #fff;
+	font-weight: 600;
+}
+.cv-reserva__info {
+	display: flex;
+	gap: 40px;
+	margin: 18px 0 0;
+	padding: 0 4px;
+}
+.cv-reserva__info dt {
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.72);
+}
+.cv-reserva__info dd {
+	margin: 4px 0 0;
+	font-size: 17px;
+	font-weight: 600;
+	color: #fff;
+}
+.hp .cv-reserva__info a {
+	color: #fff;
+}
+.cv-reserva__acoes {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.cv-reserva__acoes .cv-btn {
+	flex: 1 1 auto;
+}
+.cv-btn--vidro {
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.hp .cv-btn--vidro,
+.hp .cv-btn--vidro:hover {
+	color: #fff;
+}
+.hp .cv-btn--vidro:hover {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+/* Marcação rápida sem conta: abas, dias e horas em botões, primeira vaga. */
+.cv-rapida__abas {
+	display: flex;
+	gap: 4px;
+	margin: 0 0 10px;
+	padding: 4px;
+	border-radius: 12px;
+	background: rgba(18, 18, 18, 0.45);
+	-webkit-backdrop-filter: blur(18px);
+	backdrop-filter: blur(18px);
+}
+.cv-rapida__abas button {
+	flex: 1;
+	min-height: 40px;
+	border: 0;
+	border-radius: 9px;
+	background: none;
+	font: inherit;
+	font-size: 14px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.72);
+	cursor: pointer;
+	transition:
+		background-color 0.2s,
+		color 0.2s;
+}
+.cv-rapida__abas button:hover {
+	color: #fff;
+}
+.cv-rapida__abas button[aria-selected="true"] {
+	background: #fff;
+	color: var(--ch-escuro);
+}
+.cv-rapida__abas button:focus-visible {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+}
+.cv-rapida [hidden] {
+	display: none;
+}
+#mr-dias {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	gap: 6px;
+}
+#mr-dias .cv-rapida__dia {
+	min-width: 0;
+	padding: 7px 2px;
+}
+.cv-rapida__armadilha {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+.cv-rapida__erro {
+	grid-column: 1 / -1;
+	margin: 0;
+	padding: 10px 12px;
+	border-radius: 8px;
+	background: rgba(210, 107, 70, 0.22);
+	border: 1px solid rgba(240, 164, 134, 0.5);
+	font-size: 14px;
+	line-height: 1.4;
+	color: #fff;
+}
+.cv-rapida fieldset {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.cv-rapida legend {
+	padding: 0;
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.82);
+}
+.cv-rapida legend em {
+	margin-left: 6px;
+	font-style: normal;
+	color: rgba(255, 255, 255, 0.55);
+}
+.cv-campo label small {
+	font-weight: 400;
+	color: rgba(255, 255, 255, 0.55);
+}
+.cv-rapida__chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.cv-rapida__dia,
+.cv-rapida__hora {
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: rgba(255, 255, 255, 0.07);
+	font: inherit;
+	color: #fff;
+	cursor: pointer;
+	transition:
+		background-color 0.15s,
+		border-color 0.15s,
+		color 0.15s,
+		transform 0.15s;
+}
+.cv-rapida__dia {
+	display: grid;
+	gap: 1px;
+	min-width: 62px;
+	padding: 7px 10px;
+	border-radius: 10px;
+	text-align: center;
+}
+.cv-rapida__dia b {
+	font-size: 13px;
+	font-weight: 600;
+}
+.cv-rapida__dia span {
+	font-size: 11.5px;
+	color: rgba(255, 255, 255, 0.62);
+}
+.cv-rapida__hora {
+	min-width: 66px;
+	min-height: 40px;
+	padding: 0 12px;
+	border-radius: 99px;
+	font-size: 14px;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+.cv-rapida__dia:hover,
+.cv-rapida__hora:hover {
+	border-color: rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.14);
+}
+.cv-rapida__dia.is-on,
+.cv-rapida__hora.is-on {
+	border-color: #fff;
+	background: #fff;
+	color: var(--ch-escuro);
+}
+.cv-rapida__dia.is-on span {
+	color: var(--ch-teal);
+}
+.cv-rapida__dia:focus-visible,
+.cv-rapida__hora:focus-visible,
+.cv-rapida__primeira:focus-visible {
+	outline: 2px solid #fff;
+	outline-offset: 2px;
+}
+.cv-rapida__horas .cv-rapida__chips {
+	max-height: 148px;
+	overflow-y: auto;
+	padding: 2px;
+}
+.cv-rapida__msg {
+	margin: 0;
+	font-size: 13.5px;
+	line-height: 1.45;
+	color: rgba(255, 255, 255, 0.66);
+}
+.cv-rapida__primeira {
+	justify-self: start;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 10px;
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--ch-menta);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
+.cv-rapida__primeira:disabled {
+	opacity: 0.4;
+	cursor: default;
+	text-decoration: none;
+}
+.cv-rapida__aceito {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: rgba(255, 255, 255, 0.82);
+	cursor: pointer;
+}
+.cv-rapida__aceito input {
+	flex: none;
+	width: 18px;
+	height: 18px;
+	margin: 1px 0 0;
+	accent-color: var(--ch-menta);
+}
+.cv-rapida .is-falta input,
+.cv-rapida .is-falta select {
+	border-color: #f0a486;
+	box-shadow: 0 0 0 3px rgba(240, 164, 134, 0.25);
+}
+.cv-rapida__aceito.is-falta span {
+	color: #f0a486;
+}
+.hp .cv-reserva__nota a {
+	color: #fff;
+	font-weight: 600;
+}
+.cv-rapida-ok {
+	outline: none;
+}
+.cv-rapida-ok__ic {
+	grid-column: 1 / -1;
+	display: grid;
+	place-items: center;
+	width: 46px;
+	height: 46px;
+	border-radius: 50%;
+	background: var(--ch-menta);
+}
+.cv-rapida-ok__ic svg {
+	width: 24px;
+	height: 24px;
+	fill: none;
+	stroke: var(--ch-escuro);
+	stroke-width: 2.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.cv-rapida-ok__resumo {
+	grid-column: 1 / -1;
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 14px 16px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.08);
+}
+.cv-rapida-ok__resumo div {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+}
+.cv-rapida-ok__resumo dt {
+	font-size: 13.5px;
+	color: rgba(255, 255, 255, 0.66);
+}
+.cv-rapida-ok__resumo dd {
+	margin: 0;
+	font-size: 14.5px;
+	font-weight: 600;
+	text-align: right;
+	color: #fff;
+}
+.cv-reserva__sub b {
+	color: #fff;
+}
+
+/* Local ("our location")
+   Fotografia com a etiqueta-botão "Ver no mapa" + morada e horário ao lado. */
+.cv-local__grelha {
+	display: grid;
+	grid-template-columns: minmax(0, 620fr) minmax(0, 520fr);
+	gap: 80px;
+	align-items: center;
+}
+.cv-local__moldura {
+	position: relative;
+	aspect-ratio: 620 / 400;
+	overflow: hidden;
+	border-radius: var(--ch-r-cartao);
+	background: #e9ecea;
+}
+.cv-local__moldura img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.cv-local__dados {
+	display: grid;
+	gap: 26px;
+	margin: 0;
+}
+.cv-local__dados dt {
+	margin-bottom: 8px;
+	font-size: 20px;
+	font-weight: 500;
+	color: #000;
+}
+.cv-local__dados dd {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.5;
+	color: var(--ch-texto-2);
+}
+.hp .cv-local__dados a {
+	color: var(--ch-texto-2);
+	text-decoration: underline;
+	text-decoration-color: var(--ch-linha);
+	text-underline-offset: 3px;
+}
+.hp .cv-local__dados a:hover {
+	color: var(--ch-escuro);
+}
+
+/* FAQ sem cartão (visit us): título à esquerda, acordeão à direita. */
+.cv-faq--simples .cv-faq__grelha {
+	grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+
+/* Números (faixa de factos) */
+.cv-numeros {
+	padding: 48px 32px;
+}
+.cv-numeros__lista {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.cv-numero {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	padding: 4px 24px;
+}
+.cv-numero + .cv-numero {
+	border-left: 1px solid #d6d6d6;
+}
+.cv-numero__valor {
+	font-family: var(--hp-serif);
+	font-size: 50px;
+	line-height: 1.2;
+	color: #000;
+}
+.cv-numero__rotulo {
+	max-width: 160px;
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--ch-teal);
+}
+
+/* FAQ no telemóvel (Marcar)
+   Fotografia larga (mão com telemóvel) como cartão; título na zona livre à
+   esquerda; o acordeão vive no ecrã, com scroll próprio. O ecrã é posicionado
+   em % da fotografia (medido no original 2393×1540) e o texto escala com o
+   cartão (container query). Abaixo de 1000px vira um FAQ normal. */
+.cv-faq-tel__cartao {
+	--ecra-x: 57.58%;
+	--ecra-y: 13.18%;
+	--ecra-w: 20.23%;
+	--ecra-h: 69.68%;
+	position: relative;
+	overflow: hidden;
+	container-type: inline-size;
+	border-radius: var(--ch-r-secao);
+	background: #e6e5e4;
+}
+.cv-faq-tel__foto {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+.cv-faq-tel__texto {
+	position: absolute;
+	left: 6%;
+	top: 0;
+	bottom: 0;
+	width: 42%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+.cv-faq-tel__texto > p:last-child {
+	max-width: 420px;
+	margin: 18px 0 0;
+	font-size: 18px;
+	line-height: 1.5;
+	color: var(--ch-texto-2);
+}
+.hp .cv-faq-tel__texto a {
+	color: var(--ch-teal);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.cv-faq-tel__ecra {
+	position: absolute;
+	left: var(--ecra-x);
+	top: var(--ecra-y);
+	width: var(--ecra-w);
+	height: var(--ecra-h);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border-radius: 10% / 4.6%;
+	background: #fff;
+	font-size: clamp(11px, 1.1cqw, 14px);
+}
+.cv-faq-tel__app {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	padding: 13% 7% 4%;
+	border-bottom: 1px solid var(--ch-linha);
+	font-weight: 600;
+	color: var(--ch-escuro);
+}
+.cv-faq-tel__app img {
+	width: 1.7em;
+	height: 1.7em;
+	border-radius: 5px;
+}
+.cv-faq-tel__lista {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0 7% 6%;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+}
+.cv-faq-tel__lista .cv-pergunta summary {
+	min-height: 0;
+	gap: 0.7em;
+	padding: 0.95em 0;
+	font-size: 1em;
+	line-height: 1.3;
+}
+.cv-faq-tel__lista .cv-pergunta__mais {
+	width: 1.6em;
+	height: 1.6em;
+	border-radius: 4px;
+}
+.cv-faq-tel__lista .cv-pergunta__mais::before,
+.cv-faq-tel__lista .cv-pergunta__mais::after {
+	width: 0.7em;
+}
+.cv-faq-tel__lista .cv-pergunta p {
+	margin: 0 0 1em;
+	font-size: 0.94em;
+	line-height: 1.5;
+}
+
+/* Editorial
+   Título à esquerda, texto corrido à direita (como o FAQ do "visit us"). */
+.cv-editorial__grelha {
+	display: grid;
+	grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+	gap: 60px;
+	align-items: start;
+}
+.cv-editorial__texto p {
+	margin: 0 0 22px;
+	font-size: 20px;
+	line-height: 1.55;
+	letter-spacing: -0.01em;
+	color: var(--ch-texto-2);
+}
+.cv-editorial__texto p:first-child {
+	font-size: 24px;
+	line-height: 1.45;
+	color: #000;
+}
+.cv-editorial__texto p:last-child {
+	margin-bottom: 0;
+}
+/* O painel do hero "visit us" é alvo de âncoras (#contacto): fica abaixo do cabeçalho fixo. */
+.cv-reserva[id] {
+	scroll-margin-top: 110px;
+}
+
+/* Passos */
+.cv-passos {
+	padding-top: 40px;
+}
+.cv-passos__lista {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 24px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.cv-passo__cartao {
+	position: relative;
+	display: grid;
+	place-items: center;
+	height: 300px;
+	overflow: hidden;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-menta);
+	color: var(--ch-escuro);
+}
+.cv-passo__ilustracao {
+	width: 160px;
+	height: auto;
+	transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cv-passo:hover .cv-passo__ilustracao {
+	transform: translateY(-4px) rotate(-2deg);
+}
+.cv-passo__titulo {
+	margin: 28px 0 12px;
+	font-size: 20px;
+	font-weight: 500;
+	color: #000;
+}
+.cv-passo__texto {
+	margin: 0;
+	max-width: 380px;
+	font-size: 18px;
+	line-height: 1.4;
+	letter-spacing: -0.01em;
+	color: var(--ch-texto-2);
+}
+
+/* Médico ("our team")
+   Retrato 3:4 em fundo creme, raio 15px, etiqueta branca no canto inferior
+   direito. Serve o marquee da home (<a>) e a grelha de Médicos (<button>). */
+.cv-medico {
+	position: relative;
+	display: block;
+	width: 100%;
+	aspect-ratio: 3 / 4;
+	padding: 0;
+	overflow: hidden;
+	border: 0;
+	border-radius: var(--ch-r-cartao);
+	background: var(--ch-creme);
+	cursor: pointer;
+	text-align: left;
+}
+.cv-medico img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center top;
+	transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cv-medico:hover img {
+	transform: scale(1.04);
+}
+.cv-medico .cv-tab {
+	max-width: calc(100% - 40px);
+}
+
+/* Relatos ("reviews")
+   Carrossel de slides: fotografia larga + cartão menta com texto e etiqueta.
+   O topo do cartão é aspas (testemunhos) ou um número em serifa (princípios).
+   Scroll-snap nativo; as setas são melhoria progressiva (main.js). */
+.cv-relatos {
+	padding-right: 0;
+	padding-left: 0;
+}
+/* content-box: o padding fica FORA dos 1200px, para alinhar com a pista. */
+.cv-relatos__topo {
+	box-sizing: content-box;
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 24px;
+	margin-bottom: 60px;
+	padding: 0 32px;
+}
+.cv-relatos__topo .cv-head {
+	margin: 0;
+}
+.cv-setas {
+	display: flex;
+	gap: 8px;
+}
+.cv-seta {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: var(--ch-verde-10);
+	color: var(--ch-escuro);
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		opacity 0.2s;
+}
+.cv-seta:hover {
+	background: rgba(34, 168, 105, 0.2);
+}
+.cv-seta:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+.cv-seta svg {
+	width: 18px;
+	height: 18px;
+}
+.cv-seta--ant svg {
+	transform: rotate(180deg);
+}
+.cv-relatos__pista {
+	--margem: max(32px, calc((100vw - var(--hp-maxw)) / 2));
+	display: flex;
+	gap: 12px;
+	overflow-x: auto;
+	padding: 0 var(--margem);
+	scroll-snap-type: x mandatory;
+	scroll-padding-left: var(--margem);
+	scrollbar-width: none;
+}
+.cv-relatos__pista::-webkit-scrollbar {
+	display: none;
+}
+.cv-relato {
+	flex: 0 0 min(1080px, 88vw);
+	display: grid;
+	grid-template-columns: minmax(0, 690fr) minmax(0, 377fr);
+	gap: 12px;
+	height: 470px;
+	margin: 0;
+	scroll-snap-align: start;
+}
+.cv-relato__foto {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: var(--ch-r-cartao);
+}
+.cv-relato__cartao {
+	position: relative;
+	padding: 26px 24px 100px;
+	overflow: hidden;
+	border-radius: var(--ch-r-cartao);
+	background: var(--ch-menta);
+}
+.cv-relato__aspas {
+	display: block;
+	height: 40px;
+	font-family: var(--hp-serif);
+	font-size: 80px;
+	line-height: 0.9;
+	color: var(--ch-teal);
+}
+.cv-relato__num {
+	display: block;
+	font-family: var(--hp-serif);
+	font-size: 50px;
+	line-height: 1.2;
+	color: #000;
+}
+.cv-relato__titulo {
+	margin: 6px 0 0;
+	font-size: 20px;
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--ch-cinza);
+}
+.cv-relato__texto {
+	margin: 22px 0 0;
+	font-size: 18px;
+	line-height: 1.45;
+	letter-spacing: -0.01em;
+	color: #000;
+}
+.cv-relato__cartao .cv-tab {
+	padding: 16px 20px 14px 22px;
+	font-size: 20px;
+}
+.cv-relato__cartao .cv-tab span {
+	font-size: 16px;
+}
+
+/* FAQ
+   Cartão menta de marcação à esquerda + acordeão <details> nativo. */
+.cv-faq__grelha {
+	display: grid;
+	grid-template-columns: 378px minmax(0, 1fr);
+	gap: 60px;
+	align-items: start;
+}
+.cv-faq__cartao {
+	position: relative;
+	min-height: 455px;
+	padding: 30px 30px 110px;
+	overflow: hidden;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-menta);
+}
+.cv-faq__cartao img {
+	width: 60px;
+	height: 60px;
+	margin-bottom: 56px;
+}
+.cv-faq__cartao .cv-h3 {
+	margin-bottom: 10px;
+}
+.cv-faq__cartao p {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.45;
+	color: rgba(9, 41, 43, 0.78);
+}
+.cv-pergunta {
+	border-bottom: 1px solid var(--ch-linha);
+}
+.cv-pergunta summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	min-height: 64px;
+	padding: 18px 0;
+	list-style: none;
+	cursor: pointer;
+	font-size: 18px;
+	font-weight: 500;
+	color: #000;
+}
+.cv-pergunta summary::-webkit-details-marker {
+	display: none;
+}
+.cv-pergunta__mais {
+	position: relative;
+	flex: none;
+	width: 26px;
+	height: 26px;
+	border-radius: 5px;
+	background: var(--ch-verde-10);
+}
+.cv-pergunta__mais::before,
+.cv-pergunta__mais::after {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 11px;
+	height: 1.6px;
+	background: var(--ch-escuro);
+	transform: translate(-50%, -50%);
+	transition: transform 0.25s;
+}
+.cv-pergunta__mais::after {
+	transform: translate(-50%, -50%) rotate(90deg);
+}
+.cv-pergunta[open] .cv-pergunta__mais::after {
+	transform: translate(-50%, -50%) rotate(0deg);
+}
+.cv-pergunta p {
+	max-width: 640px;
+	margin: 0 0 22px;
+	font-size: 16px;
+	line-height: 1.6;
+	color: var(--ch-texto-2);
+}
+
+@media (max-width: 1000px) {
+	.cv-faq-tel__cartao {
+		overflow: visible;
+		border-radius: 0;
+		background: none;
+	}
+	.cv-faq-tel__foto,
+	.cv-faq-tel__app {
+		display: none;
+	}
+	.cv-faq-tel__texto,
+	.cv-faq-tel__ecra {
+		position: static;
+		width: auto;
+		height: auto;
+		border-radius: 0;
+		font-size: 16px;
+	}
+	.cv-faq-tel__texto {
+		margin-bottom: 24px;
+	}
+	.cv-faq-tel__lista {
+		overflow: visible;
+		padding: 0;
+	}
+	.cv-faq-tel__lista .cv-pergunta summary {
+		min-height: 64px;
+		padding: 18px 0;
+		font-size: 18px;
+	}
+	.cv-faq-tel__lista .cv-pergunta__mais {
+		width: 26px;
+		height: 26px;
+	}
+	.cv-faq-tel__lista .cv-pergunta__mais::before,
+	.cv-faq-tel__lista .cv-pergunta__mais::after {
+		width: 11px;
+	}
+	.cv-faq-tel__lista .cv-pergunta p {
+		margin: 0 0 22px;
+		font-size: 16px;
+	}
+}
+
+@media (max-width: 900px) {
+	.cv-hero__inner {
+		left: 24px;
+		right: 24px;
+		bottom: 40px;
+	}
+	.cv-hero__card {
+		display: none;
+	}
+	.cv-hero__title {
+		font-size: 40px;
+	}
+	.cv-sec {
+		padding: 88px 24px;
+	}
+	.cv-h2 {
+		font-size: 34px;
+	}
+	.cv-passos__lista {
+		grid-template-columns: 1fr;
+		max-width: 520px;
+		margin: 0 auto;
+	}
+	.cv-relatos__topo {
+		padding: 0 24px;
+	}
+	.cv-faq__grelha {
+		grid-template-columns: 1fr;
+	}
+	.cv-faq__cartao {
+		min-height: 340px;
+		order: 2;
+	}
+	.cv-faq--simples .cv-faq__grelha {
+		grid-template-columns: 1fr;
+		gap: 24px;
+	}
+	.cv-local__grelha {
+		grid-template-columns: 1fr;
+		gap: 40px;
+	}
+	.cv-editorial__grelha {
+		grid-template-columns: 1fr;
+		gap: 24px;
+	}
+	/* Reserva: o texto por cima, o formulário por baixo, a foto no topo. */
+	.cv-hero--reserva {
+		min-height: 0;
+		padding: 120px 0 32px;
+	}
+	.cv-hero--reserva .cv-hero__inner {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 28px;
+		padding: 0 24px;
+	}
+	.cv-hero--reserva .cv-hero__bg img {
+		object-position: center top;
+	}
+	.cv-hero--reserva::after {
+		background: linear-gradient(
+			to bottom,
+			rgba(6, 22, 24, 0.25) 0%,
+			rgba(6, 22, 24, 0.72) 30%,
+			rgba(6, 22, 24, 0.86) 100%
+		);
+	}
+	.cv-reserva,
+	.cv-reserva--largo {
+		width: 100%;
+		max-width: 560px;
+	}
+}
+
+@media (max-width: 640px) {
+	.cv-hero {
+		height: min(78svh, 680px);
+		min-height: 520px;
+	}
+	.cv-hero__inner {
+		left: 20px;
+		right: 20px;
+		bottom: 28px;
+	}
+	.cv-hero__title {
+		margin-bottom: 24px;
+		font-size: 32px;
+		line-height: 1.15;
+	}
+	.cv-hero__info {
+		gap: 6px 16px;
+		margin-bottom: 16px;
+		font-size: 13.5px;
+	}
+	.cv-sec {
+		padding: 72px 20px;
+	}
+	.cv-head {
+		margin-bottom: 40px;
+	}
+	.cv-h2 {
+		font-size: 30px;
+	}
+	.cv-h3 {
+		font-size: 26px;
+	}
+	.cv-tab {
+		--tab-r: 16px;
+		padding: 10px 14px 8px 16px;
+		font-size: 14px;
+	}
+	.cv-passo__cartao {
+		height: 250px;
+	}
+	.cv-passo__texto {
+		font-size: 16px;
+	}
+	.cv-leque {
+		top: -24px;
+		height: 120px;
+	}
+	.cv-leque__vaga {
+		width: 96px;
+		height: 96px;
+		margin: 0 3px;
+	}
+	.cv-relatos__topo {
+		flex-direction: column;
+		align-items: flex-start;
+		padding: 0 20px;
+		margin-bottom: 32px;
+	}
+	.cv-relatos__pista {
+		--margem: 20px;
+	}
+	.cv-relato {
+		flex-basis: 86vw;
+		grid-template-columns: 1fr;
+		height: auto;
+	}
+	.cv-relato__foto {
+		height: auto;
+		aspect-ratio: 4 / 3;
+	}
+	.cv-relato__texto {
+		font-size: 16px;
+	}
+	.cv-relato__num {
+		font-size: 42px;
+	}
+	.cv-relato__cartao .cv-tab {
+		font-size: 17px;
+	}
+	.cv-pergunta summary {
+		font-size: 16px;
+	}
+	.cv-faq__cartao {
+		padding: 26px 24px 100px;
+	}
+	.cv-numeros {
+		padding: 36px 20px;
+	}
+	.cv-numeros__lista {
+		grid-template-columns: 1fr;
+		gap: 26px;
+	}
+	.cv-numero + .cv-numero {
+		border-left: 0;
+	}
+	.cv-numero__valor {
+		font-size: 44px;
+	}
+	.cv-hero--reserva {
+		padding-top: 96px;
+	}
+	.cv-hero--reserva .cv-hero__inner {
+		padding: 0 16px;
+	}
+	.cv-hero__lead {
+		font-size: 16px;
+	}
+	.cv-reserva__form,
+	.cv-reserva--solido .cv-reserva__form {
+		grid-template-columns: 1fr;
+		padding: 18px;
+	}
+	.cv-atalhos .cv-btn {
+		flex: 1 1 100%;
+	}
+	.cv-campo {
+		grid-column: 1 / -1;
+	}
+	.cv-reserva__info {
+		gap: 24px;
+	}
+	.cv-reserva__info dd {
+		font-size: 15px;
+	}
+	.cv-local__dados dt {
+		font-size: 18px;
+	}
+	.cv-local__dados dd {
+		font-size: 16px;
+	}
+	.cv-editorial__texto p {
+		font-size: 17px;
+	}
+	.cv-editorial__texto p:first-child {
+		font-size: 20px;
+	}
+}
+
+/* Marcação rápida no telemóvel: os dias numa fila que desliza. */
+@media (max-width: 640px) {
+	#mr-dias {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		padding-bottom: 4px;
+		scroll-snap-type: x proximity;
+		scrollbar-width: none;
+	}
+	#mr-dias::-webkit-scrollbar {
+		display: none;
+	}
+	#mr-dias .cv-rapida__dia {
+		flex: none;
+		min-width: 66px;
+		padding: 7px 8px;
+		scroll-snap-align: start;
+	}
+	.cv-rapida__hora {
+		min-width: 60px;
+	}
+}
+
+/* FAQ: telemóvel ao lado
+   No lugar do cartão menta (opção 'telemovel' do bloco FAQ): fundo clínico
+   animado e a mão com o telemóvel; no ecrã, o convite a marcar. O ecrã segue
+   a fotografia recortada (860×1158): left 15.12%, top 3.37%, 47.09% × 77.29%.
+   O fundo só anima com .is-viva (bloco à vista). */
+.cv-faq__grelha:has(> .cv-faq__tel) {
+	grid-template-columns: 430px minmax(0, 1fr);
+}
+.cv-faq__tel {
+	position: relative;
+	padding-top: 44px;
+	overflow: hidden;
+	border-radius: var(--ch-r-secao);
+	background: #09292b;
+	isolation: isolate;
+}
+.cv-fqt__fundo {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	overflow: hidden;
+}
+.cv-fqt__foto {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: 30% 40%;
+	opacity: 0.34;
+	filter: saturate(0.85);
+}
+.cv-fqt__fundo::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		180deg,
+		rgba(9, 41, 43, 0.92) 0%,
+		rgba(9, 41, 43, 0.72) 55%,
+		rgba(21, 94, 99, 0.62) 100%
+	);
+}
+.cv-fqt__luz {
+	position: absolute;
+	z-index: 1;
+	border-radius: 50%;
+	filter: blur(50px);
+	opacity: 0.6;
+	animation: cv-fqt-deriva 22s ease-in-out infinite alternate paused;
+}
+.cv-fqt__luz--a {
+	right: -20%;
+	top: 8%;
+	width: 320px;
+	height: 320px;
+	background: radial-gradient(closest-side, rgba(1, 141, 135, 0.85), transparent);
+}
+.cv-fqt__luz--b {
+	left: -24%;
+	bottom: 4%;
+	width: 300px;
+	height: 300px;
+	background: radial-gradient(closest-side, rgba(234, 255, 227, 0.32), transparent);
+	animation-duration: 27s;
+	animation-delay: -8s;
+}
+@keyframes cv-fqt-deriva {
+	0% {
+		transform: translate(0, 0) scale(1);
+	}
+	50% {
+		transform: translate(-30px, 24px) scale(1.12);
+	}
+	100% {
+		transform: translate(24px, -18px) scale(0.94);
+	}
+}
+.cv-fqt__ecg {
+	position: absolute;
+	z-index: 2;
+	left: 0;
+	right: 0;
+	top: 26%;
+	width: 100%;
+	height: 90px;
+	overflow: visible;
+}
+.cv-fqt__ecg path {
+	fill: none;
+	stroke: rgba(234, 255, 227, 0.55);
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	vector-effect: non-scaling-stroke;
+	stroke-dasharray: 30 70;
+	stroke-dashoffset: 100;
+	filter: drop-shadow(0 0 6px rgba(234, 255, 227, 0.6));
+	animation: cv-fqt-ecg 4.5s linear infinite paused;
+}
+@keyframes cv-fqt-ecg {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+.cv-fqt__cruz {
+	position: absolute;
+	z-index: 2;
+	left: var(--x);
+	bottom: -24px;
+	width: var(--s);
+	height: var(--s);
+	opacity: 0;
+	border-radius: 2px;
+	background:
+		linear-gradient(rgba(234, 255, 227, 0.5), rgba(234, 255, 227, 0.5)) center / 100% 30%
+			no-repeat,
+		linear-gradient(rgba(234, 255, 227, 0.5), rgba(234, 255, 227, 0.5)) center / 30% 100%
+			no-repeat;
+	animation: cv-fqt-sobe var(--t) linear var(--d) infinite paused;
+}
+@keyframes cv-fqt-sobe {
+	0% {
+		transform: translateY(0) rotate(0);
+		opacity: 0;
+	}
+	12% {
+		opacity: 0.9;
+	}
+	85% {
+		opacity: 0.5;
+	}
+	100% {
+		transform: translateY(-640px) rotate(90deg);
+		opacity: 0;
+	}
+}
+
+/* A mão com o telemóvel: centrada no cartão (o pulso sai pela direita). */
+.cv-faq__tel .cv-fqt__tel {
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	margin-left: 11.3%;
+}
+.cv-fqt__pulso {
+	position: absolute;
+	left: 38.7%;
+	top: 42%;
+	width: 80%;
+	aspect-ratio: 1;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+}
+.cv-fqt__pulso i {
+	position: absolute;
+	inset: 0;
+	border: 1.5px solid rgba(234, 255, 227, 0.3);
+	border-radius: 50%;
+	animation: cv-fqt-pulso 4.2s ease-out infinite paused;
+}
+.cv-fqt__pulso i:nth-child(2) {
+	animation-delay: 1.4s;
+}
+.cv-fqt__pulso i:nth-child(3) {
+	animation-delay: 2.8s;
+}
+@keyframes cv-fqt-pulso {
+	0% {
+		transform: scale(0.45);
+		opacity: 0.9;
+	}
+	100% {
+		transform: scale(1.3);
+		opacity: 0;
+	}
+}
+.cv-fqt__flutua {
+	position: relative;
+	animation: cv-fqt-flutua 7s ease-in-out infinite paused;
+}
+@keyframes cv-fqt-flutua {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-10px);
+	}
+}
+.cv-fqt__mao {
+	display: block;
+	width: 100%;
+	height: auto;
+	filter: drop-shadow(0 28px 36px rgba(0, 0, 0, 0.42));
+}
+.cv-fqt__ecra {
+	position: absolute;
+	left: 15.12%;
+	top: 3.37%;
+	width: 47.09%;
+	height: 77.29%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border-radius: 9.9% / 4.47%;
+	background: #f6f8f7;
+	color: var(--ch-escuro);
+	text-align: left;
+}
+.cv-fqt__notch {
+	position: absolute;
+	z-index: 3;
+	left: 23.7%;
+	top: 0;
+	width: 52.3%;
+	height: 3.6%;
+	border-radius: 0 0 12px 12px;
+	background: #0b0b0b;
+}
+.cv-fqt__estado {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex: none;
+	height: 30px;
+	padding: 4px 18px 0;
+	font-size: 11px;
+	font-weight: 600;
+	color: #0b1f20;
+}
+.cv-fqt__sinal {
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 2px;
+}
+.cv-fqt__sinal i {
+	width: 3px;
+	border-radius: 1px;
+	background: currentColor;
+}
+.cv-fqt__sinal i:nth-child(1) {
+	height: 4px;
+}
+.cv-fqt__sinal i:nth-child(2) {
+	height: 6px;
+}
+.cv-fqt__sinal i:nth-child(3) {
+	height: 8px;
+}
+.cv-fqt__sinal i:nth-child(4) {
+	height: 10px;
+}
+.cv-fqt.is-viva
+	:is(
+		.cv-fqt__luz,
+		.cv-fqt__ecg path,
+		.cv-fqt__cruz,
+		.cv-fqt__pulso i,
+		.cv-fqt__flutua,
+		.cv-faq__aviso
+	) {
+	animation-play-state: running;
+}
+
+/* O ecrã: o convite a marcar (o mesmo do antigo cartão menta). */
+.cv-faq__app {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 10px;
+	min-height: 0;
+	padding: 16px 14px 16px;
+	background: radial-gradient(130% 60% at 50% 0%, #eaffe3 0%, #f6f8f7 62%);
+}
+.cv-faq__logo {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
+	background: var(--ch-escuro);
+	box-shadow: 0 10px 18px -12px rgba(9, 41, 43, 0.8);
+}
+.cv-faq__logo img {
+	width: 28px;
+	height: 28px;
+}
+.cv-faq__app-t {
+	margin: 8px 0 0;
+	font-family: var(--hp-serif);
+	font-size: 19px;
+	font-weight: 400;
+	line-height: 1.2;
+	color: #000;
+}
+.cv-faq__app-s {
+	margin: 0;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: #4b5b59;
+}
+.cv-faq__aviso {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+	padding: 9px 10px;
+	border-radius: 12px;
+	background: #fff;
+	box-shadow: 0 8px 18px -12px rgba(9, 41, 43, 0.45);
+	animation: cv-faq-aviso 6s ease-in-out infinite paused;
+}
+.cv-faq__aviso i {
+	flex: none;
+	width: 24px;
+	height: 24px;
+	border-radius: 7px;
+	background: var(--ch-teal)
+		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.94 1.94 0 0 0 3.4 0'/%3E%3C/svg%3E")
+		center / 14px no-repeat;
+}
+.cv-faq__aviso span {
+	display: grid;
+	min-width: 0;
+	font-size: 11px;
+	line-height: 1.3;
+	color: #4b5b59;
+}
+.cv-faq__aviso b {
+	font-size: 11.5px;
+	color: #0b1f20;
+}
+@keyframes cv-faq-aviso {
+	0%,
+	8% {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+	16%,
+	78% {
+		opacity: 1;
+		transform: none;
+	}
+	90%,
+	100% {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+}
+.cv-faq__app-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 42px;
+	margin-top: auto;
+	border-radius: 12px;
+	background: var(--ch-escuro);
+	font-size: 13.5px;
+	font-weight: 600;
+	text-decoration: none;
+	transition: background-color 0.2s;
+}
+.hp .cv-faq__app-btn,
+.hp .cv-faq__app-btn:hover {
+	color: #fff;
+}
+.cv-faq__app-btn:hover {
+	background: var(--ch-teal);
+}
+.cv-faq__app-btn:focus-visible,
+.cv-faq__app-tel:focus-visible {
+	outline: 2px solid var(--ch-teal);
+	outline-offset: 2px;
+}
+.cv-faq__app-tel {
+	font-size: 12px;
+	font-weight: 600;
+	text-align: center;
+	text-decoration: none;
+}
+.hp .cv-faq__app-tel {
+	color: var(--ch-teal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cv-fqt
+		:is(
+			.cv-fqt__luz,
+			.cv-fqt__ecg path,
+			.cv-fqt__cruz,
+			.cv-fqt__pulso i,
+			.cv-fqt__flutua,
+			.cv-faq__aviso
+		) {
+		animation: none !important;
+	}
+	.cv-fqt__cruz {
+		display: none;
+	}
+	.cv-fqt__ecg path {
+		stroke-dasharray: none;
+	}
+}
+@media (max-width: 1100px) {
+	.cv-faq__grelha:has(> .cv-faq__tel) {
+		grid-template-columns: 360px minmax(0, 1fr);
+		gap: 40px;
+	}
+}
+@media (max-width: 900px) {
+	.cv-faq__grelha:has(> .cv-faq__tel) {
+		grid-template-columns: 1fr;
+	}
+	.cv-faq__tel {
+		order: 2;
+		width: 100%;
+		max-width: 420px;
+		justify-self: center;
+	}
+	/* A fotografia cresce para o ecrã do telemóvel ficar legível (e centrado). */
+	.cv-faq__tel .cv-fqt__tel {
+		width: 124%;
+		margin-left: 2%;
+	}
+	.cv-faq__app {
+		gap: 8px;
+		padding: 12px 12px 14px;
+	}
+	.cv-faq__app-t {
+		font-size: 17px;
+	}
+}
+
+/* Telemóvel (afinações)
+   Heros com formulário crescem com o conteúdo (antes, a altura fixa do hero
+   empurrava o título e os primeiros campos para cima do topo da página);
+   números numa linha de três colunas; secções e cartões mais compactos. */
+@media (max-width: 900px) {
+	.cv-hero.cv-hero--reserva {
+		height: auto;
+		min-height: 0;
+		max-height: none;
+	}
+	.cv-hero--reserva .cv-hero__inner {
+		left: auto;
+		right: auto;
+		bottom: auto;
+	}
+}
+@media (max-width: 640px) {
+	.cv-hero.cv-hero--reserva {
+		padding-top: 92px;
+		padding-bottom: 24px;
+	}
+	.cv-sec {
+		padding: 60px 20px;
+	}
+	.cv-head {
+		margin-bottom: 30px;
+	}
+	.cv-numeros {
+		padding: 28px 12px;
+	}
+	.cv-numeros__lista {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0;
+	}
+	.cv-numero {
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 8px;
+		text-align: center;
+	}
+	.cv-numero + .cv-numero {
+		border-left: 1px solid #e0e4e3;
+	}
+	.cv-numero__valor {
+		font-size: 36px;
+		line-height: 1.1;
+	}
+	.cv-numero__rotulo {
+		max-width: 120px;
+		font-size: 12px;
+		line-height: 1.35;
+	}
+	.cv-passo__cartao {
+		height: 180px;
+	}
+	.cv-reserva__info {
+		flex-wrap: wrap;
+		gap: 14px 28px;
+	}
+	.cv-reserva__info a {
+		white-space: nowrap;
+	}
+}
+
+/* Telemóvel: banners em coluna
+   A fotografia em cima (inteira, sem texto por cima das caras) e o texto por
+   baixo, sobre o petróleo. Nos banners com formulário (Marcar, Especialidades)
+   o formulário vem a seguir ao texto, em baixo. */
+@media (max-width: 640px) {
+	.cv-hero,
+	.cv-hero.cv-hero--reserva {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		height: auto;
+		min-height: 0;
+		max-height: none;
+		padding: 0 0 28px;
+	}
+	.cv-hero__bg {
+		align-self: stretch;
+		width: 100%;
+	}
+	.cv-hero__bg {
+		position: relative;
+		display: block;
+		flex: none;
+		height: 56svh;
+		min-height: 330px;
+		max-height: 480px;
+	}
+	.cv-hero__bg img {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		object-position: 50% 28%;
+	}
+	.cv-hero__bg::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		background: linear-gradient(
+			to bottom,
+			rgba(6, 22, 24, 0.55) 0%,
+			rgba(6, 22, 24, 0) 22%,
+			rgba(6, 22, 24, 0) 52%,
+			var(--ch-escuro) 100%
+		);
+	}
+	.cv-hero::after,
+	.cv-hero--reserva::after {
+		display: none;
+	}
+	.cv-hero__inner,
+	.cv-hero--reserva .cv-hero__inner {
+		position: relative;
+		left: auto;
+		right: auto;
+		bottom: auto;
+		z-index: 2;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 24px;
+		margin-top: -52px;
+		padding: 0 20px;
+	}
+	.cv-hero__info {
+		gap: 8px 16px;
+		margin: 0 0 12px;
+		font-size: 13px;
+	}
+	.cv-hero__title {
+		margin: 0 0 12px;
+		font-size: 31px;
+		line-height: 1.15;
+	}
+	.cv-hero__lead {
+		margin: 0;
+		font-size: 15.5px;
+	}
+	.cv-hero__text > .cv-btn {
+		display: flex;
+		justify-content: center;
+		width: 100%;
+		margin-top: 16px;
+	}
+	.cv-migalhas {
+		margin-bottom: 12px;
+		font-size: 13px;
+	}
+	.cv-hero--reserva .cv-reserva,
+	.cv-hero--reserva .cv-reserva--largo {
+		width: 100%;
+		max-width: none;
+	}
+	.cv-hero--reserva .cv-reserva__form {
+		border-color: rgba(255, 255, 255, 0.1);
+		background: rgba(255, 255, 255, 0.05);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+	.cv-hero--reserva .cv-rapida__abas {
+		background: rgba(255, 255, 255, 0.06);
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+	.cv-leque {
+		display: none !important;
+	}
+	/* Pontos de posição dos carrosséis (gerados em main.js). */
+	.hp-pontos {
+		display: flex;
+		justify-content: center;
+		gap: 6px;
+		margin-top: 18px;
+	}
+	.hp-pontos button {
+		width: 8px;
+		height: 8px;
+		padding: 0;
+		border: 0;
+		border-radius: 99px;
+		background: #cfd8d6;
+		cursor: pointer;
+		transition:
+			width 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+			background-color 0.3s;
+	}
+	.hp-pontos button[aria-current="true"] {
+		width: 24px;
+		background: var(--ch-teal);
+	}
+	.hp-pontos button:focus-visible {
+		outline: 2px solid var(--ch-teal);
+		outline-offset: 2px;
+	}
+}
+@media (min-width: 641px) {
+	.hp-pontos {
+		display: none;
+	}
+}

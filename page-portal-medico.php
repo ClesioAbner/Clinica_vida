@@ -65,13 +65,14 @@ $titulo = static function ( $nome ) {
 	$prim = explode( ' ', trim( (string) $nome ) )[0];
 	return ( 'a' === mb_strtolower( mb_substr( $prim, -1 ) ) ) ? 'Dra.' : 'Dr.';
 };
+$papel     = 'Dra.' === $titulo( $nome_med ) ? 'Médica' : 'Médico';
 $hoje_ymd  = date_i18n( 'Y-m-d', $agora );
 $futuras   = array_values( array_filter( $todas, static function ( $c ) { return strtotime( $c['inicio'] ) >= time() && in_array( $c['status'], array( 'pendente', 'confirmada' ), true ); } ) );
 usort( $futuras, static function ( $a, $b ) { return strtotime( $a['inicio'] ) <=> strtotime( $b['inicio'] ); } );
 // Acesso a todas as fichas de pacientes (continuidade de cuidados — decisão do dono).
 $pacientes = Clinica_Repo::pacientes_do_medico( 0 );
 
-// ---- Ficha do paciente (?pac=ID) — só pacientes do próprio médico ----
+// Ficha do paciente (?pac=ID) — só pacientes do próprio médico
 $ficha = null; $historico = array(); $proc = null; $hist_meu = 0; $hist_outros = 0;
 $pac_id = isset( $_GET['pac'] ) ? (int) $_GET['pac'] : 0;
 if ( $pac_id && current_user_can( 'clinica_ver_processo' ) ) {
@@ -95,7 +96,7 @@ if ( $pac_id && current_user_can( 'clinica_ver_processo' ) ) {
 		}
 	}
 }
-// ---- Atendimento (?atender=ID) — só consultas do próprio médico, não encerradas ----
+// Atendimento (?atender=ID) — só consultas do próprio médico, não encerradas
 $atender = null;
 $at_id   = isset( $_GET['atender'] ) ? (int) $_GET['atender'] : 0;
 if ( $at_id && current_user_can( 'clinica_atender' ) ) {
@@ -158,121 +159,75 @@ $aguardam    = count( array_filter( $fila_hoje, static function ( $c ) use ( $te
 	return ! empty( $c['checkin_em'] ) && ! in_array( $c['status'], $terminado, true );
 } ) );
 
-// ---- Dados dos gráficos ----
-$seg = array(
-	array( 'Pendentes', (int) $kpis['pendente'], '#A9C9DB' ),
-	array( 'Confirmadas', (int) $kpis['confirmada'], '#4E7E9B' ),
-	array( 'Realizadas', (int) $kpis['realizada'], '#33566B' ),
-	array( 'Canceladas / faltas', (int) ( $kpis['cancelada'] + $kpis['faltou'] ), '#CBD5DD' ),
-);
-$seg_total = array_sum( array_column( $seg, 1 ) );
-$acc       = 0;
-$stops     = array();
-foreach ( $seg as $s ) {
-	if ( $s[1] <= 0 ) {
-		continue;
-	}
-	$from   = $seg_total ? ( $acc / $seg_total * 100 ) : 0;
-	$acc   += $s[1];
-	$to     = $seg_total ? ( $acc / $seg_total * 100 ) : 0;
-	$stops[] = sprintf( '%s %.2f%% %.2f%%', $s[2], $from, $to );
-}
-$donut_bg = $seg_total ? ( 'conic-gradient(' . implode( ',', $stops ) . ')' ) : '#E7ECF2';
+// Desempenho do período (só dados reais)
+// O período escolhido (?periodo=) filtra os números e o gráfico do Painel.
+// A médica não vê valores financeiros: isso é da receção e da gestão.
+$dp = Clinica_Painel::dados( $e_clinico ? (int) $medico_id : 0 );
 
-// Barras: consultas por dia (últimos 7 dias).
-$dias7 = array();
-for ( $i = 6; $i >= 0; $i-- ) {
-	$ts = strtotime( "-$i day", $agora );
-	$dias7[ date( 'Y-m-d', $ts ) ] = array( 'l' => date_i18n( 'D', $ts ), 'n' => 0 );
+// Painel na forma da referência (MEDIX)
+// Variação de um número face ao período anterior (sem base, não se inventa).
+$mx_var = static function ( $a, $b ): ?int {
+	return $b > 0 ? (int) round( ( $a - $b ) / $b * 100 ) : null;
+};
+$mx_delta = static function ( ?int $v ): string {
+	return null === $v ? '—' : ( $v >= 0 ? '+' : '−' ) . abs( $v ) . '%';
+};
+$mx_iniciais = static fn( string $nome ): string => Clinica_Painel::iniciais( $nome );
+$mx_periodo_url = static function ( string $k, string $vista ): string {
+	return add_query_arg( 'periodo', $k, remove_query_arg( array( 'periodo', 'cl', 'estado', 'pac', 'atender' ) ) ) . '#' . $vista;
+};
+
+// Frase do dia, por baixo da saudação.
+if ( $hoje_total ) {
+	$mx_resumo = sprintf( _n( 'Tem %d consulta hoje', 'Tem %d consultas hoje', $hoje_total, 'clinica' ), $hoje_total )
+		. ( $aguardam ? sprintf( _n( ' e %d paciente já na sala de espera.', ' e %d pacientes já na sala de espera.', $aguardam, 'clinica' ), $aguardam ) : '.' );
+} elseif ( $proxima ) {
+	$ts_prox   = strtotime( $proxima['inicio'] );
+	$mx_resumo = 'Sem consultas hoje. A próxima é a ' . date_i18n( 'j \d\e F', $ts_prox ) . ', às ' . date_i18n( 'H:i', $ts_prox ) . '.';
+} else {
+	$mx_resumo = 'Sem consultas agendadas. As novas marcações aparecem aqui assim que forem feitas.';
 }
+
+// Agenda da semana: consultas por dia (sem canceladas), da semana passada a
+// quatro semanas à frente. As setas trocam de semana sem novo pedido.
+$mx_por_dia = array();
 foreach ( $todas as $c ) {
-	$d = substr( $c['inicio'], 0, 10 );
-	if ( isset( $dias7[ $d ] ) ) {
-		$dias7[ $d ]['n']++;
+	if ( 'cancelada' !== $c['status'] ) {
+		$mx_por_dia[ substr( $c['inicio'], 0, 10 ) ][] = $c;
 	}
 }
-$max7 = max( 1, max( array_column( $dias7, 'n' ) ) );
-
-// Tendência das últimas 8 semanas (gráfico de linha).
-$semanas = array();
-for ( $i = 7; $i >= 0; $i-- ) {
-	$ts = strtotime( "-$i week", $agora );
-	$semanas[ date( 'o-W', $ts ) ] = array( 'l' => date_i18n( 'j/n', $ts ), 'n' => 0 );
+foreach ( $mx_por_dia as $k => $lista ) {
+	usort( $lista, static fn( $a, $b ) => strtotime( $a['inicio'] ) <=> strtotime( $b['inicio'] ) );
+	$mx_por_dia[ $k ] = $lista;
 }
-foreach ( $todas as $c ) {
-	$wk = date( 'o-W', strtotime( $c['inicio'] ) );
-	if ( isset( $semanas[ $wk ] ) ) { $semanas[ $wk ]['n']++; }
-}
-$max_sem  = max( 1, max( array_column( $semanas, 'n' ) ) );
-$sem_pts  = array();
-$sem_dots = array();
-$sem_n    = count( $semanas );
-$ix       = 0;
-foreach ( $semanas as $wk ) {
-	$x   = $sem_n > 1 ? ( $ix / ( $sem_n - 1 ) * 100 ) : 50;
-	$pct = $wk['n'] / $max_sem * 100;          // 0 = base, 100 = topo
-	$sem_pts[]  = round( $x, 1 ) . ',' . round( 100 - $pct, 1 );
-	$sem_dots[] = array( 'x' => round( $x, 1 ), 'y' => round( $pct, 1 ), 'n' => (int) $wk['n'], 'l' => $wk['l'] );
-	$ix++;
-}
-$sem_poly = implode( ' ', $sem_pts );
-$sem_area = '0,100 ' . $sem_poly . ' 100,100';
-
-// Dashboard nunca vazio nem esquelético: quando o período tem pouca atividade
-// os gráficos usam uma amostra, sempre assinalada como exemplo para não enganar.
-// Um gráfico precisa de distribuição, não só de volume: quatro consultas
-// todas no mesmo dia continuam a dar uma barra sozinha.
-$dias_com  = count( array_filter( array_column( $dias7, 'n' ) ) );
-$sem_com   = count( array_filter( array_column( $semanas, 'n' ) ) );
-$demo_d    = $dias_com < 3;
-$demo_s    = $sem_com < 3;
-$dash_demo = $demo_d || $demo_s;
-
-if ( $demo_d ) {
-	$amostra_d = array( 6, 9, 7, 12, 10, 8, 11 );
-	$i = 0;
-	foreach ( $dias7 as $k => $v ) { $dias7[ $k ]['n'] = $amostra_d[ $i % 7 ]; $i++; }
-	$max7 = max( $amostra_d );
-}
-
-if ( $demo_s ) {
-	$amostra_s = array( 18, 24, 21, 29, 26, 33, 30, 36 );
-	$i = 0;
-	foreach ( $semanas as $k => $v ) { $semanas[ $k ]['n'] = $amostra_s[ $i % 8 ]; $i++; }
-	$max_sem  = max( $amostra_s );
-	$sem_pts  = array();
-	$sem_dots = array();
-	$ix       = 0;
-	foreach ( $semanas as $wk ) {
-		$x   = $sem_n > 1 ? ( $ix / ( $sem_n - 1 ) * 100 ) : 50;
-		$pct = $wk['n'] / $max_sem * 100;
-		$sem_pts[]  = round( $x, 1 ) . ',' . round( 100 - $pct, 1 );
-		$sem_dots[] = array( 'x' => round( $x, 1 ), 'y' => round( $pct, 1 ), 'n' => (int) $wk['n'], 'l' => $wk['l'] );
-		$ix++;
+$mx_segunda = strtotime( 'monday this week', $agora );
+$mx_semanas = array();
+for ( $w = -1; $w <= 4; $w++ ) {
+	$ini  = strtotime( sprintf( '%+d week', $w ), $mx_segunda );
+	$dias = array();
+	for ( $d = 0; $d < 7; $d++ ) {
+		$dias[] = strtotime( "+{$d} day", $ini );
 	}
-	$sem_poly = implode( ' ', $sem_pts );
-	$sem_area = '0,100 ' . $sem_poly . ' 100,100';
+	$mx_semanas[] = array( 'mes' => ucfirst( date_i18n( 'F Y', strtotime( '+3 day', $ini ) ) ), 'dias' => $dias, 'atual' => 0 === $w );
 }
+$mx_sem_nomes = array( 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom' );
 
-// Carga por dia da semana — útil ao médico (um médico tem só uma especialidade,
-// por isso "por especialidade" seria sempre uma barra só).
-$dias_sem = array( 1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta', 6 => 'Sábado', 7 => 'Domingo' );
-$por_dia  = array_fill_keys( array_values( $dias_sem ), 0 );
-foreach ( $todas as $c ) {
-	$d = (int) date( 'N', strtotime( $c['inicio'] ) );
-	if ( isset( $dias_sem[ $d ] ) ) { $por_dia[ $dias_sem[ $d ] ]++; }
-}
-$por_dia_max = max( 1, max( $por_dia ) );
-$total_cons  = array_sum( array_column( $seg, 1 ) );
+// Retornos previstos (definidos ao concluir uma consulta em Atender).
+$mx_retornos = array_values( array_filter( $todas, static fn( $c ) => ! empty( $c['retorno_em'] ) && $c['retorno_em'] >= $hoje_ymd ) );
+usort( $mx_retornos, static fn( $a, $b ) => strcmp( (string) $a['retorno_em'], (string) $b['retorno_em'] ) );
 
-// Dias do mês com consultas (para marcar no calendário).
-$mes_atual     = date_i18n( 'Y-m', $agora );
-$dias_marcados = array();
-foreach ( array_merge( $todas, $prox ) as $c ) {
-	if ( substr( $c['inicio'], 0, 7 ) === $mes_atual ) {
-		$dias_marcados[ (int) date_i18n( 'j', strtotime( $c['inicio'] ) ) ] = true;
-	}
-}
+// Pacientes de hoje; sem consultas hoje, os próximos.
+$mx_lista_hoje = (bool) $fila_hoje;
+$mx_pacientes  = array_slice( $fila_hoje ?: $prox, 0, 4 );
+
+// Próxima consulta: ficha e processo (idade, alergias) do paciente.
+$mx_prox_ficha = $proxima ? Clinica_Repo::paciente_ficha( (int) $proxima['paciente_id'] ) : null;
+$mx_prox_proc  = ( $proxima && class_exists( 'Clinica_Processo' ) ) ? Clinica_Processo::do_paciente( (int) $proxima['paciente_id'] ) : null;
+$mx_prox_idade = $mx_prox_ficha ? Clinica_Repo::idade( $mx_prox_ficha['data_nascimento'] ?? null ) : null;
+$mx_foto       = function_exists( 'clinica_avatar_url' ) ? clinica_avatar_url( $utilizador->ID, 400 ) : $avatar;
+
+// Ícones e iniciais partilhados pelos portais (Clinica_Painel).
+$mx_svg = static fn( string $k ): string => Clinica_Painel::icone( $k );
 
 $transicoes = array(
 	'pendente'   => array( 'confirmada' => 'Confirmar', 'cancelada' => 'Recusar' ),
@@ -325,165 +280,308 @@ $abas = array(
 $fmt      = static function ( $iso ) { return date_i18n( 'd/m · H:i', strtotime( $iso ) ); };
 $fmt_hora = static function ( $iso ) { return date_i18n( 'H:i', strtotime( $iso ) ); };
 
-$mes_ts    = $agora;
-$dia_hoje  = (int) date_i18n( 'j', $mes_ts );
-$prim_ts   = mktime( 0, 0, 0, (int) date( 'n', $mes_ts ), 1, (int) date( 'Y', $mes_ts ) );
-$dias_mes  = (int) date( 't', $prim_ts );
-$offset    = (int) date( 'N', $prim_ts ) - 1;
-$nome_mes  = date_i18n( 'F Y', $prim_ts );
 ?>
 <div class="hp">
-<div class="pm-shell">
+<div class="pm-shell mx">
 
-	<aside class="pm-side">
-		<div class="pm-side__brand">
-			<span class="pm-side__logo"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo2.png' ); ?>" alt=""></span>
-			<span class="pm-side__brandname">Clínica Vida</span>
-		</div>
-
-		<div class="pm-side__me">
-			<img src="<?php echo esc_url( $avatar ); ?>" alt="">
-			<div class="pm-side__meinfo">
-				<div class="pm-side__name"><?php echo esc_html( $titulo( $nome_med ) . ' ' . $primeiro ); ?></div>
-				<div class="pm-side__role">Médico</div>
-			</div>
-		</div>
-
-		<nav class="pm-nav">
-			<span class="pm-nav__cap">Menu</span>
-			<a class="pm-nav__i is-active" href="#" data-go="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Painel</span></a>
-			<a class="pm-nav__i" href="#" data-go="pacientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Pacientes</span></a>
-			<div class="pm-nav__group">
-				<a class="pm-nav__i" href="#" data-toggle><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Consultas</span><i class="pm-nav__chev" aria-hidden="true"></i></a>
-				<div class="pm-nav__sub">
-					<?php
-					$base_url = remove_query_arg( array( 'estado', 'pac', 'atender', 'cl' ) );
-					$sub_est  = array(
-						'todas'      => array( 'Todas', array_sum( $kpis ) ),
-						'pendente'   => array( 'Pendentes', $kpis['pendente'] ),
-						'confirmada' => array( 'Confirmadas', $kpis['confirmada'] ),
-						'realizada'  => array( 'Realizadas', $kpis['realizada'] ),
-					);
-					$est_atual = isset( $_GET['estado'] ) ? sanitize_key( $_GET['estado'] ) : '';
-					foreach ( $sub_est as $k => $info ) : ?>
-						<a class="pm-nav__subi<?php echo $est_atual === $k ? ' is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'estado', $k, $base_url ) ); ?>"><?php echo esc_html( $info[0] ); ?><?php if ( $info[1] ) : ?> <b class="pm-badge"><?php echo (int) $info[1]; ?></b><?php endif; ?></a>
-					<?php endforeach; ?>
+	<!-- Topo: marca à esquerda; pesquisa, avisos e perfil à direita -->
+	<header class="mx-topo">
+		<a class="mx-marca" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="30" height="30" alt="">
+			<span>Clínica Vida</span>
+		</a>
+		<div class="mx-topo__acoes">
+			<a class="mx-icone" href="#pacientes" data-ir="pacientes" aria-label="Procurar paciente"><?php echo $mx_svg( 'procurar' ); ?></a>
+			<a class="mx-icone" href="<?php echo esc_url( add_query_arg( 'estado', 'pendente', remove_query_arg( array( 'estado', 'pac', 'atender', 'cl', 'periodo' ) ) ) . '#consultas' ); ?>" aria-label="<?php echo esc_attr( sprintf( _n( '%d consulta por confirmar', '%d consultas por confirmar', (int) $kpis['pendente'], 'clinica' ), (int) $kpis['pendente'] ) ); ?>">
+				<?php echo $mx_svg( 'sino' ); ?>
+				<?php if ( (int) $kpis['pendente'] ) : ?><i class="mx-icone__ponto"></i><?php endif; ?>
+			</a>
+			<details class="mx-perfil">
+				<summary>
+					<img src="<?php echo esc_url( $avatar ); ?>" width="40" height="40" alt="">
+					<span class="mx-perfil__t"><b><?php echo esc_html( $titulo( $nome_med ) . ' ' . $nome_med ); ?></b><small><?php echo esc_html( $papel ); ?></small></span>
+					<svg class="mx-perfil__seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+				</summary>
+				<div class="mx-perfil__menu">
+					<a href="#agenda" data-ir="agenda">A minha agenda</a>
+					<a href="#consultas" data-ir="consultas">As minhas consultas</a>
+					<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">Sair</a>
 				</div>
-			</div>
-			<a class="pm-nav__i" href="#" data-go="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14v3M9 14h6"/></svg><span>Agenda</span></a>
-		</nav>
+			</details>
+		</div>
+	</header>
 
-		<a class="pm-nav__i pm-nav__out" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sair</span></a>
+	<!-- Barra de ícones (a pílula escura da referência) -->
+	<aside class="pm-side mx-rail" aria-label="Menu">
+		<nav class="mx-rail__nav">
+			<?php
+			$mx_menu = array(
+				'painel'     => 'Painel',
+				'pacientes'  => 'Pacientes',
+				'consultas'  => 'Consultas',
+				'agenda'     => 'Agenda',
+			);
+			foreach ( $mx_menu as $k => $rot ) : ?>
+				<a class="pm-nav__i<?php echo 'painel' === $k ? ' is-active' : ''; ?>" href="#<?php echo esc_attr( $k ); ?>" data-go="<?php echo esc_attr( $k ); ?>" aria-label="<?php echo esc_attr( $rot ); ?>">
+					<?php echo $mx_svg( $k ); ?><span class="mx-dica"><?php echo esc_html( $rot ); ?></span>
+				</a>
+			<?php endforeach; ?>
+		</nav>
+		<nav class="mx-rail__fim">
+			<a class="pm-nav__i" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" aria-label="Sair"><?php echo $mx_svg( 'sair' ); ?><span class="mx-dica">Sair</span></a>
+		</nav>
 	</aside>
 
-	<main class="pm-main">
-
-		<header class="pm-top">
-			<div class="pm-top__l">
-				<h1 class="pm-welcome"><?php echo esc_html( $saudacao . ', ' . $titulo( $nome_med ) . ' ' . $primeiro ); ?></h1>
-				<p class="pm-date"><?php echo esc_html( ucfirst( $data_hoje ) ); ?></p>
-			</div>
-			<div class="pm-user">
-				<span class="pm-user__meta"><b><?php echo esc_html( $utilizador->display_name ); ?></b><small>Médico</small></span>
-							</div>
-		</header>
+	<main class="pm-main mx-main">
 
 		<?php clinica_render_flash(); ?>
 
-			<!-- KPIs -->
-			<section class="pm-kpis pm-view" data-view="painel">
-				<?php
-				$cards = array(
-					array( 'Pendentes', $kpis['pendente'], 'pend' ),
-					array( 'Confirmadas', $kpis['confirmada'], 'conf' ),
-					array( 'Realizadas', $kpis['realizada'], 'real' ),
-					array( 'Canceladas e faltas', $kpis['cancelada'] + $kpis['faltou'], 'canc' ),
-				);
-				foreach ( $cards as $c ) : ?>
-					<div class="pm-kpi">
-						<span class="pm-kpi__l"><?php echo esc_html( $c[0] ); ?></span>
-						<strong class="pm-kpi__n"><?php echo (int) $c[1]; ?></strong>
-					</div>
-				<?php endforeach; ?>
-			</section>
 
-			<!-- Gráficos: barras (7 dias) + tendência (8 semanas) -->
-			<section class="pm-charts pm-view" data-view="painel">
-				<div class="pm-chart">
-					<div class="pm-chart__head"><strong>Consultas por dia</strong><span><?php echo $demo_d ? "exemplo" : "últimos 7 dias"; ?></span></div>
-					<div class="pm-plot">
-						<div class="pm-plot__y">
-							<?php for ( $g = 4; $g >= 0; $g-- ) : ?>
-								<span><?php echo (int) round( $max7 * $g / 4 ); ?></span>
-							<?php endfor; ?>
-						</div>
-						<div class="pm-plot__c">
-							<div class="pm-plot__bars">
-								<?php foreach ( $dias7 as $dk => $dd ) : $e_hoje = ( $dk === current_time( 'Y-m-d' ) ); ?>
-									<div class="pm-plot__b<?php echo $e_hoje ? ' is-hoje' : ''; ?>">
-										<span class="pm-plot__v"><?php echo (int) $dd['n']; ?></span>
-										<span class="pm-plot__bar" style="height:<?php echo (int) round( $dd['n'] / $max7 * 100 ); ?>%"></span>
-									</div>
-								<?php endforeach; ?>
-							</div>
-							<div class="pm-plot__x">
-								<?php foreach ( $dias7 as $dk => $dd ) : $e_hoje = ( $dk === current_time( 'Y-m-d' ) ); ?>
-									<span class="<?php echo $e_hoje ? 'is-hoje' : ''; ?>">
-										<b><?php echo esc_html( $dd['l'] ); ?></b>
-										<i><?php echo esc_html( date( 'j/n', strtotime( $dk ) ) ); ?></i>
-									</span>
-								<?php endforeach; ?>
-							</div>
-						</div>
+			<!-- Painel
+			     Forma da referência (MEDIX): saudação e período, quatro números
+			     com ícone, o gráfico dos pacientes com pílulas, retornos e
+			     pacientes de hoje; à direita a agenda da semana e a próxima
+			     consulta. Só dados reais, com estados vazios por extenso. -->
+			<section class="mx-painel pm-view" data-view="painel">
+
+				<div class="mx-ola">
+					<div>
+						<h1 class="mx-ola__t"><?php echo esc_html( $saudacao . ', ' . $titulo( $nome_med ) . ' ' . $primeiro ); ?></h1>
+						<p class="mx-ola__s"><?php echo esc_html( $mx_resumo ); ?></p>
 					</div>
+					<label class="mx-select">
+						<span class="mx-sr">Período dos números e do gráfico</span>
+						<select data-gf-ir>
+							<?php foreach ( Clinica_Analitica::PERIODOS_MEDICO as $k => $p ) : ?>
+								<option value="<?php echo esc_url( $mx_periodo_url( $k, 'painel' ) ); ?>"<?php selected( $k, $dp['periodo'] ); ?>><?php echo esc_html( 'Últimos ' . $p['label'] ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+					</label>
 				</div>
 
-				<div class="pm-chart">
-					<div class="pm-chart__head"><strong>Tendência</strong><span><?php echo $demo_s ? "exemplo" : "últimas 8 semanas"; ?></span></div>
-					<div class="pm-plot">
-						<div class="pm-plot__y">
-							<span><?php echo (int) $max_sem; ?></span>
-							<span><?php echo (int) ceil( $max_sem / 2 ); ?></span>
-							<span>0</span>
-						</div>
-						<div class="pm-plot__c">
-							<div class="pm-plot__line">
-								<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-									<polygon class="pm-line__area" points="<?php echo esc_attr( $sem_area ); ?>"></polygon>
-									<polyline class="pm-line__l" points="<?php echo esc_attr( $sem_poly ); ?>"></polyline>
-								</svg>
-								<?php foreach ( $sem_dots as $d ) : ?>
-									<i class="pm-line__dot" style="left:<?php echo esc_attr( $d['x'] ); ?>%; bottom:<?php echo esc_attr( $d['y'] ); ?>%" title="<?php echo (int) $d['n']; ?> consulta(s) · semana de <?php echo esc_attr( $d['l'] ); ?>"></i>
-								<?php endforeach; ?>
-							</div>
-							<div class="pm-plot__x">
-								<?php $j = 0; foreach ( $semanas as $wk ) : ?><span><?php echo ( 0 === $j % 2 ) ? esc_html( $wk['l'] ) : ''; ?></span><?php $j++; endforeach; ?>
-							</div>
+				<div class="mx-kpis">
+					<div class="mx-kpi">
+						<span class="mx-kpi__ic mx-kpi__ic--menta"><?php echo $mx_svg( 'feito' ); ?></span>
+						<span class="mx-kpi__l">Consultas realizadas</span>
+						<strong class="mx-kpi__v"><?php echo esc_html( number_format_i18n( $dp['atual']['realizadas'] ) ); ?></strong>
+					</div>
+					<div class="mx-kpi">
+						<span class="mx-kpi__ic mx-kpi__ic--terra"><?php echo $mx_svg( 'pacientes' ); ?></span>
+						<span class="mx-kpi__l">Pacientes atendidos</span>
+						<strong class="mx-kpi__v"><?php echo esc_html( number_format_i18n( $dp['atual']['pacientes'] ) ); ?></strong>
+					</div>
+					<div class="mx-kpi">
+						<span class="mx-kpi__ic mx-kpi__ic--areia"><?php echo $mx_svg( 'tendencia' ); ?></span>
+						<span class="mx-kpi__l">Taxa de comparência</span>
+						<strong class="mx-kpi__v"><?php echo esc_html( Clinica_Grafico::pct( $dp['comparencia'] ) ); ?></strong>
+					</div>
+					<a class="mx-kpi" href="#agenda" data-ir="agenda">
+						<span class="mx-kpi__ic mx-kpi__ic--agua"><?php echo $mx_svg( 'agenda' ); ?></span>
+						<span class="mx-kpi__l">Consultas agendadas</span>
+						<strong class="mx-kpi__v"><?php echo esc_html( number_format_i18n( count( $prox ) ) ); ?></strong>
+					</a>
+				</div>
+
+				<section class="mx-cartao mx-grafico" aria-labelledby="mx-g-pac">
+					<div class="mx-cartao__cab">
+						<h2 class="mx-cartao__t" id="mx-g-pac">Os seus pacientes</h2>
+						<div class="gf-filtro mx-pilulas" role="group" aria-label="Séries do gráfico" data-gf-alvo="mx-graf-pac">
+							<button type="button" data-so="" aria-pressed="true">Todas</button>
+							<button type="button" data-so="0" aria-pressed="false"><i class="gf-chave gf-c--c1"></i>Realizadas</button>
+							<button type="button" data-so="1" aria-pressed="false"><i class="gf-chave gf-c--c2"></i>Marcadas</button>
 						</div>
 					</div>
-				</div>
-			</section>
+					<div class="mx-grafico__corpo">
+						<div class="mx-stats">
+							<div class="mx-stat">
+								<strong><?php echo esc_html( number_format_i18n( $dp['atual']['realizadas'] ) ); ?> <span class="mx-delta mx-delta--c1"><?php echo esc_html( $mx_delta( $mx_var( $dp['atual']['realizadas'], $dp['anterior']['realizadas'] ) ) ); ?></span></strong>
+								<span>Consultas realizadas</span>
+							</div>
+							<div class="mx-stat">
+								<strong><?php echo esc_html( number_format_i18n( $dp['atual']['marcadas'] ) ); ?> <span class="mx-delta mx-delta--c2"><?php echo esc_html( $mx_delta( $mx_var( $dp['atual']['marcadas'], $dp['anterior']['marcadas'] ) ) ); ?></span></strong>
+								<span>Consultas marcadas</span>
+							</div>
+							<p class="mx-stats__nota"><?php echo esc_html( 'Últimos ' . $dp['label'] . ', face aos ' . $dp['label'] . ' anteriores.' ); ?></p>
+						</div>
+						<?php
+						echo Clinica_Grafico::linhas(
+							array(
+								'id'      => 'mx-graf-pac',
+								'titulo'  => 'Consultas ' . $dp['por_unidade'],
+								'rotulos' => $dp['rotulos'],
+								'longos'  => $dp['longos'],
+								'saltar'  => $dp['saltar'],
+								'suave'   => true,
+								'legenda' => false,
+								'final'   => false,
+								'series'  => array(
+									array( 'nome' => 'Realizadas', 'valores' => $dp['serie']['realizadas'], 'cor' => 'c1' ),
+									array( 'nome' => 'Marcadas', 'valores' => $dp['serie']['marcadas'], 'cor' => 'c2' ),
+								),
+								'formato' => static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v ),
+								'eixo'    => static fn( $v ) => number_format_i18n( (int) $v ),
+								'vazio'   => 'Sem consultas nos últimos ' . $dp['label'] . '.',
+							)
+						);
+						?>
+					</div>
+				</section>
 
-			<!-- Consultas por especialidade (barras horizontais, ordenadas) -->
-			<section class="pm-espec pm-view" data-view="painel">
-				<div class="pm-chart__head"><strong>Próximas consultas</strong><span><?php echo count( $prox ); ?> agendadas</span></div>
-				<?php if ( $prox ) : ?>
-					<div class="pm-ntbl">
-						<div class="pm-ntbl__head"><span>Data</span><span>Hora</span><span>Paciente</span><span>Especialidade</span><span>Estado</span></div>
-						<?php foreach ( array_slice( $prox, 0, 3 ) as $r ) : ?>
-							<div class="pm-nrow">
-								<span class="pm-nrow__d"><?php echo esc_html( date_i18n( 'd/m', strtotime( $r['inicio'] ) ) ); ?></span>
-								<span class="pm-nrow__h"><?php echo esc_html( date_i18n( 'H:i', strtotime( $r['inicio'] ) ) ); ?></span>
-								<span class="pm-nrow__c pm-nrow__n"><?php echo esc_html( $r['pac_nome'] ); ?></span>
-								<span class="pm-nrow__c"><?php echo esc_html( $r['esp_nome'] ); ?></span>
-								<span class="pm-nrow__s"><span class="pm-st pm-st--<?php echo esc_attr( $r['status'] ); ?>"><?php echo esc_html( $labels[ $r['status'] ] ?? $r['status'] ); ?></span></span>
+				<div class="mx-baixo">
+					<section class="mx-cartao" aria-labelledby="mx-ret">
+						<div class="mx-cartao__cab">
+							<h2 class="mx-cartao__t" id="mx-ret">Retornos previstos</h2>
+						</div>
+						<?php if ( $mx_retornos ) : ?>
+							<ul class="mx-eventos">
+								<?php foreach ( array_slice( $mx_retornos, 0, 3 ) as $r ) : ?>
+									<li class="mx-evento">
+										<span class="mx-evento__t">
+											<b><?php echo esc_html( $r['pac_nome'] ); ?></b>
+											<small><?php echo esc_html( 'Retorno a ' . date_i18n( 'd/m/Y', strtotime( $r['retorno_em'] ) ) . ( ! empty( $r['retorno_nota'] ) ? ' · ' . $r['retorno_nota'] : '' ) ); ?></small>
+										</span>
+										<a class="mx-evento__ir" href="<?php echo esc_url( add_query_arg( 'pac', (int) $r['paciente_id'], remove_query_arg( array( 'pac', 'atender', 'estado', 'cl' ) ) ) ); ?>" aria-label="<?php echo esc_attr( 'Abrir ficha de ' . $r['pac_nome'] ); ?>"><?php echo $mx_svg( 'seta' ); ?></a>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<div class="mx-vazio">
+								<span class="mx-vazio__ic"><?php echo $mx_svg( 'retorno' ); ?></span>
+								<p><b>Sem retornos previstos</b>Ao concluir uma consulta em Atender, pode marcar quando o paciente deve voltar.</p>
+							</div>
+						<?php endif; ?>
+					</section>
+
+					<section class="mx-cartao" aria-labelledby="mx-hoje">
+						<div class="mx-cartao__cab">
+							<h2 class="mx-cartao__t" id="mx-hoje"><?php echo $mx_lista_hoje ? 'Pacientes de hoje' : 'Próximos pacientes'; ?></h2>
+							<a class="mx-cartao__ligacao" href="#consultas" data-ir="consultas">Ver todos</a>
+						</div>
+						<?php if ( $mx_pacientes ) : ?>
+							<ul class="mx-pessoas">
+								<?php foreach ( $mx_pacientes as $c ) : ?>
+									<li class="mx-pessoa">
+										<span class="mx-pessoa__av" aria-hidden="true"><?php echo esc_html( $mx_iniciais( $c['pac_nome'] ) ); ?></span>
+										<span class="mx-pessoa__t">
+											<b><?php echo esc_html( $c['pac_nome'] ); ?></b>
+											<small><?php echo esc_html( ( $labels[ $c['status'] ] ?? $c['status'] ) . ( ! empty( $c['checkin_em'] ) && ! in_array( $c['status'], $terminado, true ) ? ' · na sala de espera' : '' ) ); ?></small>
+										</span>
+										<time class="mx-pessoa__h" datetime="<?php echo esc_attr( $c['inicio'] ); ?>"><?php echo esc_html( $mx_lista_hoje ? date_i18n( 'H:i', strtotime( $c['inicio'] ) ) : date_i18n( 'd/m · H:i', strtotime( $c['inicio'] ) ) ); ?></time>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<div class="mx-vazio">
+								<span class="mx-vazio__ic"><?php echo $mx_svg( 'pacientes' ); ?></span>
+								<p><b>Sem pacientes agendados</b>As consultas marcadas pela receção aparecem aqui.</p>
+							</div>
+						<?php endif; ?>
+					</section>
+				</div>
+
+				<section class="mx-cartao mx-agenda" aria-labelledby="mx-ag">
+					<div class="mx-cartao__cab">
+						<h2 class="mx-cartao__t" id="mx-ag">Agenda</h2>
+						<a class="mx-mais" href="#agenda" data-ir="agenda" aria-label="Abrir a agenda completa"><?php echo $mx_svg( 'mais' ); ?></a>
+					</div>
+					<div class="mx-cal">
+						<div class="mx-cal__nav">
+							<button type="button" class="mx-cal__seta" data-cal="-1" aria-label="Semana anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+							<span class="mx-cal__mes" aria-live="polite"><?php echo esc_html( $mx_semanas[1]['mes'] ); ?></span>
+							<button type="button" class="mx-cal__seta" data-cal="1" aria-label="Semana seguinte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+						</div>
+						<?php foreach ( $mx_semanas as $sem ) : ?>
+							<div class="mx-cal__semana" data-mes="<?php echo esc_attr( $sem['mes'] ); ?>"<?php echo $sem['atual'] ? '' : ' hidden'; ?>>
+								<?php foreach ( $sem['dias'] as $di => $ts ) :
+									$ymd  = date( 'Y-m-d', $ts );
+									$n    = count( $mx_por_dia[ $ymd ] ?? array() );
+									$hoje = $ymd === $hoje_ymd;
+									?>
+									<button type="button" class="mx-cal__dia<?php echo $hoje ? ' is-hoje is-sel' : ''; ?><?php echo $n ? ' tem' : ''; ?>" data-dia="<?php echo esc_attr( $ymd ); ?>" data-rotulo="<?php echo esc_attr( ucfirst( date_i18n( 'l, j \d\e F', $ts ) ) ); ?>" aria-pressed="<?php echo $hoje ? 'true' : 'false'; ?>" aria-label="<?php echo esc_attr( date_i18n( 'j \d\e F', $ts ) . ( $n ? ', ' . sprintf( _n( '%d consulta', '%d consultas', $n, 'clinica' ), $n ) : '' ) ); ?>">
+										<span class="mx-cal__sem"><?php echo esc_html( $mx_sem_nomes[ $di ] ); ?></span>
+										<span class="mx-cal__num"><?php echo esc_html( date( 'd', $ts ) ); ?></span>
+									</button>
+								<?php endforeach; ?>
 							</div>
 						<?php endforeach; ?>
+						<div class="mx-cal__resumo">
+							<p class="mx-cal__data"><?php echo esc_html( ucfirst( date_i18n( 'l, j \d\e F', $agora ) ) ); ?></p>
+							<?php
+							foreach ( $mx_semanas as $sem ) :
+								foreach ( $sem['dias'] as $ts ) :
+									$ymd = date( 'Y-m-d', $ts );
+									if ( empty( $mx_por_dia[ $ymd ] ) ) {
+										continue;
+									}
+									?>
+									<ul class="mx-cal__lista" data-resumo="<?php echo esc_attr( $ymd ); ?>"<?php echo $ymd === $hoje_ymd ? '' : ' hidden'; ?>>
+										<?php foreach ( array_slice( $mx_por_dia[ $ymd ], 0, 3 ) as $c ) : ?>
+											<li><time><?php echo esc_html( date_i18n( 'H:i', strtotime( $c['inicio'] ) ) ); ?></time><?php echo esc_html( $c['pac_nome'] ); ?></li>
+										<?php endforeach; ?>
+										<?php if ( count( $mx_por_dia[ $ymd ] ) > 3 ) : ?>
+											<li class="mx-cal__mais"><?php echo esc_html( sprintf( 'e mais %d', count( $mx_por_dia[ $ymd ] ) - 3 ) ); ?></li>
+										<?php endif; ?>
+									</ul>
+									<?php
+								endforeach;
+							endforeach;
+							?>
+							<p class="mx-cal__vazio"<?php echo empty( $mx_por_dia[ $hoje_ymd ] ) ? '' : ' hidden'; ?>>Sem consultas neste dia.</p>
+						</div>
 					</div>
-				<?php else : ?>
-					<p class="pm-empty">Sem consultas agendadas</p>
-				<?php endif; ?>
+				</section>
+
+				<section class="mx-cartao mx-proxima" aria-labelledby="mx-prox">
+					<div class="mx-cartao__cab">
+						<h2 class="mx-cartao__t" id="mx-prox">Próxima consulta</h2>
+						<a class="mx-seta" href="#agenda" data-ir="agenda" aria-label="Abrir agenda"><?php echo $mx_svg( 'seta' ); ?></a>
+					</div>
+					<?php if ( $proxima ) :
+						$ficha_url = add_query_arg( 'pac', (int) $proxima['paciente_id'], remove_query_arg( array( 'pac', 'atender', 'estado', 'cl' ) ) );
+						$alergias  = trim( (string) ( $mx_prox_proc['alergias'] ?? '' ) );
+						?>
+						<p class="mx-proxima__nome"><?php echo esc_html( $proxima['pac_nome'] ); ?></p>
+						<span class="mx-chip"><?php echo $mx_svg( 'coracao' ); ?><?php echo esc_html( $proxima['esp_nome'] ); ?></span>
+						<div class="mx-proxima__visual" aria-hidden="true">
+							<svg class="mx-proxima__traco" viewBox="0 0 320 200" preserveAspectRatio="none"><path d="M-10 150 C 60 40, 150 30, 190 90 S 290 190, 330 60"/><path d="M-10 175 C 80 80, 170 70, 210 120 S 300 200, 330 110"/></svg>
+							<span class="mx-proxima__av"><?php echo esc_html( $mx_iniciais( $proxima['pac_nome'] ) ); ?></span>
+						</div>
+						<p class="mx-proxima__sobre-t">Sobre o paciente</p>
+						<p class="mx-proxima__sobre">
+							<?php
+							$partes = array();
+							if ( null !== $mx_prox_idade ) {
+								$partes[] = (int) $mx_prox_idade . ' anos';
+							}
+							if ( ! empty( $mx_prox_proc['numero'] ) ) {
+								$partes[] = 'processo ' . $mx_prox_proc['numero'];
+							}
+							$frase = $partes ? ucfirst( implode( ', ', $partes ) ) . '. ' : '';
+							$frase .= $alergias ? 'Alergias: ' . $alergias . '.' : 'Sem alergias registadas no processo.';
+							echo esc_html( $frase );
+							?>
+							<a href="<?php echo esc_url( $ficha_url ); ?>">Ver ficha</a>
+						</p>
+						<div class="mx-proxima__quando">
+							<span><?php echo $mx_svg( 'agenda' ); ?><?php echo esc_html( date_i18n( 'j M, H:i', strtotime( $proxima['inicio'] ) ) ); ?></span>
+							<span><?php echo $mx_svg( 'relogio' ); ?><?php echo esc_html( (int) $proxima['duracao_min'] . ' minutos' ); ?></span>
+						</div>
+						<a class="mx-botao" href="<?php echo esc_url( $ficha_url ); ?>">Abrir ficha do paciente</a>
+					<?php else : ?>
+						<p class="mx-proxima__nome">Sem consultas agendadas</p>
+						<span class="mx-chip"><?php echo $mx_svg( 'coracao' ); ?><?php echo esc_html( $papel ); ?></span>
+						<div class="mx-proxima__visual mx-proxima__visual--foto" aria-hidden="true">
+							<svg class="mx-proxima__traco" viewBox="0 0 320 200" preserveAspectRatio="none"><path d="M-10 150 C 60 40, 150 30, 190 90 S 290 190, 330 60"/><path d="M-10 175 C 80 80, 170 70, 210 120 S 300 200, 330 110"/></svg>
+							<img src="<?php echo esc_url( $mx_foto ); ?>" alt="">
+						</div>
+						<p class="mx-proxima__sobre">Quando a receção marcar uma consulta consigo, o paciente, as alergias registadas e a hora aparecem aqui.</p>
+						<a class="mx-botao" href="#agenda" data-ir="agenda">Abrir agenda</a>
+					<?php endif; ?>
+				</section>
+
 			</section>
+
 
 						<!-- Fichas dos pacientes -->
 		<section id="pacientes" class="pm-panel pm-view" data-view="pacientes" hidden>
@@ -980,106 +1078,178 @@ $nome_mes  = date_i18n( 'F Y', $prim_ts );
 			<?php endif; ?>
 		</section>
 
-						<section id="consultas" class="pm-panel pm-view" data-view="consultas" hidden>
-			<div class="pm-panel__head">
-				<h3>Consultas</h3>
-				<input type="search" class="pm-search" id="pm-search" placeholder="Pesquisar paciente…" aria-label="Pesquisar paciente">
-			</div>
-			<nav class="pm-tabs">
-				<?php foreach ( $abas as $val => $info ) :
-					$url   = $val ? add_query_arg( 'estado', $val, remove_query_arg( array( 'cl', 'estado' ) ) ) : remove_query_arg( array( 'cl', 'estado' ) );
-					$ativa = ( $estado_filtro === $val );
-				?>
-					<a class="pm-tab <?php echo $ativa ? 'is-active' : ''; ?>" href="<?php echo esc_url( $url ); ?>#consultas"><?php echo esc_html( $info[0] ); ?> <span><?php echo (int) $info[1]; ?></span></a>
-				<?php endforeach; ?>
-			</nav>
-
-			<?php if ( $consultas ) : ?>
-				<div class="pm-ctbl" id="pm-list">
-					<div class="pm-ctbl__head">
-						<span>Data</span>
-						<span>Hora</span>
-						<span>Paciente</span>
-						<span>Especialidade</span>
-						<span>Chegada</span>
-						<span>Estado</span>
-						<span class="r">Ações</span>
-					</div>
-					<?php foreach ( $consultas as $c ) :
-						// O médico só atende quem a receção já deu entrada (check-in).
-						$terminada = in_array( $c['status'], array( 'realizada', 'cancelada', 'faltou' ), true );
-						$pronto    = ! empty( $c['checkin_em'] ) && ! $terminada;
-					?>
-						<div class="pm-crow" data-nome="<?php echo esc_attr( mb_strtolower( $c['pac_nome'] ) ); ?>">
-							<span class="pm-crow__d"><?php echo esc_html( date_i18n( 'd/m', strtotime( $c['inicio'] ) ) ); ?></span>
-							<span class="pm-crow__h"><b><?php echo esc_html( date_i18n( 'H:i', strtotime( $c['inicio'] ) ) ); ?></b><small><?php echo (int) $c['duracao_min']; ?> min</small></span>
-							<span class="pm-crow__c pm-crow__n"<?php echo ! empty( $c['observacoes'] ) ? ' title="' . esc_attr( $c['observacoes'] ) . '"' : ''; ?>><?php echo esc_html( $c['pac_nome'] ); ?></span>
-							<span class="pm-crow__c"><?php echo esc_html( $c['esp_nome'] ); ?></span>
-							<span class="pm-crow__c pm-crow__ch"><?php echo ! empty( $c['checkin_em'] ) ? esc_html( date_i18n( 'H:i', strtotime( $c['checkin_em'] ) ) ) : ''; ?></span>
-							<span class="pm-crow__c"><span class="pm-st pm-st--<?php echo esc_attr( $c['status'] ); ?>"><?php echo esc_html( $labels[ $c['status'] ] ?? $c['status'] ); ?></span></span>
-							<span class="pm-crow__a">
-								<?php if ( $terminada ) : ?>
-								<?php elseif ( empty( $c['checkin_em'] ) ) : ?>
-									<span class="pm-crow__wait">Aguarda receção</span>
-								<?php elseif ( 'chamada' === $c['status'] ) : ?>
-									<?php clinica_med_fluxo_btn( (int) $c['id'], 'iniciar', 'Iniciar consulta', 'pm-act--ok' ); ?>
-								<?php elseif ( 'em_atendimento' === $c['status'] ) : ?>
-									<a class="pm-act pm-act--ok" href="<?php echo esc_url( add_query_arg( 'atender', (int) $c['id'], remove_query_arg( array( 'pac', 'cl', 'estado' ) ) ) ); ?>">Concluir</a>
-									<?php clinica_med_fluxo_btn( (int) $c['id'], 'pausar', 'Pôr em pausa', 'pm-act--ico', true ); ?>
-								<?php elseif ( 'pausada' === $c['status'] ) : ?>
-									<?php clinica_med_fluxo_btn( (int) $c['id'], 'retomar', 'Retomar', 'pm-act--ok' ); ?>
-								<?php else : ?>
-									<?php clinica_med_fluxo_btn( (int) $c['id'], 'chamar', 'Chamar', 'pm-act--ok' ); ?>
-								<?php endif; ?>
-							</span>
-						</div>
-					<?php endforeach; ?>
+		<!-- Consultas
+		     Lista no tema do painel: data num mosaico de calendário, paciente
+		     com iniciais, chegada, estado em pastilha e a ação do fluxo.
+		     O médico só atende quem a receção já deu entrada (check-in). -->
+		<section id="consultas" class="mx-vista pm-view" data-view="consultas" hidden>
+			<div class="mx-vista__cab">
+				<div>
+					<h1 class="mx-vista__t">Consultas</h1>
+					<p class="mx-vista__s"><?php echo esc_html( sprintf( _n( '%d consulta no seu histórico, da mais recente para a mais antiga.', '%d consultas no seu histórico, da mais recente para a mais antiga.', (int) array_sum( $kpis ), 'clinica' ), (int) array_sum( $kpis ) ) ); ?></p>
 				</div>
-				<p class="pm-empty" id="pm-noresult" hidden>Nenhum paciente encontrado</p>
-			<?php else : ?>
-				<p class="pm-empty">Sem consultas neste filtro</p>
-			<?php endif; ?>
-		</section>
-
-				<!-- Agenda / horários -->
-		<section class="pm-panel pm-view" data-view="agenda" hidden>
-			<div class="pm-panel__head">
-				<h3>Agenda</h3>
-				<span class="pm-panel__c"><?php echo count( $prox ); ?> consulta<?php echo 1 === count( $prox ) ? '' : 's'; ?> por atender</span>
+				<label class="mx-procura">
+					<?php echo $mx_svg( 'procurar' ); ?>
+					<span class="mx-sr">Procurar paciente</span>
+					<input type="search" id="pm-search" placeholder="Procurar paciente">
+				</label>
 			</div>
-			<?php if ( $agenda_por_dia ) : ?>
-				<div class="pm-atbl">
-					<div class="pm-atbl__head">
-						<span>Hora</span>
-						<span>Paciente</span>
-						<span>Especialidade</span>
-						<span>Duração</span>
-						<span>Chegada</span>
-						<span>Estado</span>
-					</div>
-					<?php foreach ( $agenda_por_dia as $dia => $items ) :
-						$ts      = strtotime( $dia );
-						$is_hoje = ( $dia === $hoje_ymd );
-					?>
-						<div class="pm-adia<?php echo $is_hoje ? ' is-hoje' : ''; ?>">
-							<span class="pm-adia__d"><?php echo esc_html( ucfirst( date_i18n( 'l, j \d\e F', $ts ) ) ); ?><?php echo $is_hoje ? ' · Hoje' : ''; ?></span>
-							<span class="pm-adia__n"><?php echo count( $items ); ?> consulta<?php echo 1 === count( $items ) ? '' : 's'; ?></span>
+
+			<div class="mx-cartao mx-tabela-cartao">
+				<nav class="mx-abas" aria-label="Filtrar por estado">
+					<?php foreach ( $abas as $val => $info ) :
+						$url   = $val ? add_query_arg( 'estado', $val, remove_query_arg( array( 'cl', 'estado' ) ) ) : remove_query_arg( array( 'cl', 'estado' ) );
+						$ativa = ( $estado_filtro === $val );
+						?>
+						<a class="mx-aba<?php echo $ativa ? ' is-ativa' : ''; ?>" href="<?php echo esc_url( $url ); ?>#consultas"<?php echo $ativa ? ' aria-current="true"' : ''; ?>><?php echo esc_html( $info[0] ); ?><span><?php echo (int) $info[1]; ?></span></a>
+					<?php endforeach; ?>
+				</nav>
+
+				<?php if ( $consultas ) : ?>
+					<div class="mx-tabela" id="pm-list" role="table" aria-label="Consultas">
+						<div class="mx-tabela__cab" role="row">
+							<span role="columnheader">Data</span>
+							<span role="columnheader">Paciente</span>
+							<span role="columnheader">Chegada</span>
+							<span role="columnheader">Estado</span>
+							<span role="columnheader" class="r">Ação</span>
 						</div>
-						<?php foreach ( $items as $f ) : ?>
-							<div class="pm-arow">
-								<span class="pm-arow__h"><?php echo esc_html( $fmt_hora( $f['inicio'] ) ); ?></span>
-								<span class="pm-arow__c pm-arow__n"><?php echo esc_html( $f['pac_nome'] ); ?></span>
-								<span class="pm-arow__c"><?php echo esc_html( $f['esp_nome'] ); ?></span>
-								<span class="pm-arow__c"><?php echo (int) $f['duracao_min']; ?> min</span>
-								<span class="pm-arow__c"><?php echo ! empty( $f['checkin_em'] ) ? esc_html( $fmt_hora( $f['checkin_em'] ) ) : 'A aguardar'; ?></span>
-								<span class="pm-arow__s"><span class="pm-st pm-st--<?php echo esc_attr( $f['status'] ); ?>"><?php echo esc_html( $labels[ $f['status'] ] ?? $f['status'] ); ?></span></span>
+						<?php foreach ( $consultas as $c ) :
+							$terminada = in_array( $c['status'], array( 'realizada', 'cancelada', 'faltou' ), true );
+							$ts_c      = strtotime( $c['inicio'] );
+							?>
+							<div class="mx-tabela__linha pm-crow<?php echo $terminada ? ' is-fechada' : ''; ?>" role="row" data-nome="<?php echo esc_attr( mb_strtolower( $c['pac_nome'] ) ); ?>">
+								<span class="mx-data" role="cell">
+									<span class="mx-data__dia"><b><?php echo esc_html( date_i18n( 'd', $ts_c ) ); ?></b><small><?php echo esc_html( date_i18n( 'M', $ts_c ) ); ?></small></span>
+									<span class="mx-data__hora"><b><?php echo esc_html( date_i18n( 'H:i', $ts_c ) ); ?></b><small><?php echo (int) $c['duracao_min']; ?> min</small></span>
+								</span>
+								<span class="mx-pac" role="cell"<?php echo ! empty( $c['observacoes'] ) ? ' title="' . esc_attr( $c['observacoes'] ) . '"' : ''; ?>>
+									<span class="mx-pac__av" aria-hidden="true"><?php echo esc_html( $mx_iniciais( $c['pac_nome'] ) ); ?></span>
+									<span class="mx-pac__t"><b><?php echo esc_html( $c['pac_nome'] ); ?></b><small><?php echo esc_html( $c['esp_nome'] ); ?></small></span>
+								</span>
+								<span class="mx-chegada" role="cell">
+									<?php if ( ! empty( $c['checkin_em'] ) ) : ?>
+										<?php echo $mx_svg( 'relogio' ); ?><?php echo esc_html( date_i18n( 'H:i', strtotime( $c['checkin_em'] ) ) ); ?>
+									<?php else : ?>
+										<span class="mx-mudo">—</span>
+									<?php endif; ?>
+								</span>
+								<span role="cell"><span class="pm-st pm-st--<?php echo esc_attr( $c['status'] ); ?>"><?php echo esc_html( $labels[ $c['status'] ] ?? $c['status'] ); ?></span></span>
+								<span class="mx-acao" role="cell">
+									<?php if ( $terminada ) : ?>
+										<a class="mx-acao__ficha" href="<?php echo esc_url( add_query_arg( 'pac', (int) $c['paciente_id'], remove_query_arg( array( 'pac', 'atender', 'estado', 'cl' ) ) ) ); ?>">Ver ficha</a>
+									<?php elseif ( empty( $c['checkin_em'] ) ) : ?>
+										<span class="mx-acao__espera">Aguarda receção</span>
+									<?php elseif ( 'chamada' === $c['status'] ) : ?>
+										<?php clinica_med_fluxo_btn( (int) $c['id'], 'iniciar', 'Iniciar consulta', 'pm-act--ok' ); ?>
+									<?php elseif ( 'em_atendimento' === $c['status'] ) : ?>
+										<a class="pm-act pm-act--ok" href="<?php echo esc_url( add_query_arg( 'atender', (int) $c['id'], remove_query_arg( array( 'pac', 'cl', 'estado' ) ) ) ); ?>">Concluir</a>
+										<?php clinica_med_fluxo_btn( (int) $c['id'], 'pausar', 'Pôr em pausa', 'pm-act--ico', true ); ?>
+									<?php elseif ( 'pausada' === $c['status'] ) : ?>
+										<?php clinica_med_fluxo_btn( (int) $c['id'], 'retomar', 'Retomar', 'pm-act--ok' ); ?>
+									<?php else : ?>
+										<?php clinica_med_fluxo_btn( (int) $c['id'], 'chamar', 'Chamar', 'pm-act--ok' ); ?>
+									<?php endif; ?>
+								</span>
 							</div>
 						<?php endforeach; ?>
-					<?php endforeach; ?>
+					</div>
+					<div class="mx-vazio mx-vazio--meio" id="pm-noresult" hidden>
+						<span class="mx-vazio__ic"><?php echo $mx_svg( 'procurar' ); ?></span>
+						<p><b>Nenhum paciente encontrado</b>Experimente outro nome ou limpe a pesquisa.</p>
+					</div>
+				<?php else : ?>
+					<div class="mx-vazio mx-vazio--meio">
+						<span class="mx-vazio__ic"><?php echo $mx_svg( 'consultas' ); ?></span>
+						<p><b>Sem consultas neste filtro</b>Escolha outro estado acima para ver as restantes.</p>
+					</div>
+				<?php endif; ?>
+			</div>
+		</section>
+
+		<!-- Agenda
+		     Calendário do mês à esquerda (dias com consultas marcados) e as
+		     próximas consultas por dia à direita, numa linha do tempo. -->
+		<?php
+		$ag_meses = array();
+		for ( $mi = 0; $mi < 3; $mi++ ) {
+			$ag_meses[] = strtotime( date( 'Y-m-01', strtotime( "first day of +{$mi} month", $agora ) ) );
+		}
+		?>
+		<section class="mx-vista pm-view" data-view="agenda" hidden>
+			<div class="mx-vista__cab">
+				<div>
+					<h1 class="mx-vista__t">Agenda</h1>
+					<p class="mx-vista__s"><?php echo esc_html( $prox ? sprintf( _n( '%d consulta por atender.', '%d consultas por atender.', count( $prox ), 'clinica' ), count( $prox ) ) : 'Sem consultas por atender.' ); ?></p>
 				</div>
-			<?php else : ?>
-				<p class="pm-empty">Sem consultas agendadas</p>
-			<?php endif; ?>
+			</div>
+
+			<div class="mx-agenda-grelha">
+				<section class="mx-cartao mx-mes" aria-label="Calendário">
+					<div class="mx-cal__nav">
+						<button type="button" class="mx-cal__seta" data-mes="-1" aria-label="Mês anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+						<span class="mx-mes__t" aria-live="polite"><?php echo esc_html( ucfirst( date_i18n( 'F Y', $ag_meses[0] ) ) ); ?></span>
+						<button type="button" class="mx-cal__seta" data-mes="1" aria-label="Mês seguinte"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+					</div>
+					<?php foreach ( $ag_meses as $mi => $m_ts ) :
+						$m_dias = (int) date( 't', $m_ts );
+						$m_off  = (int) date( 'N', $m_ts ) - 1;
+						?>
+						<div class="mx-mes__grelha" data-titulo="<?php echo esc_attr( ucfirst( date_i18n( 'F Y', $m_ts ) ) ); ?>"<?php echo $mi ? ' hidden' : ''; ?>>
+							<?php foreach ( $mx_sem_nomes as $sn ) : ?><span class="mx-mes__sem"><?php echo esc_html( mb_substr( $sn, 0, 1 ) ); ?></span><?php endforeach; ?>
+							<?php for ( $b = 0; $b < $m_off; $b++ ) : ?><span></span><?php endfor; ?>
+							<?php for ( $dd = 1; $dd <= $m_dias; $dd++ ) :
+								$ymd = date( 'Y-m-', $m_ts ) . str_pad( (string) $dd, 2, '0', STR_PAD_LEFT );
+								$tem = ! empty( $agenda_por_dia[ $ymd ] );
+								$cls = 'mx-mes__dia' . ( $ymd === $hoje_ymd ? ' is-hoje' : '' ) . ( $tem ? ' tem' : '' ) . ( $ymd < $hoje_ymd ? ' is-passado' : '' );
+								if ( $tem ) :
+									?>
+									<a class="<?php echo esc_attr( $cls ); ?>" href="#ag-<?php echo esc_attr( $ymd ); ?>" aria-label="<?php echo esc_attr( date_i18n( 'j \d\e F', strtotime( $ymd ) ) . ', ' . sprintf( _n( '%d consulta', '%d consultas', count( $agenda_por_dia[ $ymd ] ), 'clinica' ), count( $agenda_por_dia[ $ymd ] ) ) ); ?>"><?php echo (int) $dd; ?></a>
+								<?php else : ?>
+									<span class="<?php echo esc_attr( $cls ); ?>"><?php echo (int) $dd; ?></span>
+								<?php endif; ?>
+							<?php endfor; ?>
+						</div>
+					<?php endforeach; ?>
+					<ul class="mx-mes__legenda">
+						<li><i class="mx-mes__ponto"></i>Dia com consultas</li>
+						<li><i class="mx-mes__anel"></i>Hoje</li>
+					</ul>
+				</section>
+
+				<section class="mx-cartao mx-linhatempo" aria-label="Próximas consultas">
+					<?php if ( $agenda_por_dia ) : ?>
+						<?php foreach ( $agenda_por_dia as $dia => $items ) :
+							$ts_d    = strtotime( $dia );
+							$is_hoje = ( $dia === $hoje_ymd );
+							?>
+							<div class="mx-dia" id="ag-<?php echo esc_attr( $dia ); ?>">
+								<div class="mx-dia__cab">
+									<span class="mx-dia__data"><b><?php echo esc_html( date_i18n( 'd', $ts_d ) ); ?></b><small><?php echo esc_html( date_i18n( 'M', $ts_d ) ); ?></small></span>
+									<span class="mx-dia__t"><b><?php echo esc_html( ucfirst( date_i18n( 'l', $ts_d ) ) ); ?><?php echo $is_hoje ? ' · Hoje' : ''; ?></b><small><?php echo esc_html( sprintf( _n( '%d consulta', '%d consultas', count( $items ), 'clinica' ), count( $items ) ) ); ?></small></span>
+								</div>
+								<ol class="mx-tempo">
+									<?php foreach ( $items as $f ) : ?>
+										<li class="mx-tempo__i">
+											<time class="mx-tempo__h"><?php echo esc_html( $fmt_hora( $f['inicio'] ) ); ?></time>
+											<div class="mx-tempo__c">
+												<span class="mx-pac__av" aria-hidden="true"><?php echo esc_html( $mx_iniciais( $f['pac_nome'] ) ); ?></span>
+												<span class="mx-pac__t"><b><?php echo esc_html( $f['pac_nome'] ); ?></b><small><?php echo esc_html( $f['esp_nome'] . ' · ' . (int) $f['duracao_min'] . ' min · ' . ( ! empty( $f['checkin_em'] ) ? 'chegou às ' . $fmt_hora( $f['checkin_em'] ) : 'a aguardar chegada' ) ); ?></small></span>
+												<span class="pm-st pm-st--<?php echo esc_attr( $f['status'] ); ?>"><?php echo esc_html( $labels[ $f['status'] ] ?? $f['status'] ); ?></span>
+											</div>
+										</li>
+									<?php endforeach; ?>
+								</ol>
+							</div>
+						<?php endforeach; ?>
+					<?php else : ?>
+						<div class="mx-vazio mx-vazio--meio">
+							<span class="mx-vazio__ic"><?php echo $mx_svg( 'agenda' ); ?></span>
+							<p><b>Sem consultas agendadas</b>Quando a receção marcar consultas consigo, aparecem aqui por dia e por hora.</p>
+						</div>
+					<?php endif; ?>
+				</section>
+			</div>
 		</section>
 
 
@@ -1137,6 +1307,16 @@ $nome_mes  = date_i18n( 'F Y', $prim_ts );
 		window.scrollTo( 0, 0 );
 	}
 	items.forEach( function ( i ) { i.addEventListener( 'click', function ( e ) { e.preventDefault(); show( i.dataset.go ); } ); } );
+	var perfil = document.querySelector( '.mx-perfil' );
+	if ( perfil ) {
+		document.addEventListener( 'click', function ( e ) {
+			if ( perfil.open && ( ! perfil.contains( e.target ) || e.target.closest( '.mx-perfil__menu a' ) ) ) { perfil.open = false; }
+		} );
+	}
+	// Atalhos dentro das vistas (ex.: "Ver agenda" na faixa Hoje).
+	document.querySelectorAll( '[data-ir]' ).forEach( function ( a ) {
+		a.addEventListener( 'click', function ( e ) { e.preventDefault(); show( a.dataset.ir ); } );
+	} );
 	// Cabeçalho de grupo: abre/fecha o submenu.
 	side.querySelectorAll( '[data-toggle]' ).forEach( function ( t ) {
 		t.addEventListener( 'click', function ( e ) {
@@ -1147,6 +1327,59 @@ $nome_mes  = date_i18n( 'F Y', $prim_ts );
 			if ( abrir ) { g.classList.add( 'is-open' ); }
 		} );
 	} );
+
+	// Agenda da semana (painel): as setas mudam de semana e um dia mostra as
+	// suas consultas por baixo. Tudo já vem do servidor; aqui só se mostra.
+	( function () {
+		var cal = document.querySelector( '.mx-cal' );
+		if ( ! cal ) { return; }
+		var semanas = cal.querySelectorAll( '.mx-cal__semana' ), mes = cal.querySelector( '.mx-cal__mes' );
+		var setas = cal.querySelectorAll( '[data-cal]' ), i = 0;
+		semanas.forEach( function ( s, k ) { if ( ! s.hidden ) { i = k; } } );
+		function ir( n ) {
+			i = Math.max( 0, Math.min( semanas.length - 1, n ) );
+			semanas.forEach( function ( s, k ) { s.hidden = k !== i; } );
+			mes.textContent = semanas[ i ].dataset.mes;
+			setas[0].disabled = 0 === i;
+			setas[1].disabled = semanas.length - 1 === i;
+		}
+		setas.forEach( function ( b ) {
+			b.addEventListener( 'click', function () { ir( i + parseInt( b.dataset.cal, 10 ) ); } );
+		} );
+		cal.addEventListener( 'click', function ( e ) {
+			var d = e.target.closest( '.mx-cal__dia' );
+			if ( ! d ) { return; }
+			cal.querySelectorAll( '.mx-cal__dia' ).forEach( function ( o ) {
+				o.classList.toggle( 'is-sel', o === d );
+				o.setAttribute( 'aria-pressed', o === d ? 'true' : 'false' );
+			} );
+			var achou = false;
+			cal.querySelectorAll( '[data-resumo]' ).forEach( function ( l ) {
+				l.hidden = l.dataset.resumo !== d.dataset.dia;
+				if ( ! l.hidden ) { achou = true; }
+			} );
+			cal.querySelector( '.mx-cal__vazio' ).hidden = achou;
+			cal.querySelector( '.mx-cal__data' ).textContent = d.dataset.rotulo;
+		} );
+		ir( i );
+	} )();
+
+	// Agenda: as setas mudam o mês do calendário (três meses já desenhados).
+	( function () {
+		var caixa = document.querySelector( '.mx-mes' );
+		if ( ! caixa ) { return; }
+		var meses = caixa.querySelectorAll( '.mx-mes__grelha' ), titulo = caixa.querySelector( '.mx-mes__t' );
+		var setas = caixa.querySelectorAll( '[data-mes]' ), i = 0;
+		function ir( n ) {
+			i = Math.max( 0, Math.min( meses.length - 1, n ) );
+			meses.forEach( function ( m, k ) { m.hidden = k !== i; } );
+			titulo.textContent = meses[ i ].dataset.titulo;
+			setas[0].disabled = 0 === i;
+			setas[1].disabled = meses.length - 1 === i;
+		}
+		setas.forEach( function ( b ) { b.addEventListener( 'click', function () { ir( i + parseInt( b.dataset.mes, 10 ) ); } ); } );
+		ir( 0 );
+	} )();
 
 	// Ficha clinica: separadores (Resumo/Historico/Prescricoes/Exames/Documentos).
 	( function () {

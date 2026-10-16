@@ -64,6 +64,14 @@ final class Clinica_Pagamentos {
 	const DB_VERSION = '1';
 	const ESTADOS    = array( 'pendente', 'pago', 'cancelado', 'falhou', 'reembolsado' );
 
+	// Métodos de pagamento (chave => rótulo). Guardados na coluna `metodo`.
+	const METODOS = array(
+		'mpesa'     => 'M-Pesa',
+		'emola'     => 'e-Mola',
+		'numerario' => 'Numerário',
+		'cartao'    => 'Cartão',
+	);
+
 	public static function instalar(): void {
 		if ( get_option( 'clinica_pagamentos_db' ) === self::DB_VERSION ) {
 			return;
@@ -160,7 +168,7 @@ final class Clinica_Pagamentos {
 			$motivo = (string) $r->campo( 'detalhe', $r->erro() );
 			Clinica_Auditoria::registar(
 				$r->ok() ? 'Pagamento cobrado (' . $gateway->nome() . ')' : 'Cobrança falhou (' . $gateway->nome() . ')',
-				self::numero_recibo( $id ) . ( $r->ok() ? '' : ' — ' . $motivo )
+				self::numero_recibo( $id ) . ( $r->ok() ? '' : ': ' . $motivo )
 			);
 		}
 
@@ -168,7 +176,7 @@ final class Clinica_Pagamentos {
 			return $r;
 		}
 
-		self::definir_estado( $id, 'pago', (string) $r->campo( 'referencia', '' ) );
+		self::definir_estado( $id, 'pago', (string) $r->campo( 'referencia', '' ), 'mpesa' );
 		self::guardar_telefone( $id, $telefone );
 
 		return $r;
@@ -184,7 +192,7 @@ final class Clinica_Pagamentos {
 	}
 
 	// Muda o estado de um pagamento (confirmar, estornar, falhar…). */
-	public static function definir_estado( int $id, string $estado, string $referencia = '' ): bool {
+	public static function definir_estado( int $id, string $estado, string $referencia = '', string $metodo = '' ): bool {
 		if ( ! in_array( $estado, self::ESTADOS, true ) ) {
 			return false;
 		}
@@ -195,7 +203,15 @@ final class Clinica_Pagamentos {
 			$dados['referencia'] = $referencia;
 			$fmt[]               = '%s';
 		}
-		return false !== $wpdb->update( self::TABELA, $dados, array( 'id' => $id ), $fmt, array( '%d' ) );
+		if ( '' !== $metodo && isset( self::METODOS[ $metodo ] ) ) {
+			$dados['metodo'] = $metodo;
+			$fmt[]           = '%s';
+		}
+		$ok = false !== $wpdb->update( self::TABELA, $dados, array( 'id' => $id ), $fmt, array( '%d' ) );
+		if ( $ok ) {
+			do_action( 'clinica_pagamento_estado', $id, $estado );
+		}
+		return $ok;
 	}
 
 	// Lista pagamentos (com nomes) — filtro opcional por estado. */
@@ -256,6 +272,29 @@ final class Clinica_Pagamentos {
 	// Número do recibo a partir do id do pagamento. */
 	public static function numero_recibo( int $id ): string {
 		return 'RC-' . str_pad( (string) $id, 6, '0', STR_PAD_LEFT );
+	}
+
+	/**
+	 * Recebido agrupado por método de pagamento (só pagamentos 'pago').
+	 * Devolve sempre todos os métodos conhecidos (mesmo a zero), para o gráfico
+	 * ser estável. @return array<int,array{metodo,label,n,valor}>
+	 */
+	public static function por_metodo(): array {
+		global $wpdb;
+		$rows = $wpdb->get_results( "SELECT metodo, COUNT(*) n, SUM(valor) v FROM " . self::TABELA . " WHERE estado = 'pago' GROUP BY metodo", ARRAY_A ) ?: array();
+		$out  = array();
+		foreach ( self::METODOS as $k => $label ) {
+			$out[ $k ] = array( 'metodo' => $k, 'label' => $label, 'n' => 0, 'valor' => 0.0 );
+		}
+		foreach ( $rows as $r ) {
+			$k = (string) $r['metodo'];
+			if ( ! isset( $out[ $k ] ) ) {
+				$out[ $k ] = array( 'metodo' => $k, 'label' => ucfirst( $k ), 'n' => 0, 'valor' => 0.0 );
+			}
+			$out[ $k ]['n']     = (int) $r['n'];
+			$out[ $k ]['valor'] = (float) $r['v'];
+		}
+		return array_values( $out );
 	}
 
 	// Totais para os KPIs do Financeiro. */

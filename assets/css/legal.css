@@ -1,0 +1,323 @@
+/*
+ * Páginas legais (Termos, Privacidade, Cookies), classes .lg-*: faixa
+ * petróleo em moldura com o título, índice fixo à esquerda e texto de leitura
+ * à direita. Tokens --ch-* e --hp-serif do .hp em home.css.
+ */
+.lg-topo {
+	margin: 8px;
+	padding: 176px 32px 76px;
+	border-radius: 20px;
+	background: radial-gradient(120% 150% at 100% 0%, #155e63 0%, #0b3a3d 46%, #09292b 100%);
+	color: #fff;
+}
+
+.lg-topo__titulo {
+	max-width: 760px;
+	margin: 0 0 18px;
+	font-family: var(--hp-serif);
+	font-size: clamp(38px, 5vw, 58px);
+	font-weight: 400;
+	line-height: 1.08;
+	letter-spacing: -0.015em;
+	color: #fff;
+}
+
+.lg-topo__resumo {
+	max-width: 620px;
+	margin: 0 0 22px;
+	font-size: 18px;
+	line-height: 1.55;
+	color: rgba(255, 255, 255, 0.78);
+}
+
+.lg-topo__data {
+	margin: 0;
+	font-size: 14px;
+	color: rgba(255, 255, 255, 0.58);
+}
+
+.lg-corpo {
+	display: grid;
+	grid-template-columns: 250px minmax(0, 1fr);
+	align-items: start;
+	gap: 80px;
+	padding: 80px 32px 120px;
+}
+
+.lg-lado {
+	position: sticky;
+	top: 112px;
+	display: grid;
+	gap: 32px;
+}
+
+.lg-indice__t {
+	margin: 0 0 12px;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #73807d;
+}
+
+.lg-indice ol {
+	display: grid;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	border-left: 1px solid var(--ch-linha);
+}
+
+.hp .lg-indice a {
+	display: block;
+	margin-left: -1px;
+	padding: 7px 0 7px 16px;
+	border-left: 2px solid transparent;
+	font-size: 14.5px;
+	line-height: 1.35;
+	color: #4b5b59;
+	text-decoration: none;
+	transition:
+		color 0.2s,
+		border-color 0.2s;
+}
+
+.hp .lg-indice a:hover {
+	color: var(--ch-escuro);
+}
+
+.hp .lg-indice a[aria-current="true"] {
+	border-left-color: var(--ch-teal);
+	color: var(--ch-escuro);
+	font-weight: 600;
+}
+
+.lg-outros {
+	display: grid;
+	gap: 8px;
+	padding-top: 24px;
+	border-top: 1px solid var(--ch-linha);
+}
+
+.hp .lg-outros a {
+	font-size: 14.5px;
+	color: var(--ch-teal);
+	text-decoration: none;
+}
+
+.hp .lg-outros a:hover {
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.hp .lg-outros a[aria-current="page"] {
+	color: var(--ch-escuro);
+	font-weight: 600;
+}
+
+.lg-texto {
+	max-width: 720px;
+}
+
+.lg-sec {
+	margin: 0 0 44px;
+	padding: 0 0 44px;
+	border-bottom: 1px solid var(--ch-linha);
+	scroll-margin-top: 112px;
+}
+
+.lg-sec:last-child {
+	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom: 0;
+}
+
+.lg-sec h2 {
+	display: flex;
+	align-items: baseline;
+	gap: 14px;
+	margin: 0 0 18px;
+	font-family: var(--hp-serif);
+	font-size: 28px;
+	font-weight: 400;
+	line-height: 1.2;
+	color: #000;
+}
+
+.lg-sec__n {
+	flex: none;
+	font-family: "Inter", system-ui, sans-serif;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ch-teal);
+}
+
+.lg-sec p,
+.lg-sec li {
+	font-size: 16.5px;
+	line-height: 1.7;
+	color: #3d4b49;
+}
+
+.lg-sec p {
+	margin: 0 0 14px;
+}
+
+.lg-sec p:last-child {
+	margin-bottom: 0;
+}
+
+.lg-sec ul {
+	display: grid;
+	gap: 8px;
+	margin: 0 0 14px;
+	padding-left: 20px;
+}
+
+.lg-sec li::marker {
+	color: var(--ch-teal);
+}
+
+.lg-sec b {
+	font-weight: 600;
+	color: var(--ch-escuro);
+}
+
+.hp .lg-sec a {
+	color: var(--ch-teal);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.lg-tabela {
+	margin: 4px 0 18px;
+	overflow-x: auto;
+	border: 1px solid var(--ch-linha);
+	border-radius: 14px;
+}
+
+.lg-tabela:focus-visible {
+	outline: 2px solid var(--ch-teal);
+	outline-offset: 2px;
+}
+
+.lg-tabela table {
+	width: 100%;
+	min-width: 560px;
+	border-collapse: collapse;
+	font-size: 14.5px;
+}
+
+.lg-tabela th {
+	padding: 12px 16px;
+	background: #f4f7f6;
+	font-weight: 600;
+	text-align: left;
+	color: var(--ch-escuro);
+}
+
+.lg-tabela td {
+	padding: 12px 16px;
+	border-top: 1px solid var(--ch-linha);
+	vertical-align: top;
+	line-height: 1.5;
+	color: #3d4b49;
+}
+
+.lg-tabela code {
+	padding: 2px 6px;
+	border-radius: 6px;
+	background: #eef3f2;
+	font-size: 13px;
+	color: var(--ch-escuro);
+	white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+	.lg-corpo {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 40px;
+		padding-top: 56px;
+	}
+
+	.lg-lado {
+		position: static;
+	}
+}
+
+@media (max-width: 640px) {
+	.lg-topo {
+		margin: 6px;
+		padding: 128px 20px 48px;
+		border-radius: 16px;
+	}
+
+	.lg-topo__resumo {
+		font-size: 16px;
+	}
+
+	.lg-corpo {
+		padding: 40px 20px 80px;
+	}
+
+	.lg-sec {
+		margin-bottom: 36px;
+		padding-bottom: 36px;
+	}
+
+	.lg-sec h2 {
+		font-size: 24px;
+	}
+
+	.lg-sec p,
+	.lg-sec li {
+		font-size: 16px;
+	}
+
+	.lg-tabela {
+		overflow: visible;
+		border: 0;
+	}
+
+	.lg-tabela table {
+		min-width: 0;
+	}
+
+	.lg-tabela thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+	}
+
+	.lg-tabela tr {
+		display: grid;
+		gap: 8px;
+		margin-bottom: 10px;
+		padding: 14px 16px;
+		border: 1px solid var(--ch-linha);
+		border-radius: 14px;
+	}
+
+	.lg-tabela td {
+		display: grid;
+		grid-template-columns: 104px minmax(0, 1fr);
+		gap: 10px;
+		padding: 0;
+		border: 0;
+	}
+
+	.lg-tabela td::before {
+		content: attr(data-rotulo);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--ch-escuro);
+	}
+
+	.lg-tabela code {
+		justify-self: start;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+}

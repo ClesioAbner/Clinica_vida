@@ -130,7 +130,7 @@ function clinica_controller_direcao(): void {
 	}
 	$acao = sanitize_key( $_POST['dir_action'] );
 
-	// ---- Definir metas ----
+	// Definir metas
 	if ( 'metas' === $acao ) {
 		if ( ! current_user_can( 'clinica_definir_metas' ) || ! wp_verify_nonce( $_POST['dir_nonce'] ?? '', 'dir_metas' ) ) {
 			clinica_redirect( 'negado' );
@@ -143,7 +143,7 @@ function clinica_controller_direcao(): void {
 		clinica_redirect( 'meta_ok', 'metas' );
 	}
 
-	// ---- Propor uma decisão estratégica ----
+	// Propor uma decisão estratégica
 	if ( 'propor' === $acao ) {
 		// Propor é da GESTÃO (sobe à Direção). A Direção não propõe, decide.
 		if ( ! current_user_can( 'clinica_propor_estrategico' ) || ! wp_verify_nonce( $_POST['dir_nonce'] ?? '', 'dir_propor' ) ) {
@@ -169,7 +169,7 @@ function clinica_controller_direcao(): void {
 		clinica_redirect( 'prop_ok', 'propostas' );
 	}
 
-	// ---- Decidir (aprovar/rejeitar) ----
+	// Decidir (aprovar/rejeitar)
 	if ( 'decidir' === $acao ) {
 		if ( ! current_user_can( 'clinica_aprovar_estrategico' ) || ! wp_verify_nonce( $_POST['dir_nonce'] ?? '', 'dir_decidir' ) ) {
 			clinica_redirect( 'negado' );

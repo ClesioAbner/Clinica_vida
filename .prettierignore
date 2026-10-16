@@ -1,0 +1,8 @@
+node_modules/
+lib/
+assets/js/vendor/
+assets/img/
+*.min.js
+*.min.css
+package-lock.json
+theme.json

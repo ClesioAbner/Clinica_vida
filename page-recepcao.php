@@ -120,8 +120,9 @@ usort( $futuras, static function ( $a, $b ) { return strtotime( $a['inicio'] ) <
 $por_confirmar = (int) $kpis['pendente'];
 
 $fila = clinica_recepcao_fila();
+$site_pend = class_exists( 'Clinica_Marcacao_Rapida' ) ? Clinica_Marcacao_Rapida::por_confirmar() : array();
 
-// ---- Agenda do dia: dia selecionado (?dia=Y-m-d), navegação e resumo -------
+// Agenda do dia: dia selecionado (?dia=Y-m-d), navegação e resumo
 $dia_sel = isset( $_GET['dia'] ) ? sanitize_text_field( wp_unslash( $_GET['dia'] ) ) : $hoje_ymd;
 if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $dia_sel ) || ! strtotime( $dia_sel ) ) {
 	$dia_sel = $hoje_ymd;
@@ -179,7 +180,7 @@ foreach ( $hoje_lista as $h ) {
 $pedidos = array_values( array_filter( $consultas, static function ( $c ) { return 'pendente' === $c['status']; } ) );
 usort( $pedidos, static function ( $a, $b ) { return strtotime( $a['inicio'] ) <=> strtotime( $b['inicio'] ); } );
 
-// ---- Gráficos do dashboard (só dados de HOJE, já em memória — sem query pesada).
+// Gráficos do dashboard (só dados de HOJE, já em memória — sem query pesada).
 // A tendência histórica continua a ser tático/executivo (vive na Gestão);
 // aqui os gráficos respondem "como está a correr o dia AGORA".
 $hora_ini = 8;
@@ -191,55 +192,16 @@ foreach ( $hoje_lista as $c ) {
 	$hh = max( $hora_ini, min( $hora_fim, $hh ) );
 	$por_hora[ $hh ]++;
 }
-$hora_pico = max( 1, max( $por_hora ) );
-$hora_atual = (int) date_i18n( 'G', $agora );
 
-// Distribuição por estado (hoje) — donut igual ao do portal médico.
+// Estado de hoje (barras do painel).
 $h_pend = 0; $h_conf = 0; $h_feito = 0;
 foreach ( $hoje_lista as $c ) {
 	if ( 'pendente' === $c['status'] ) { $h_pend++; }
 	elseif ( 'confirmada' === $c['status'] ) { $h_conf++; }
 	elseif ( in_array( $c['status'], array( 'realizada', 'faltou' ), true ) ) { $h_feito++; }
 }
-$rc_seg = array(
-	array( 'Por confirmar', $h_pend, '#A9C9DB' ),
-	array( 'Confirmadas', $h_conf, '#4E7E9B' ),
-	array( 'Concluídas', $h_feito, '#2E4E60' ),
-);
-$rc_seg_total = array_sum( array_column( $rc_seg, 1 ) );
-$rc_acc = 0; $rc_stops = array();
-foreach ( $rc_seg as $s ) {
-	if ( $s[1] <= 0 ) { continue; }
-	$from = $rc_seg_total ? ( $rc_acc / $rc_seg_total * 100 ) : 0;
-	$rc_acc += $s[1];
-	$to = $rc_seg_total ? ( $rc_acc / $rc_seg_total * 100 ) : 0;
-	$rc_stops[] = sprintf( '%s %.2f%% %.2f%%', $s[2], $from, $to );
-}
-$rc_donut_bg = $rc_seg_total ? ( 'conic-gradient(' . implode( ',', $rc_stops ) . ')' ) : '#E7ECF2';
 
-// Dashboard nunca vazio: sem consultas reais hoje, mostra um exemplo (marcado).
-$dash_demo = ( 0 === $rc_seg_total );
-if ( $dash_demo ) {
-	$por_hora   = array( 8 => 1, 9 => 3, 10 => 4, 11 => 2, 12 => 1, 13 => 0, 14 => 3, 15 => 5, 16 => 4, 17 => 2, 18 => 1, 19 => 0 );
-	$hora_pico  = 5;
-	$hora_atual = 15;
-	$rc_seg = array(
-		array( 'Por confirmar', 6, '#A9C9DB' ),
-		array( 'Confirmadas', 9, '#4E7E9B' ),
-		array( 'Concluídas', 5, '#2E4E60' ),
-	);
-	$rc_seg_total = 20;
-	$rc_acc = 0; $rc_stops = array();
-	foreach ( $rc_seg as $s ) {
-		$from = $rc_acc / $rc_seg_total * 100;
-		$rc_acc += $s[1];
-		$to = $rc_acc / $rc_seg_total * 100;
-		$rc_stops[] = sprintf( '%s %.2f%% %.2f%%', $s[2], $from, $to );
-	}
-	$rc_donut_bg = 'conic-gradient(' . implode( ',', $rc_stops ) . ')';
-}
-
-// ---- Histórico ADMINISTRATIVO de um paciente (?hist=ID) ----
+// Histórico ADMINISTRATIVO de um paciente (?hist=ID)
 // Só factos administrativos: consultas (datas/médico/estado/chegada) e
 // pagamentos/recibos. Nunca diagnósticos nem conteúdo do processo clínico.
 $hist_pac = null; $hist_cons = array(); $hist_pgs = array(); $hist_proc = null;
@@ -265,22 +227,42 @@ $rc_acoes = array(
 $rc_editavel = array( 'pendente', 'confirmada' );
 ?>
 <div class="hp">
-<div class="pm-shell pm-shell--rec">
+<div class="pm-shell pm-shell--rec dz gt">
 
-	<aside class="pm-side">
-		<div class="pm-side__brand">
-			<span class="pm-side__logo"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo2.png' ); ?>" alt=""></span>
-			<span class="pm-side__brandname">Clínica Vida</span>
+	<!-- Topo (forma "Dizinv"): marca, pesquisa de pacientes, avisos e perfil -->
+	<header class="dz-topo">
+		<a class="dz-marca" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="28" height="28" alt="">
+			<span>Clínica Vida</span>
+		</a>
+		<form class="dz-procura" role="search" data-dz-procura>
+			<?php echo Clinica_Painel::icone( 'procurar' ); ?>
+			<label class="db-sr" for="dz-procura">Procurar paciente</label>
+			<input type="search" id="dz-procura" placeholder="Procurar paciente por nome, telefone ou BI" autocomplete="off">
+		</form>
+		<div class="dz-topo__r">
+			<a class="dz-ic" href="#fila" data-go="fila" aria-label="<?php echo esc_attr( sprintf( _n( '%d paciente na fila', '%d pacientes na fila', count( $fila ), 'clinica' ), count( $fila ) ) ); ?>"><?php echo Clinica_Painel::icone( 'sino' ); ?><?php if ( $fila ) : ?><b class="dz-ic__n"><?php echo count( $fila ); ?></b><?php endif; ?></a>
+			<a class="dz-ic" href="#mensagens" data-go="mensagens" aria-label="<?php echo esc_attr( sprintf( _n( '%d mensagem por ler', '%d mensagens por ler', (int) $msg_novas, 'clinica' ), (int) $msg_novas ) ); ?>"><?php echo Clinica_Painel::icone( 'mensagem' ); ?><?php if ( $msg_novas ) : ?><b class="dz-ic__n"><?php echo (int) $msg_novas; ?></b><?php endif; ?></a>
+			<details class="dz-perfil">
+				<summary><img src="<?php echo esc_url( $avatar ); ?>" width="32" height="32" alt=""><span><?php echo esc_html( $primeiro ); ?></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+				<div class="dz-perfil__menu">
+					<a href="#marcar" data-go="marcar">Nova consulta</a>
+					<a href="#novo-paciente" data-go="novo-paciente">Novo paciente</a>
+					<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">Sair</a>
+				</div>
+			</details>
 		</div>
+	</header>
 
-		<div class="pm-side__me">
-			<img src="<?php echo esc_url( $avatar ); ?>" alt="">
-			<div class="pm-side__meinfo">
-				<div class="pm-side__name"><?php echo esc_html( $primeiro ); ?></div>
-				<div class="pm-side__role">Receção</div>
-			</div>
+	<aside class="pm-side gt-side">
+		<a class="gt-marca" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+			<span class="gt-marca__ic"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="24" height="24" alt=""></span>
+			<span class="gt-marca__t">Clínica Vida</span>
+		</a>
+		<div class="gt-perfil">
+			<img src="<?php echo esc_url( $avatar ); ?>" width="54" height="54" alt="">
+			<span><small>Olá,</small><b><?php echo esc_html( $utilizador->display_name ); ?></b></span>
 		</div>
-
 		<nav class="pm-nav">
 			<span class="pm-nav__cap">Receção</span>
 			<a class="pm-nav__i is-active" href="#" data-go="painel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Painel</span></a>
@@ -304,145 +286,329 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 			<a class="pm-nav__i" href="#" data-go="mensagens"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v12H5.17L4 17.17V4z"/></svg><span>Mensagens<?php if ( $msg_novas ) : ?> <b class="rc-badge"><?php echo (int) $msg_novas; ?></b><?php endif; ?></span></a>
 		</nav>
 
-		<div class="rc-help">
-			<a class="pm-nav__i rc-help__i" href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg><span>Precisa de ajuda?</span></a>
-			<a class="pm-nav__i pm-nav__out" href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sair</span></a>
+		<div class="gt-side__barra">
+			<a href="#marcar" data-go="marcar" aria-label="Nova consulta" title="Nova consulta"><?php echo Clinica_Painel::icone( 'agenda' ); ?></a>
+			<a href="#pagamentos" data-go="pagamentos" aria-label="Caixa" title="Caixa"><?php echo Clinica_Painel::icone( 'dinheiro' ); ?></a>
+			<a href="<?php echo esc_url( home_url( '/contacto/' ) ); ?>" aria-label="Precisa de ajuda?" title="Precisa de ajuda?"><?php echo Clinica_Painel::icone( 'mensagem' ); ?></a>
+			<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" aria-label="Sair" title="Sair"><?php echo Clinica_Painel::icone( 'sair' ); ?></a>
 		</div>
 	</aside>
 
-	<main class="pm-main">
+	<main class="pm-main gt-main">
 
-		<header class="pm-top">
-			<div class="pm-top__l">
-				<span class="ad-eyebrow ad-eyebrow--rec">Portal da Receção</span>
-				<h1 class="pm-welcome"><?php echo esc_html( $saudacao . ', ' . $primeiro ); ?></h1>
-				<p class="pm-date"><?php echo esc_html( ucfirst( $data_hoje ) ); ?></p>
-			</div>
-		</header>
+		<nav class="dz-migalhas" aria-label="Onde estou">
+			<span class="dz-migalhas__c"><?php echo Clinica_Painel::icone( 'painel' ); ?><span data-dz-titulo>Painel</span></span>
+			<a class="dz-mais" href="#marcar" data-go="marcar" aria-label="Nova consulta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></a>
+		</nav>
 
-		<?php clinica_render_flash(); ?>
+		<?php
+		// Depois de um pagamento registado, o ecrã de sucesso da Caixa substitui o aviso.
+		if ( isset( $_GET['pago'] ) && 'pg_recebido' === ( $_GET['cl'] ?? '' ) ) {
+			ob_start();
+			clinica_render_flash();
+			ob_end_clean();
+		} else {
+			clinica_render_flash();
+		}
+		?>
 
-		<!-- ============================ PAINEL ============================ -->
-		<section class="rc-kpis pm-view" data-view="painel">
-			<?php
-			$rc_cards = array(
-				array( 'Consultas hoje', count( $hoje_lista ), 'Ver agenda', 'consultas' ),
-				array( 'Por confirmar', $por_confirmar, 'Ver pedidos', 'consultas' ),
-				array( 'Na fila', count( $fila ), 'Ver fila', 'fila' ),
-				array( 'Pagamentos pendentes', (int) $pg_tot['pendente_n'], 'Ver pagamentos', 'pagamentos' ),
-			);
-			foreach ( $rc_cards as $k ) : ?>
-				<div class="rc-kpi">
-					<span class="rc-kpi__l"><?php echo esc_html( $k[0] ); ?></span>
-					<strong class="rc-kpi__n"><?php echo (int) $k[1]; ?></strong>
-					<a class="rc-kpi__a" href="#" data-go="<?php echo esc_attr( $k[3] ); ?>"><?php echo esc_html( $k[2] ); ?></a>
-				</div>
-			<?php endforeach; ?>
-		</section>
+		<!-- Painel
+		     Forma "Gentelella" (a mesma da Direção) organizada para o balcão:
+		     boas-vindas com a fotografia da receção, faixa de seis números do
+		     dia, pedidos do site para ligar, consultas marcadas com os médicos
+		     de hoje ao lado, próximos pacientes em tabela e, em baixo, o que
+		     falta cobrar, a cobrança e as mensagens do site. -->
+		<?php
+		$hoje_n    = count( $hoje_lista );
+		$pend_val  = (float) $pg_tot['pendente_valor'];
+		$pend_n    = (int) $pg_tot['pendente_n'];
+		$pago_val  = (float) ( $pg_tot['pago_valor'] ?? 0 );
+		$cobrado   = ( $pago_val + $pend_val ) > 0 ? $pago_val / ( $pago_val + $pend_val ) * 100 : null;
+		$amanha    = date( 'Y-m-d', strtotime( '+1 day', strtotime( $hoje_ymd ) ) );
+		$amanha_n  = count( array_filter( $consultas, static fn( $c ) => substr( $c['inicio'], 0, 10 ) === $amanha && 'cancelada' !== $c['status'] ) );
+		$horizonte = isset( $_GET['horizonte'] ) ? (int) $_GET['horizonte'] : 14;
+		$horizonte = in_array( $horizonte, array( 7, 14, 30 ), true ) ? $horizonte : 14;
+		$hz_rot    = array();
+		$hz_longo  = array();
+		$hz_val    = array();
+		$hz_idx    = array();
+		for ( $d = 0; $d < $horizonte; $d++ ) {
+			$ts = strtotime( "+{$d} day", strtotime( $hoje_ymd ) );
+			$hz_idx[ date( 'Y-m-d', $ts ) ] = $d;
+			$hz_rot[]   = 7 === $horizonte ? date_i18n( 'D j', $ts ) : date_i18n( 'j/n', $ts );
+			$hz_longo[] = ucfirst( date_i18n( 'l, j \d\e F', $ts ) );
+			$hz_val[]   = 0;
+		}
+		foreach ( $consultas as $c ) {
+			$k = substr( $c['inicio'], 0, 10 );
+			if ( isset( $hz_idx[ $k ] ) && 'cancelada' !== $c['status'] ) {
+				$hz_val[ $hz_idx[ $k ] ]++;
+			}
+		}
+		$hz_url = static fn( int $n ): string => add_query_arg( 'horizonte', $n, remove_query_arg( array( 'horizonte', 'cl' ) ) ) . '#painel';
+		$dz_faixa = array(
+			array( 'pendente', 'Por confirmar', $por_confirmar, 'consultas', 'rosa' ),
+			array( 'fila', 'Na fila', count( $fila ), 'fila', 'areia' ),
+			array( 'agenda', 'Consultas hoje', $hoje_n, 'consultas', 'menta' ),
+			array( 'financeiro', 'Pagamentos pendentes', $pend_n, 'pagamentos', 'agua' ),
+		);
+		?>
+		<?php
+		$hoje_rec = 0.0;
+		foreach ( $pg_pagos as $pg ) {
+			if ( substr( (string) ( $pg['atualizado_em'] ?? '' ), 0, 10 ) === $hoje_ymd ) {
+				$hoje_rec += (float) $pg['valor'];
+			}
+		}
+		$rc_resumo = array();
+		if ( $hoje_n ) {
+			$rc_resumo[] = sprintf( _n( '%d consulta hoje', '%d consultas hoje', $hoje_n, 'clinica' ), $hoje_n );
+		}
+		if ( $por_confirmar ) {
+			$rc_resumo[] = sprintf( _n( '%d por confirmar', '%d por confirmar', $por_confirmar, 'clinica' ), $por_confirmar );
+		}
+		if ( $pend_n ) {
+			$rc_resumo[] = sprintf( _n( '%d pagamento por cobrar', '%d pagamentos por cobrar', $pend_n, 'clinica' ), $pend_n );
+		}
+		// [ícone, rótulo, valor, formato, nota, destaque, vista]
+		$rc_tiles = array(
+			array( 'agenda', 'Consultas hoje', $hoje_n, 'int', 'Na agenda do dia', true, 'consultas' ),
+			array( 'pendente', 'Por confirmar', $por_confirmar, 'int', 'Ligar ou confirmar', false, 'consultas' ),
+			array( 'fila', 'Na fila', count( $fila ), 'int', 'Já chegaram', false, 'fila' ),
+			array( 'consultas', 'Amanhã', $amanha_n, 'int', 'Marcadas para amanhã', false, 'consultas' ),
+			array( 'financeiro', 'Por cobrar', $pend_val, 'mil', sprintf( _n( '%d pagamento', '%d pagamentos', $pend_n, 'clinica' ), $pend_n ), false, 'pagamentos' ),
+			array( 'dinheiro', 'Recebido hoje', $hoje_rec, 'mil', 'Na caixa hoje', false, 'pagamentos' ),
+		);
+		$gt_ferr = static function (): string {
+			return '<div class="gt-ferr">'
+				. '<button type="button" data-gt-recolher aria-expanded="true" aria-label="Recolher painel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>'
+				. '<button type="button" data-gt-fechar aria-label="Fechar painel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
+				. '</div>';
+		};
+		?>
+		<section class="gt-painel rc-painel pm-view" data-view="painel">
 
-		<!-- Gráficos do dia (sempre visíveis no topo) -->
-		<section class="rc-charts pm-view" data-view="painel">
-			<div class="rc-card rc-card--chart">
-				<div class="rc-card__h"><strong>Consultas por hora</strong><span class="<?php echo $dash_demo ? 'rc-tagex' : ''; ?>"><?php echo $dash_demo ? 'exemplo' : 'hoje'; ?></span></div>
-				<?php if ( $por_hora ) : ?>
-					<div class="rc-plot">
-						<div class="rc-plot__y">
-							<span><?php echo (int) $hora_pico; ?></span>
-							<span><?php echo (int) ceil( $hora_pico / 2 ); ?></span>
-							<span>0</span>
-						</div>
-						<div class="rc-plot__c">
-							<div class="rc-plot__bars">
-								<?php foreach ( $por_hora as $h => $n ) :
-									$alt = $hora_pico ? round( $n / $hora_pico * 100 ) : 0;
-								?>
-									<div class="rc-b<?php echo $h === $hora_atual ? ' is-now' : ''; ?>" title="<?php echo (int) $n; ?> às <?php echo (int) $h; ?>h">
-										<span style="height:<?php echo (int) $alt; ?>%"></span>
-									</div>
-								<?php endforeach; ?>
-							</div>
-							<div class="rc-plot__x">
-								<?php foreach ( array_keys( $por_hora ) as $h ) : ?>
-									<span><?php echo ( $h % 2 === 0 ) ? (int) $h . 'h' : ''; ?></span>
-								<?php endforeach; ?>
-							</div>
-						</div>
+			<section class="rc-boas" aria-labelledby="rc-boas-t" data-gt-entrada>
+				<div class="rc-boas__txt">
+					<p class="rc-boas__data"><?php echo esc_html( ucfirst( $data_hoje ) ); ?></p>
+					<h1 class="rc-boas__t" id="rc-boas-t"><?php echo esc_html( $saudacao . ', ' . $primeiro ); ?></h1>
+					<p class="rc-boas__resumo"><?php echo esc_html( $rc_resumo ? implode( ' · ', $rc_resumo ) : 'Tudo em dia por agora.' ); ?></p>
+					<div class="rc-boas__acoes">
+						<a class="rc-boas__btn rc-boas__btn--forte" href="#marcar" data-go="marcar"><?php echo Clinica_Painel::icone( 'agenda' ); ?>Marcar consulta</a>
+						<a class="rc-boas__btn" href="#pagamentos" data-go="pagamentos"><?php echo Clinica_Painel::icone( 'dinheiro' ); ?>Cobrar pagamento</a>
+						<a class="rc-boas__btn" href="#novo-paciente" data-go="novo-paciente"><?php echo Clinica_Painel::icone( 'paciente' ); ?>Novo paciente</a>
 					</div>
-				<?php else : ?>
-					<p class="pm-empty">Sem consultas hoje</p>
-				<?php endif; ?>
-			</div>
-
-			<div class="rc-card rc-card--chart">
-				<div class="rc-card__h"><strong>Distribuição por estado</strong><span class="<?php echo $dash_demo ? 'rc-tagex' : ''; ?>"><?php echo $dash_demo ? 'exemplo' : 'hoje'; ?></span></div>
-				<?php if ( $rc_seg_total ) : ?>
-					<div class="pm-donut-wrap">
-						<div class="pm-donut" style="background:<?php echo esc_attr( $rc_donut_bg ); ?>">
-							<div class="pm-donut__c"><span class="rc-donutnum" data-to="<?php echo (int) $rc_seg_total; ?>"><?php echo (int) $rc_seg_total; ?></span><small>consultas</small></div>
-						</div>
-						<ul class="pm-legend">
-							<?php foreach ( $rc_seg as $s ) : ?>
-								<li><span class="pm-legend__d" style="background:<?php echo esc_attr( $s[2] ); ?>"></span><?php echo esc_html( $s[0] ); ?><b><?php echo (int) $s[1]; ?></b></li>
-							<?php endforeach; ?>
-						</ul>
-					</div>
-				<?php else : ?>
-					<p class="pm-empty">Sem consultas hoje</p>
-				<?php endif; ?>
-			</div>
-		</section>
-
-		<!-- Cards operacionais (em baixo) — acionável | referência -->
-		<section class="rc-dashgrid pm-view" data-view="painel">
-			<div class="rc-dashcol">
-				<div class="rc-card">
-					<div class="rc-card__h"><strong>Próximo paciente</strong></div>
-					<?php if ( $prox_c && $prox_fic ) : ?>
-						<div class="rc-pat__n"><?php echo esc_html( $prox_fic['nome'] ); ?></div>
-						<div class="rc-pat__t"><?php echo esc_html( $prox_c['esp_nome'] ); ?> · <?php echo esc_html( $fmt_hora( $prox_c['inicio'] ) ); ?></div>
-						<dl class="rc-pat">
-							<div><dt>Telefone</dt><dd><?php echo $prox_fic['telefone'] ? esc_html( $prox_fic['telefone'] ) : '<i>Não registado</i>'; ?></dd></div>
-							<div><dt>Idade</dt><dd><?php echo null !== $prox_idade ? (int) $prox_idade . ' anos' : '<i>Não registada</i>'; ?></dd></div>
-							<div><dt>Médico</dt><dd><?php echo esc_html( $prox_c['med_nome'] ); ?></dd></div>
-							<div><dt>Chegada</dt><dd><?php echo ! empty( $prox_c['checkin_em'] ) ? '<b>' . esc_html( $fmt_hora( $prox_c['checkin_em'] ) ) . '</b>' : '<i>A aguardar</i>'; ?></dd></div>
-						</dl>
-						<a class="rc-card__a" href="<?php echo esc_url( add_query_arg( 'hist', (int) $prox_c['paciente_id'], remove_query_arg( array( 'cl', 'hist' ) ) ) ); ?>">Ver ficha do paciente</a>
-					<?php else : ?>
-						<p class="pm-empty">Sem pacientes em espera</p>
-					<?php endif; ?>
 				</div>
+				<img class="rc-boas__img" src="<?php echo esc_url( CLINICA_URI . '/assets/img/inicio/porque.webp' ); ?>" width="1493" height="871" alt="" decoding="async">
+			</section>
 
+			<div class="gt-tiles" data-gt-entrada>
+				<?php foreach ( $rc_tiles as $t ) :
+					$moe = 'mil' === $t[3];
+					?>
+					<a class="gt-tile rc-tile" href="#<?php echo esc_attr( $t[6] ); ?>" data-go="<?php echo esc_attr( $t[6] ); ?>" data-gt-3d>
+						<span class="gt-tile__l"><?php echo Clinica_Painel::icone( $t[0] ); ?><?php echo esc_html( $t[1] ); ?></span>
+						<b class="gt-tile__n<?php echo $t[5] ? ' is-destaque' : ''; ?>"<?php echo $moe ? ' title="' . esc_attr( number_format( (float) $t[2], 0, ',', ' ' ) . ' ' . $moeda ) . '"' : ''; ?>><span data-gt-n="<?php echo esc_attr( (string) round( (float) $t[2] ) ); ?>" data-gt-fmt="<?php echo esc_attr( $t[3] ); ?>"><?php echo esc_html( $moe ? Clinica_Grafico::compacto( (float) $t[2] ) : number_format_i18n( (int) $t[2] ) ); ?></span><?php echo $moe ? ' <small>' . esc_html( $moeda ) . '</small>' : ''; ?></b>
+						<span class="gt-tile__d"><?php echo esc_html( $t[4] ); ?></span>
+					</a>
+				<?php endforeach; ?>
 			</div>
 
-			<div class="rc-dashcol rc-dashcol--side">
-				<div class="rc-card">
-					<div class="rc-card__h"><strong>Médicos hoje</strong></div>
-					<?php if ( $medicos ) : ?>
-						<ul class="rc-docs2">
-							<?php foreach ( $medicos as $m ) :
-								$n  = (int) ( $med_hoje[ $m['nome'] ] ?? 0 );
-								$em = ( ( $med_estado[ $m['nome'] ] ?? '' ) === 'Em atendimento' );
-								if ( $em ) { $st = 'Em atendimento'; $cls = 'on'; }
-								elseif ( $n > 0 ) { $st = $n . ' hoje'; $cls = 'busy'; }
-								else { $st = 'Disponível'; $cls = 'free'; }
-							?>
-								<li class="rc-doc2">
-									<div class="rc-doc2__i">
-										<div class="rc-doc2__n"><?php echo esc_html( $m['nome'] ); ?></div>
-										<div class="rc-doc2__e"><?php echo esc_html( $m['esp_nome'] ); ?></div>
-									</div>
-									<span class="rc-doc2__s rc-doc2__s--<?php echo $cls; ?>"><i></i><?php echo esc_html( $st ); ?></span>
+			<?php if ( $site_pend ) : ?>
+				<section class="gt-x rc-site" aria-labelledby="rc-site-t" data-gt-entrada>
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="rc-site-t">Pedidos do site <small>marcados sem conta · ligar a confirmar</small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<ul class="rc-site__lista">
+							<?php foreach ( $site_pend as $sp ) : ?>
+								<li class="rc-site__i">
+									<span class="dz-av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( (string) $sp['nome_cliente'] ) ); ?></span>
+									<span class="rc-site__quem">
+										<b><?php echo esc_html( $sp['nome_cliente'] ); ?></b>
+										<small><?php echo esc_html( ucfirst( date_i18n( 'D, j M · H:i', strtotime( $sp['inicio'] ) ) ) . ' · ' . $sp['med_nome'] . ( $sp['esp_nome'] ? ' · ' . $sp['esp_nome'] : '' ) ); ?></small>
+										<?php if ( ! empty( $sp['observacoes'] ) ) : ?><em><?php echo esc_html( wp_trim_words( (string) $sp['observacoes'], 14, '…' ) ); ?></em><?php endif; ?>
+									</span>
+									<span class="rc-site__acoes">
+										<?php if ( ! empty( $sp['telefone'] ) ) : ?>
+											<a class="rc-site__ligar" href="<?php echo esc_attr( 'tel:' . preg_replace( '/[^\d+]/', '', (string) $sp['telefone'] ) ); ?>"><?php echo Clinica_Painel::icone( 'telemovel' ); ?><?php echo esc_html( $sp['telefone'] ); ?></a>
+										<?php endif; ?>
+										<form method="post" onsubmit="return confirm('Confirmar a consulta de <?php echo esc_js( $sp['nome_cliente'] ); ?>?');">
+											<?php wp_nonce_field( 'rc_checkin', 'rc_nonce' ); ?>
+											<input type="hidden" name="rc_action" value="checkin">
+											<input type="hidden" name="id" value="<?php echo (int) $sp['id']; ?>">
+											<input type="hidden" name="novo_estado" value="confirmada">
+											<button type="submit" class="rc-site__ok">Confirmar</button>
+										</form>
+										<form method="post" onsubmit="return confirm('Cancelar o pedido de <?php echo esc_js( $sp['nome_cliente'] ); ?>? A hora fica livre.');">
+											<?php wp_nonce_field( 'rc_canc', 'rc_nonce' ); ?>
+											<input type="hidden" name="rc_action" value="cancelar">
+											<input type="hidden" name="id" value="<?php echo (int) $sp['id']; ?>">
+											<input type="hidden" name="motivo" value="Pedido do site não confirmado">
+											<button type="submit" class="rc-site__nao">Cancelar</button>
+										</form>
+									</span>
 								</li>
 							<?php endforeach; ?>
 						</ul>
+					</div>
+				</section>
+			<?php endif; ?>
+
+			<section class="gt-x gt-atividade" aria-labelledby="rc-g-curva" data-gt-entrada>
+				<div class="gt-x__cab">
+					<h2 class="gt-x__t" id="rc-g-curva">Consultas marcadas <small>próximos <?php echo (int) $horizonte; ?> dias</small></h2>
+					<label class="dz-select">
+						<span class="db-sr">Horizonte do gráfico</span>
+						<select data-gf-ir>
+							<?php foreach ( array( 7, 14, 30 ) as $n ) : ?>
+								<option value="<?php echo esc_url( $hz_url( $n ) ); ?>"<?php selected( $n, $horizonte ); ?>><?php echo esc_html( 'Próximos ' . $n . ' dias' ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+					</label>
+				</div>
+				<div class="gt-x__corpo gt-atividade__corpo">
+					<?php
+					echo Clinica_Grafico::linhas(
+						array(
+							'titulo'  => 'Consultas marcadas por dia',
+							'rotulos' => $hz_rot,
+							'longos'  => $hz_longo,
+							'saltar'  => 30 === $horizonte ? 5 : ( 14 === $horizonte ? 2 : 1 ),
+							'suave'   => true,
+							'pontos'  => 'valores',
+							'final'   => false,
+							'series'  => array( array( 'nome' => 'Consultas', 'valores' => $hz_val, 'cor' => 'c1' ) ),
+							'formato' => static fn( $v ) => sprintf( _n( '%d consulta', '%d consultas', (int) $v, 'clinica' ), (int) $v ),
+							'eixo'    => static fn( $v ) => number_format_i18n( (int) $v ),
+							'vazio'   => 'Sem consultas marcadas nos próximos ' . $horizonte . ' dias.',
+						)
+					);
+					?>
+					<div class="gt-campanha">
+						<p class="gt-campanha__t">Médicos hoje</p>
+						<?php if ( $medicos ) : ?>
+							<ul class="rc-meds-hoje">
+								<?php foreach ( $medicos as $m ) :
+									$n  = (int) ( $med_hoje[ $m['nome'] ] ?? 0 );
+									$em = ( ( $med_estado[ $m['nome'] ] ?? '' ) === 'Em atendimento' );
+									$st = $em ? 'Em consulta' : ( $n > 0 ? 'Com agenda' : 'Livre' );
+									?>
+									<li>
+										<span class="dz-av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( $m['nome'] ) ); ?></span>
+										<span class="rc-meds-hoje__t"><b><?php echo esc_html( $m['nome'] ); ?></b><small><?php echo esc_html( $m['esp_nome'] . ' · ' . sprintf( _n( '%d consulta', '%d consultas', $n, 'clinica' ), $n ) ); ?></small></span>
+										<span class="rc-estado rc-estado--<?php echo $em ? 'on' : ( $n > 0 ? 'agenda' : 'livre' ); ?>"><?php echo esc_html( $st ); ?></span>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="gt-nota">Sem médicos ativos.</p>
+						<?php endif; ?>
+					</div>
+				</div>
+			</section>
+
+			<section class="gt-x" aria-labelledby="rc-g-prox" data-gt-entrada>
+				<div class="gt-x__cab"><h2 class="gt-x__t" id="rc-g-prox">Próximos pacientes <small>pendentes e confirmadas</small></h2><a class="dz-pilula" href="#consultas" data-go="consultas">Agenda do dia</a><?php echo $gt_ferr(); ?></div>
+				<div class="gt-x__corpo">
+					<?php if ( $futuras ) : ?>
+						<div class="bi-rtbl-wrap">
+							<table class="bi-rtbl gt-tabela">
+								<thead><tr><th scope="col">Quando</th><th scope="col">Paciente</th><th scope="col">Médico</th><th scope="col">Especialidade</th><th scope="col">Origem</th><th scope="col">Estado</th></tr></thead>
+								<tbody>
+									<?php foreach ( array_slice( $futuras, 0, 6 ) as $c ) :
+										$orig = 'site_rapida' === ( $c['origem'] ?? '' ) ? 'Site, sem conta' : ( 'balcao' === ( $c['origem'] ?? '' ) ? 'Balcão' : 'Portal' );
+										?>
+										<tr>
+											<td class="bi-rtbl__k"><?php echo esc_html( $fmt( $c['inicio'] ) ); ?></td>
+											<td><span class="dz-pessoa"><span class="dz-av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( $c['pac_nome'] ) ); ?></span><?php echo esc_html( $c['pac_nome'] ); ?></span></td>
+											<td><?php echo esc_html( $c['med_nome'] ); ?></td>
+											<td><?php echo esc_html( $c['esp_nome'] ); ?></td>
+											<td class="rc-orig"><?php echo esc_html( $orig ); ?></td>
+											<td><span class="rc-estado rc-estado--<?php echo esc_attr( $c['status'] ); ?>"><?php echo esc_html( $labels[ $c['status'] ] ?? $c['status'] ); ?></span></td>
+										</tr>
+									<?php endforeach; ?>
+								</tbody>
+							</table>
+						</div>
 					<?php else : ?>
-						<p class="pm-empty">Sem médicos ativos</p>
+						<p class="gt-nota gt-nota--meio">Sem consultas marcadas. Use "Marcar consulta".</p>
 					<?php endif; ?>
 				</div>
+			</section>
+
+			<div class="gt-linha3" data-gt-entrada>
+				<section class="gt-x" aria-labelledby="rc-g-cob">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="rc-g-cob">Por cobrar <small><?php echo esc_html( Clinica_Grafico::moeda( $pend_val ) ); ?></small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $pagamentos ) : ?>
+							<ul class="rc-cobrar">
+								<?php foreach ( array_slice( $pagamentos, 0, 5 ) as $pg ) :
+									$nm = (string) ( $pg['paciente'] ?: 'Paciente' );
+									?>
+									<li>
+										<span class="dz-av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( $nm ) ); ?></span>
+										<span class="rc-cobrar__t"><b><?php echo esc_html( $nm ); ?></b><small><?php echo esc_html( number_format( (float) $pg['valor'], 0, ',', ' ' ) . ' ' . $moeda ); ?></small></span>
+										<a class="rc-cobrar__a" href="<?php echo esc_url( add_query_arg( 'pg', (int) $pg['id'], remove_query_arg( array( 'cl', 'pg' ) ) ) . '#pagamentos' ); ?>">Cobrar</a>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Nada por cobrar.</p>
+						<?php endif; ?>
+					</div>
+				</section>
+
+				<section class="gt-x" aria-labelledby="rc-g-anel">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="rc-g-anel">Cobrança</h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<div class="gt-metodos gt-metodos--valor">
+							<p class="gt-metodos__cab"><span>Total</span><span>Estado</span><span>Quota</span></p>
+							<?php
+							echo Clinica_Grafico::anel(
+								array(
+									'titulo'  => 'Cobrança de todos os registos',
+									'centro'  => Clinica_Grafico::pct( $cobrado ),
+									'sub'     => 'cobrado',
+									'legenda' => false,
+									'itens'   => array(
+										array( 'rotulo' => 'Cobrado', 'valor' => $pago_val, 'cor' => 'c1', 'texto' => Clinica_Grafico::moeda( $pago_val ) ),
+										array( 'rotulo' => 'Por cobrar', 'valor' => $pend_val, 'cor' => 'c2', 'texto' => Clinica_Grafico::moeda( $pend_val ) ),
+									),
+									'vazio'   => 'Sem pagamentos registados.',
+								)
+							);
+							$tot_cob = $pago_val + $pend_val;
+							?>
+							<ul class="gt-metodos__lista">
+								<li><i class="gf-c--c1"></i><span>Cobrado</span><em><?php echo esc_html( Clinica_Grafico::compacto( $pago_val ) ); ?></em><b><?php echo esc_html( Clinica_Grafico::pct( $tot_cob > 0 ? $pago_val / $tot_cob * 100 : null ) ); ?></b></li>
+								<li><i class="gf-c--c2"></i><span>Por cobrar</span><em><?php echo esc_html( Clinica_Grafico::compacto( $pend_val ) ); ?></em><b><?php echo esc_html( Clinica_Grafico::pct( $tot_cob > 0 ? $pend_val / $tot_cob * 100 : null ) ); ?></b></li>
+							</ul>
+						</div>
+					</div>
+				</section>
+
+				<section class="gt-x" aria-labelledby="rc-g-msg">
+					<div class="gt-x__cab"><h2 class="gt-x__t" id="rc-g-msg">Mensagens <small><?php echo esc_html( sprintf( _n( '%d por ler', '%d por ler', (int) $msg_novas, 'clinica' ), (int) $msg_novas ) ); ?></small></h2><?php echo $gt_ferr(); ?></div>
+					<div class="gt-x__corpo">
+						<?php if ( $mensagens ) : ?>
+							<ul class="gt-linhatempo">
+								<?php foreach ( array_slice( $mensagens, 0, 3 ) as $mg ) : ?>
+									<li<?php echo empty( $mg['lido'] ) ? ' class="is-nova"' : ''; ?>>
+										<b><?php echo esc_html( $mg['assunto'] ?: 'Mensagem do site' ); ?></b>
+										<small><?php echo esc_html( $mg['nome'] . ' · há ' . human_time_diff( strtotime( $mg['criado_em'] ), current_time( 'timestamp' ) ) ); ?></small>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+							<a class="rc-link rc-msg-ver" href="#mensagens" data-go="mensagens">Abrir a caixa de entrada</a>
+						<?php else : ?>
+							<p class="gt-nota gt-nota--meio">Sem mensagens do site.</p>
+						<?php endif; ?>
+					</div>
+				</section>
 			</div>
 		</section>
 
-		<!-- ========================= AGENDA DO DIA ========================= -->
+		<!-- Agenda do dia -->
 		<section class="pm-view" data-view="consultas" hidden>
 			<!-- Barra de dia compacta (‹ data › + Nova consulta), estilo Smile360 -->
 			<div class="rc-agbar">
@@ -564,7 +730,7 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 			</div>
 		</section>
 
-		<!-- ====================== FILA DE ATENDIMENTO ====================== -->
+		<!-- Fila de atendimento -->
 		<section class="pm-view" data-view="fila" hidden>
 			<?php if ( $fila ) :
 				$esperas = array();
@@ -613,7 +779,7 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 							</div>
 						<?php endforeach; ?>
 					</div>
-					<p class="rc-flnote">O médico chama o paciente e marca a consulta como <b>realizada</b> no portal dele — nessa altura sai da fila.</p>
+					<p class="rc-flnote">O médico chama o paciente e marca a consulta como <b>realizada</b> no portal dele. Nessa altura sai da fila.</p>
 				</div>
 			<?php else : ?>
 				<div class="ad-head"><div class="ad-head__t"><h2>Fila de atendimento</h2></div></div>
@@ -623,93 +789,160 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 			<?php endif; ?>
 		</section>
 
-		<!-- ========================= MARCAR CONSULTA ========================= -->
-		<section class="pm-view" data-view="marcar" hidden>
-			<div class="ad-head"><div class="ad-head__t"><h2>Nova consulta</h2><p>Registe a pessoa e marque a consulta</p></div></div>
+		<!-- Marcar consulta -->
+		<section class="pm-view rc-nc" data-view="marcar" hidden>
+			<?php
+			// Imagem de cada especialidade (quando existe no tema) e médicos por especialidade.
+			$esp_img = static function ( array $e ): string {
+				$f = 'assets/img/inicio/esp-' . sanitize_title( (string) ( $e['slug'] ?: $e['nome'] ) ) . '.webp';
+				return file_exists( CLINICA_DIR . '/' . $f ) ? CLINICA_URI . '/' . $f : '';
+			};
+			$med_por_esp = array();
+			foreach ( $med_list as $m ) {
+				$med_por_esp[ (int) $m['especialidade_id'] ] = ( $med_por_esp[ (int) $m['especialidade_id'] ] ?? 0 ) + 1;
+			}
+			?>
+			<div class="rc-nc__cab">
+				<div>
+					<h2 class="rc-nc__t">Nova consulta</h2>
+					<p class="rc-nc__s">Paciente, médico e hora. Fica pendente e o pagamento por cobrar.</p>
+				</div>
+				<ol class="rc-passos" aria-label="Passos da marcação">
+					<li data-passo="1"><b>1</b>Paciente</li>
+					<li data-passo="2"><b>2</b>Médico</li>
+					<li data-passo="3"><b>3</b>Data e hora</li>
+				</ol>
+			</div>
 
 			<?php if ( ! $medicos ) : ?>
-				<div class="pm-panel"><p class="pm-empty">Ainda não há médicos ativos. Peça à Administração para adicionar médicos.</p></div>
+				<div class="dz-cartao"><p class="pm-empty">Ainda não há médicos ativos. Peça à Administração para adicionar médicos.</p></div>
 			<?php else : ?>
-			<form method="post" class="ge-nform rc-book2" id="rc-form" onsubmit="return confirm('Deseja marcar a consulta?\n\nFica pendente até o médico confirmar. É criado um pagamento por cobrar.');">
+			<form method="post" class="rc-nc__grelha" id="rc-form" novalidate>
 				<?php wp_nonce_field( 'rc_nc', 'rc_nonce' ); ?>
 				<input type="hidden" name="rc_action" value="nova_consulta">
 				<input type="hidden" name="inicio" id="rc-inicio">
+				<input type="hidden" name="reuse_paciente_id" id="rc-reuse">
+				<input type="hidden" name="medico_id" id="rc-med">
 
-				<div class="ge-nform__body">
-					<div class="ge-nform__main">
+				<div class="rc-nc__passos">
+					<!-- 1 · Paciente -->
+					<section class="rc-nc__bloco" data-bloco="1" aria-labelledby="rc-nc-b1">
+						<header class="rc-nc__bcab">
+							<span class="rc-nc__n" aria-hidden="true">1</span>
+							<h3 id="rc-nc-b1">Paciente</h3>
+							<div class="rc-seg" role="radiogroup" aria-label="Paciente">
+								<button type="button" role="radio" aria-checked="true" data-modo="existente">Já registado</button>
+								<button type="button" role="radio" aria-checked="false" data-modo="novo">Pessoa nova</button>
+							</div>
+						</header>
 
-						<div class="ge-nform__grp">
-							<h3 class="ge-nform__gt">1 · Dados da pessoa</h3>
-							<div class="ge-grid">
-								<label class="ge-field ge-field--wide"><span>Nome completo</span><input type="text" name="nome" id="rc-nome" placeholder="Como está no documento" autocomplete="off"></label>
-								<label class="ge-field"><span>Telefone</span><input type="tel" name="telefone" id="rc-tel" placeholder="+258 84 000 0000" autocomplete="off"></label>
-								<label class="ge-field"><span>Email</span><input type="email" name="email" id="rc-email" placeholder="Para criar o acesso ao portal" autocomplete="off"></label>
-								<label class="ge-field"><span>Nº do documento (BI)</span><input type="text" name="bi" id="rc-bi" placeholder="110100123456A" autocomplete="off"></label>
-								<label class="ge-field"><span>Data de nascimento</span><input type="date" name="data_nascimento" id="rc-nasc" max="<?php echo esc_attr( $hoje_ymd ); ?>"></label>
-								<label class="ge-field"><span>Idade</span><input type="text" id="rc-idade" placeholder="Automático" readonly tabindex="-1"></label>
-								<label class="ge-field"><span>Género</span>
-									<select name="genero"><option value="">Selecione</option><option value="F">Feminino</option><option value="M">Masculino</option></select>
-								</label>
-								<label class="ge-field ge-field--wide"><span>Morada</span><input type="text" name="endereco" placeholder="Bairro, avenida, número, cidade"></label>
+						<div class="rc-nc__modo" data-modo="existente">
+							<div class="rc-busca">
+								<?php echo Clinica_Painel::icone( 'procurar' ); ?>
+								<label class="db-sr" for="rc-pac-q">Procurar paciente</label>
+								<input type="search" id="rc-pac-q" placeholder="Nome, telefone ou BI" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="rc-pac-res" aria-autocomplete="list">
+							</div>
+							<ul class="rc-pac-res" id="rc-pac-res" role="listbox" aria-label="Pacientes encontrados" hidden></ul>
+							<div class="rc-pac-sel" id="rc-pac-sel" hidden>
+								<span class="dz-av" data-sel-ini aria-hidden="true"></span>
+								<span class="rc-pac-sel__t"><b data-sel-nome></b><small data-sel-tel></small></span>
+								<button type="button" class="rc-link" data-sel-trocar>Trocar</button>
 							</div>
 						</div>
 
-						<div class="ge-nform__grp">
-							<h3 class="ge-nform__gt">2 · Motivo / sintomas</h3>
-							<textarea class="rc-obs rc-ta" name="sintomas" rows="2" placeholder="O que traz a pessoa à clínica? Ex.: febre há 3 dias, dores no peito, seguimento…"></textarea>
-						</div>
-
-						<div class="ge-nform__grp">
-							<h3 class="ge-nform__gt">3 · Sector e médico</h3>
-							<div class="ge-grid">
-								<label class="ge-field"><span>Sector / especialidade</span>
-									<select id="rc-esp">
-										<option value="">Selecione o sector</option>
-										<?php foreach ( $esp_list as $e ) : ?><option value="<?php echo (int) $e['id']; ?>"><?php echo esc_html( $e['nome'] ); ?></option><?php endforeach; ?>
-									</select>
-								</label>
-								<label class="ge-field"><span>Médico</span>
-									<select name="medico_id" id="rc-med" required>
-										<option value="">Selecione o médico</option>
-										<?php foreach ( $med_list as $m ) : ?><option value="<?php echo (int) $m['id']; ?>" data-esp="<?php echo (int) $m['especialidade_id']; ?>"><?php echo esc_html( $m['nome'] ); ?></option><?php endforeach; ?>
-									</select>
-								</label>
+						<div class="rc-nc__modo" data-modo="novo" hidden>
+							<div class="rc-campos">
+								<label class="rc-c rc-c--largo"><span>Nome completo</span><input type="text" name="nome" id="rc-nome" placeholder="Como está no documento" autocomplete="off"></label>
+								<label class="rc-c"><span>Telefone</span><input type="tel" name="telefone" id="rc-tel" placeholder="84 123 4567" inputmode="tel" autocomplete="off"></label>
+								<label class="rc-c"><span>Email <small>opcional</small></span><input type="email" name="email" id="rc-email" placeholder="Para ter acesso ao portal" autocomplete="off"></label>
 							</div>
+							<details class="rc-mais">
+								<summary>Mais dados (BI, nascimento, género, morada)</summary>
+								<div class="rc-campos">
+									<label class="rc-c"><span>Nº do BI</span><input type="text" name="bi" placeholder="110100123456A" autocomplete="off"></label>
+									<label class="rc-c"><span>Data de nascimento</span><input type="date" name="data_nascimento" id="rc-nasc" max="<?php echo esc_attr( $hoje_ymd ); ?>"></label>
+									<label class="rc-c"><span>Idade</span><input type="text" id="rc-idade" placeholder="Automático" readonly tabindex="-1"></label>
+									<label class="rc-c"><span>Género</span><select name="genero"><option value="">Selecione</option><option value="F">Feminino</option><option value="M">Masculino</option></select></label>
+									<label class="rc-c rc-c--largo"><span>Morada</span><input type="text" name="endereco" placeholder="Bairro, avenida, número, cidade"></label>
+								</div>
+							</details>
 						</div>
 
-						<div class="ge-nform__grp">
-							<h3 class="ge-nform__gt">4 · Data e hora <em id="rc-nslots"></em></h3>
-							<div class="rc-days" id="rc-days">
-								<?php foreach ( $dias_rapidos as $i => $d ) : ?>
-									<button type="button" class="rc-dchip<?php echo 0 === $i ? ' is-on' : ''; ?>" data-v="<?php echo esc_attr( $d['v'] ); ?>"><b><?php echo esc_html( $d['l'] ); ?></b><span><?php echo esc_html( $d['d'] ); ?></span></button>
-								<?php endforeach; ?>
-								<label class="rc-dother"><span>Outra data</span><input type="date" id="rc-data" min="<?php echo esc_attr( $hoje_ymd ); ?>" value="<?php echo esc_attr( $hoje_ymd ); ?>"></label>
-							</div>
-							<div class="rc-slots" id="rc-slots"><p class="rc-slots__msg">Escolha o médico para ver as horas livres.</p></div>
-						</div>
+						<label class="rc-c rc-c--largo rc-nc__motivo"><span>Motivo / sintomas <small>opcional</small></span><textarea name="sintomas" rows="2" placeholder="Ex.: febre há 3 dias, dores no peito, seguimento…"></textarea></label>
+					</section>
 
-					</div>
+					<!-- 2 · Especialidade e médico -->
+					<section class="rc-nc__bloco" data-bloco="2" aria-labelledby="rc-nc-b2">
+						<header class="rc-nc__bcab">
+							<span class="rc-nc__n" aria-hidden="true">2</span>
+							<h3 id="rc-nc-b2">Especialidade e médico</h3>
+						</header>
+						<div class="rc-esps" role="radiogroup" aria-label="Especialidade">
+							<?php foreach ( $esp_list as $e ) :
+								$img = $esp_img( $e );
+								$n   = (int) ( $med_por_esp[ (int) $e['id'] ] ?? 0 );
+								if ( ! $n ) {
+									continue;
+								}
+								?>
+								<button type="button" role="radio" aria-checked="false" class="rc-esp" data-esp="<?php echo (int) $e['id']; ?>" data-nome="<?php echo esc_attr( $e['nome'] ); ?>" data-img="<?php echo esc_url( $img ); ?>">
+									<?php if ( $img ) : ?><img src="<?php echo esc_url( $img ); ?>" alt="" width="400" height="420" loading="lazy" decoding="async"><?php else : ?><span class="rc-esp__ic" aria-hidden="true"><?php echo Clinica_Painel::icone( 'especialidades' ); ?></span><?php endif; ?>
+									<span class="rc-esp__t"><b><?php echo esc_html( $e['nome'] ); ?></b><small><?php echo esc_html( sprintf( _n( '%d médico', '%d médicos', $n, 'clinica' ), $n ) ); ?></small></span>
+								</button>
+							<?php endforeach; ?>
+						</div>
+						<div class="rc-meds" role="radiogroup" aria-label="Médico" id="rc-meds">
+							<p class="rc-nc__dica" data-meds-dica>Escolha a especialidade para ver os médicos.</p>
+							<?php foreach ( $med_list as $m ) : ?>
+								<button type="button" role="radio" aria-checked="false" class="rc-medc" data-med="<?php echo (int) $m['id']; ?>" data-esp="<?php echo (int) $m['especialidade_id']; ?>" data-nome="<?php echo esc_attr( $m['nome'] ); ?>" hidden>
+									<span class="rc-medc__av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( (string) $m['nome'] ) ); ?></span>
+									<span class="rc-medc__t"><b><?php echo esc_html( $m['nome'] ); ?></b><small><?php echo esc_html( (int) $m['duracao_padrao_min'] . ' min por consulta' ); ?></small></span>
+									<span class="rc-medc__ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+								</button>
+							<?php endforeach; ?>
+						</div>
+					</section>
+
+					<!-- 3 · Data e hora -->
+					<section class="rc-nc__bloco" data-bloco="3" aria-labelledby="rc-nc-b3">
+						<header class="rc-nc__bcab">
+							<span class="rc-nc__n" aria-hidden="true">3</span>
+							<h3 id="rc-nc-b3">Data e hora <em id="rc-nslots"></em></h3>
+							<button type="button" class="rc-link" id="rc-primeira" disabled>Primeira vaga</button>
+						</header>
+						<div class="rc-days" id="rc-days">
+							<?php foreach ( $dias_rapidos as $i => $d ) : ?>
+								<button type="button" class="rc-dchip" data-v="<?php echo esc_attr( $d['v'] ); ?>" aria-pressed="false"><b><?php echo esc_html( $d['l'] ); ?></b><span><?php echo esc_html( $d['d'] ); ?></span></button>
+							<?php endforeach; ?>
+							<label class="rc-dother"><span>Outra data</span><input type="date" id="rc-data" min="<?php echo esc_attr( $hoje_ymd ); ?>" value=""></label>
+						</div>
+						<div class="rc-slots" id="rc-slots" aria-live="polite"><p class="rc-slots__msg">Escolha o médico para ver as horas livres.</p></div>
+					</section>
 				</div>
 
-				<div class="rc-confirm">
-					<dl class="rc-confirm__grid">
-						<div><dt>Pessoa</dt><dd id="s-pac"></dd></div>
-						<div><dt>Sector</dt><dd id="s-esp"></dd></div>
-						<div><dt>Médico</dt><dd id="s-med"></dd></div>
-						<div><dt>Data</dt><dd id="s-data"></dd></div>
-						<div><dt>Hora</dt><dd id="s-hora"></dd></div>
-						<div><dt>Valor</dt><dd class="is-set"><?php echo number_format( (float) $valor_cons, 2, ',', '.' ); ?> <?php echo esc_html( $moeda ); ?></dd></div>
-					</dl>
-					<div class="rc-confirm__foot">
-						<button class="ge-btn ge-btn--primary rc-confirm__go" type="submit" id="rc-go" disabled>Marcar consulta</button>
+				<aside class="rc-resumo" aria-labelledby="rc-res-t">
+					<div class="rc-resumo__foto" id="rc-res-foto" style="background-image:url(<?php echo esc_url( CLINICA_URI . '/assets/img/marcar/hero-1600.webp' ); ?>)"></div>
+					<div class="rc-resumo__corpo">
+						<h3 class="rc-resumo__t" id="rc-res-t">Resumo</h3>
+						<dl class="rc-resumo__dl">
+							<div><dt>Paciente</dt><dd id="s-pac">—</dd></div>
+							<div><dt>Especialidade</dt><dd id="s-esp">—</dd></div>
+							<div><dt>Médico</dt><dd id="s-med">—</dd></div>
+							<div><dt>Data</dt><dd id="s-data">—</dd></div>
+							<div><dt>Hora</dt><dd id="s-hora">—</dd></div>
+						</dl>
+						<p class="rc-resumo__valor"><span>Valor da consulta</span><b><?php echo esc_html( number_format( (float) $valor_cons, 0, ',', ' ' ) . ' ' . $moeda ); ?></b></p>
+						<label class="rc-resumo__op"><input type="checkbox" name="cobrar_ja" value="1" checked><span>Cobrar logo a seguir</span></label>
+						<button class="rc-resumo__go" type="submit" id="rc-go" disabled>Marcar consulta</button>
+						<p class="rc-resumo__falta" id="rc-falta">Falta: paciente, médico e hora.</p>
 					</div>
-				</div>
+				</aside>
 			</form>
 			<?php endif; ?>
 		</section>
 
-		<!-- ============================ PACIENTES ============================ -->
-		<!-- ==================== NOVO PACIENTE (página dedicada) ==================== -->
+		<!-- Pacientes -->
+		<!-- Novo paciente (página dedicada) -->
 		<section class="pm-view" data-view="novo-paciente" hidden>
 			<div class="ad-head">
 				<div class="ad-head__t"><h2>Novo paciente</h2><p>Fica com conta no portal e processo clínico aberto automaticamente</p></div>
@@ -736,14 +969,14 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 							<h3 class="ge-nform__gt">Conta &amp; contacto</h3>
 							<div class="ge-grid">
 								<label class="ge-field ge-field--wide"><span>Email *</span><input type="email" name="email" required placeholder="Usado para entrar no portal"></label>
-								<label class="ge-field ge-field--wide"><span>Morada</span><input type="text" name="endereco" placeholder="Bairro, avenida, nº — cidade"></label>
+								<label class="ge-field ge-field--wide"><span>Morada</span><input type="text" name="endereco" placeholder="Bairro, avenida, nº, cidade"></label>
 								<label class="ge-field"><span>Palavra-passe</span><input type="password" name="pwd" minlength="6" placeholder="Gerada se vazia"></label>
 							</div>
 						</div>
 					</div>
 					<aside class="ge-nform__side">
 						<h3 class="ge-nform__gt">Nota</h3>
-						<p class="ge-sidenote">Ao registar, cria-se <b>conta no portal</b> e <b>processo clínico</b> automaticamente. Sem palavra-passe, é gerada uma. Só dados administrativos — o prontuário é do médico.</p>
+						<p class="ge-sidenote">Ao registar, cria-se <b>conta no portal</b> e <b>processo clínico</b> automaticamente. Sem palavra-passe, é gerada uma. Só dados administrativos: o prontuário é do médico.</p>
 					</aside>
 				</div>
 				<div class="ge-nform__foot">
@@ -791,7 +1024,7 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 				<p class="pm-empty">Ainda não há pacientes registados. Use <b>+ Novo paciente</b> para registar o primeiro.</p>
 			<?php endif; ?>
 		</section>
-		<!-- ==================== HISTÓRICO ADMINISTRATIVO ==================== -->
+		<!-- Histórico administrativo -->
 		<section class="pm-view" data-view="histadmin" hidden>
 			<?php if ( $hist_pac ) :
 				$h_idade  = Clinica_Repo::idade( $hist_pac['data_nascimento'] ?? null );
@@ -915,7 +1148,7 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 				<p class="pm-empty">Paciente não encontrado.</p>
 			<?php endif; ?>
 		</section>
-		<!-- ============================ HISTÓRICOS ============================ -->
+		<!-- Históricos -->
 		<section class="pm-view" data-view="historico" hidden>
 			<div class="ad-head"><div class="ad-head__t"><h2>Históricos</h2><p>Arquivo de fichas e de todas as marcações da clínica</p></div></div>
 
@@ -984,162 +1217,380 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 			</div>
 		</section>
 
-		<!-- =========================== PAGAMENTOS =========================== -->
-		<section class="pm-view" data-view="pagamentos" hidden>
-			<div class="ad-head"><div class="ad-head__t"><h2>Pagamentos</h2><p>Cobre as consultas por M-Pesa ou regista pagamentos em dinheiro — e emite a fatura.</p></div></div>
+		<!-- Pagamentos -->
+		<section class="pm-view cx" data-view="pagamentos" hidden>
+			<?php
+			// Dados da Caixa
+			$mp_on    = class_exists( 'Clinica_Pagamentos' ) && Clinica_Pagamentos::gateway()->configurado();
+			$fmt_mz   = static fn( $v ) => number_format( (float) $v, 0, ',', ' ' ) . ' ' . $moeda;
+			$hoje_rec = 0.0;
+			$hoje_rn  = 0;
+			foreach ( $pg_pagos as $pg ) {
+				if ( substr( (string) ( $pg['atualizado_em'] ?? '' ), 0, 10 ) === $hoje_ymd ) {
+					$hoje_rec += (float) $pg['valor'];
+					$hoje_rn++;
+				}
+			}
+			// Por cobrar: primeiro quem já foi atendido (consulta passada), do mais antigo.
+			$cx_pend = $pagamentos;
+			usort( $cx_pend, static fn( $a, $b ) => strtotime( (string) ( $a['inicio'] ?: $a['criado_em'] ) ) <=> strtotime( (string) ( $b['inicio'] ?: $b['criado_em'] ) ) );
+			$atraso_n = count( array_filter( $cx_pend, static fn( $p ) => ! empty( $p['inicio'] ) && strtotime( $p['inicio'] ) < $agora ) );
+			$metodos_cx = array(
+				'numerario' => array( 'Numerário', 'dinheiro' ),
+				'mpesa'     => array( 'M-Pesa', 'telemovel' ),
+				'emola'     => array( 'e-Mola', 'telemovel' ),
+				'cartao'    => array( 'Cartão', 'cartao' ),
+			);
+			// Acabado de pagar (?pago=ID depois do registo): ecrã de sucesso com o recibo.
+			$cx_pago = null;
+			if ( isset( $_GET['pago'] ) && 'pg_recebido' === ( $_GET['cl'] ?? '' ) ) {
+				foreach ( $pg_pagos as $pg ) {
+					if ( (int) $pg['id'] === (int) $_GET['pago'] ) {
+						$cx_pago = $pg;
+						break;
+					}
+				}
+			}
+			$cx_tiles = array(
+				array( 'dinheiro', 'Recebido hoje', $hoje_rec, 'mil', sprintf( _n( '%d pagamento', '%d pagamentos', $hoje_rn, 'clinica' ), $hoje_rn ), true ),
+				array( 'verificar', 'Pagamentos hoje', $hoje_rn, 'int', 'Registados na caixa', false ),
+				array( 'financeiro', 'Por cobrar', (float) $pg_tot['pendente_valor'], 'mil', sprintf( _n( '%d pagamento', '%d pagamentos', (int) $pg_tot['pendente_n'], 'clinica' ), (int) $pg_tot['pendente_n'] ), false ),
+				array( 'relogio', 'Em atraso', $atraso_n, 'int', 'Consulta feita, ainda por pagar', false ),
+			);
+			?>
+			<header class="cx-cab">
+				<h2 class="cx-cab__t">Pagamentos</h2>
+				<p class="cx-cab__s">Cobre as consultas e registe como foram pagas.</p>
+			</header>
 
-			<?php $esperado = (float) $pg_tot['pendente_valor'] + (float) $pg_tot['pago_valor']; ?>
-			<div class="rc-fmetrics">
-				<div class="rc-fmetric"><span>Por cobrar</span><b class="<?php echo (int) $pg_tot['pendente_n'] ? 'rc-pend' : ''; ?>"><?php echo (int) $pg_tot['pendente_n']; ?></b></div>
-				<div class="rc-fmetric"><span>Valor pendente</span><b class="<?php echo (int) $pg_tot['pendente_n'] ? 'rc-pend' : ''; ?>"><?php echo number_format( (float) $pg_tot['pendente_valor'], 0, ',', ' ' ); ?> <?php echo esc_html( $moeda ); ?></b></div>
-				<div class="rc-fmetric"><span>Recebido</span><b><?php echo number_format( (float) $pg_tot['pago_valor'], 0, ',', ' ' ); ?> <?php echo esc_html( $moeda ); ?></b></div>
-				<div class="rc-fmetric"><span>Esperado</span><b><?php echo number_format( $esperado, 0, ',', ' ' ); ?> <?php echo esc_html( $moeda ); ?></b></div>
+			<div class="gt-tiles gt-tiles--4 cx-tiles" data-gt-entrada>
+				<?php foreach ( $cx_tiles as $t ) :
+					$moe = 'mil' === $t[3];
+					?>
+					<div class="gt-tile" data-gt-3d>
+						<span class="gt-tile__l"><?php echo Clinica_Painel::icone( $t[0] ); ?><?php echo esc_html( $t[1] ); ?></span>
+						<b class="gt-tile__n<?php echo $t[5] ? ' is-destaque' : ''; ?>"<?php echo $moe ? ' title="' . esc_attr( $fmt_mz( $t[2] ) ) . '"' : ''; ?>><span data-gt-n="<?php echo esc_attr( (string) round( (float) $t[2] ) ); ?>" data-gt-fmt="<?php echo esc_attr( $t[3] ); ?>"><?php echo esc_html( $moe ? Clinica_Grafico::compacto( (float) $t[2] ) : number_format_i18n( (int) $t[2] ) ); ?></span><?php echo $moe ? ' <small>' . esc_html( $moeda ) . '</small>' : ''; ?></b>
+						<span class="gt-tile__d"><?php echo esc_html( $t[4] ); ?></span>
+					</div>
+				<?php endforeach; ?>
 			</div>
 
-			<?php if ( class_exists( 'Clinica_Pagamentos' ) && Clinica_Pagamentos::gateway()->configurado() ) : ?>
-				<p class="rc-payhint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg><span>Escreva o número do cliente e clique <b>Cobrar</b> — ele recebe o pedido de PIN no telemóvel e a confirmação é automática. Se pagar em numerário, use <b>Recebido em dinheiro</b>.</span></p>
-			<?php endif; ?>
+			<div class="cx-grelha">
+				<!-- Lista: por cobrar (escolher para cobrar) e pagos (recibos) -->
+				<section class="gt-x cx-lista" aria-label="Pagamentos">
+					<div class="cx-lista__cab">
+						<div class="cx-abas" id="rc-paytabs" role="tablist" aria-label="Estado">
+							<button type="button" class="rc-tab cx-aba is-active" role="tab" aria-selected="true" data-tab="cobrar">Por cobrar <span><?php echo (int) $pg_tot['pendente_n']; ?></span></button>
+							<button type="button" class="rc-tab cx-aba" role="tab" aria-selected="false" data-tab="pagos">Pagos <span><?php echo (int) $pg_tot['pago_n']; ?></span></button>
+							<i class="cx-abas__linha" aria-hidden="true"></i>
+						</div>
+						<label class="cx-procura">
+							<?php echo Clinica_Painel::icone( 'procurar' ); ?>
+							<span class="db-sr">Procurar paciente</span>
+							<input type="search" id="rc-pgsearch" placeholder="Procurar paciente" autocomplete="off">
+						</label>
+					</div>
 
-			<div class="rc-paytop">
-				<div class="rc-tabs" id="rc-paytabs" role="tablist">
-					<button type="button" class="rc-tab is-active" data-tab="cobrar">Por cobrar <b><?php echo (int) $pg_tot['pendente_n']; ?></b></button>
-					<button type="button" class="rc-tab" data-tab="pagos">Pagos <b><?php echo (int) $pg_tot['pago_n']; ?></b></button>
-				</div>
-				<input type="search" class="pm-search" id="rc-pgsearch" placeholder="Procurar paciente…" aria-label="Procurar paciente">
-			</div>
+					<div class="rc-paypanel" data-tab="cobrar">
+						<?php if ( $cx_pend ) : ?>
+							<ul class="cx-itens">
+								<?php foreach ( $cx_pend as $pg ) :
+									$nome_pg = (string) ( $pg['paciente'] ?: 'Paciente' );
+									$feita   = ! empty( $pg['inicio'] ) && strtotime( $pg['inicio'] ) < $agora;
+									$det_pg  = trim( ( $pg['esp'] ?: 'Consulta' ) . ( $pg['medico'] ? ' · ' . $pg['medico'] : '' ) );
+									$quando  = ! empty( $pg['inicio'] ) ? $fmt( $pg['inicio'] ) : '';
+									?>
+									<li class="rc-payrow" data-name="<?php echo esc_attr( mb_strtolower( $nome_pg ) ); ?>">
+										<button type="button" class="cx-item rc-cx__item" aria-pressed="false" data-pg="<?php echo (int) $pg['id']; ?>" data-nome="<?php echo esc_attr( $nome_pg ); ?>" data-det="<?php echo esc_attr( $det_pg . ( $quando ? ' · ' . $quando : '' ) ); ?>" data-valor="<?php echo esc_attr( (string) (float) $pg['valor'] ); ?>" data-ini="<?php echo esc_attr( Clinica_Painel::iniciais( $nome_pg ) ); ?>">
+											<span class="cx-item__av" aria-hidden="true"><?php echo esc_html( Clinica_Painel::iniciais( $nome_pg ) ); ?></span>
+											<span class="cx-item__t">
+												<b><?php echo esc_html( $nome_pg ); ?></b>
+												<small><?php echo esc_html( $det_pg ); ?></small>
+												<?php if ( $quando ) : ?><small class="<?php echo $feita ? 'cx-item__feita' : ''; ?>"><?php echo esc_html( ( $feita ? 'Atendido a ' : 'Consulta a ' ) . $quando ); ?></small><?php endif; ?>
+											</span>
+											<span class="cx-item__v"><?php echo esc_html( $fmt_mz( $pg['valor'] ) ); ?></span>
+											<svg class="cx-item__seta" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+										</button>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+							<p class="cx-nada rc-pgnores" hidden>Nenhum paciente corresponde à pesquisa.</p>
+						<?php else : ?>
+							<p class="cx-nada">Nada por cobrar. Os pagamentos das consultas marcadas aparecem aqui.</p>
+						<?php endif; ?>
+					</div>
 
-			<!-- Por cobrar -->
-			<div class="rc-paypanel" data-tab="cobrar">
-				<div class="pm-panel">
-					<?php if ( $pagamentos ) : ?>
-						<div class="rc-paytbl">
-							<div class="rc-paytbl__head"><span>Paciente</span><span>Consulta</span><span class="r">Valor</span><span>Cobrança</span></div>
-							<?php
-							$mp_on = class_exists( 'Clinica_Pagamentos' ) && Clinica_Pagamentos::gateway()->configurado();
-							foreach ( $pagamentos as $pg ) :
-								$pgid = (int) $pg['id'];
-							?>
-								<div class="rc-payrow" data-name="<?php echo esc_attr( mb_strtolower( (string) ( $pg['paciente'] ?? '' ) ) ); ?>">
-									<span class="rc-pay__n"><?php echo esc_html( $pg['paciente'] ?: 'Paciente' ); ?></span>
-									<span class="rc-pay__c"><?php echo esc_html( $pg['esp'] ?: 'Consulta' ); ?><?php echo $pg['medico'] ? ' · ' . esc_html( $pg['medico'] ) : ''; ?><?php echo $pg['inicio'] ? ' · ' . esc_html( $fmt( $pg['inicio'] ) ) : ''; ?></span>
-									<span class="rc-pay__v r"><?php echo number_format( (float) $pg['valor'], 2, ',', '.' ); ?> <small><?php echo esc_html( $moeda ); ?></small></span>
-									<div class="rc-payact">
-										<?php if ( $mp_on ) : ?>
-											<form method="post" class="rc-payform rc-payform--mp" data-mpvalor="<?php echo esc_attr( number_format( (float) $pg['valor'], 2, ',', '.' ) . ' ' . $moeda ); ?>" onsubmit="return clMpesaCobrar(this);">
-												<?php wp_nonce_field( 'rc_pg', 'rc_nonce' ); ?>
-												<input type="hidden" name="rc_action" value="pg_cobrar">
-												<input type="hidden" name="id" value="<?php echo $pgid; ?>">
-												<input type="tel" name="telefone" inputmode="numeric" placeholder="Nº M-Pesa do cliente" class="rc-ref" autocomplete="off" required>
-												<button type="submit" class="pm-act pm-act--mp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M11 18h2"/></svg>Cobrar</button>
-											</form>
-										<?php endif; ?>
-										<form method="post" class="rc-payform rc-payform--cash" onsubmit="return confirm('Confirmar que este pagamento foi recebido em dinheiro?');">
-											<?php wp_nonce_field( 'rc_pg', 'rc_nonce' ); ?>
-											<input type="hidden" name="rc_action" value="pagamento">
-											<input type="hidden" name="id" value="<?php echo $pgid; ?>">
-											<input type="hidden" name="referencia" value="Dinheiro">
-											<button type="submit" class="<?php echo $mp_on ? 'rc-cashbtn' : 'pm-act pm-act--ok'; ?>"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><?php echo $mp_on ? 'Recebido em dinheiro' : 'Confirmar recebido em dinheiro'; ?></button>
-										</form>
+					<div class="rc-paypanel" data-tab="pagos" hidden>
+						<?php if ( $pg_pagos ) : ?>
+							<div class="bi-rtbl-wrap">
+								<table class="gt-tabela cx-pagos">
+									<thead><tr><th scope="col">Recibo</th><th scope="col">Paciente</th><th scope="col">Método</th><th scope="col" class="r">Valor</th><th scope="col"><span class="db-sr">Ações</span></th></tr></thead>
+									<tbody>
+										<?php foreach ( array_slice( $pg_pagos, 0, 40 ) as $pg ) :
+											$nome_pg = (string) ( $pg['paciente'] ?: 'Paciente' );
+											?>
+											<tr class="rc-payrow" data-name="<?php echo esc_attr( mb_strtolower( $nome_pg ) ); ?>">
+												<td class="bi-rtbl__k"><?php echo esc_html( Clinica_Pagamentos::numero_recibo( (int) $pg['id'] ) ); ?><small class="cx-pagos__q"><?php echo esc_html( ! empty( $pg['atualizado_em'] ) ? $fmt( $pg['atualizado_em'] ) : '' ); ?></small></td>
+												<td><?php echo esc_html( $nome_pg ); ?></td>
+												<td><span class="cx-met cx-met--<?php echo esc_attr( (string) $pg['metodo'] ); ?>"><?php echo esc_html( Clinica_Pagamentos::METODOS[ $pg['metodo'] ] ?? $pg['metodo'] ); ?></span></td>
+												<td class="r"><?php echo esc_html( $fmt_mz( $pg['valor'] ) ); ?></td>
+												<td class="r"><?php if ( current_user_can( 'clinica_emitir_recibo' ) ) : ?><a class="rc-link" href="<?php echo esc_url( add_query_arg( 'recibo', (int) $pg['id'], remove_query_arg( array( 'cl', 'recibo', 'pg', 'pago' ) ) ) ); ?>" target="_blank" rel="noopener">Recibo</a><?php endif; ?></td>
+											</tr>
+										<?php endforeach; ?>
+									</tbody>
+								</table>
+							</div>
+							<p class="cx-nada rc-pgnores" hidden>Nenhum paciente corresponde à pesquisa.</p>
+						<?php else : ?>
+							<p class="cx-nada">Ainda sem pagamentos confirmados.</p>
+						<?php endif; ?>
+					</div>
+				</section>
+
+				<!-- Cobrança: palco animado do método + formulário -->
+				<section class="cx-checkout rc-cx__checkout" aria-label="Cobrar" data-moeda="<?php echo esc_attr( $moeda ); ?>" data-mp-push="<?php echo $mp_on ? '1' : '0'; ?>">
+					<div class="cx-palco" id="rc-palco" aria-hidden="true">
+						<p class="cx-palco__rot" data-palco-rot><?php echo $cx_pago ? 'Recibo pronto' : 'Caixa pronta'; ?></p>
+
+						<div class="cx-cena cx-cena--movel" data-cena="movel"<?php echo $cx_pago ? ' hidden' : ''; ?>>
+							<img class="cx-mao" src="<?php echo esc_url( CLINICA_URI . '/assets/img/caixa/mao-telemovel.webp' ); ?>"
+								srcset="<?php echo esc_url( CLINICA_URI . '/assets/img/caixa/mao-telemovel-340.webp' ); ?> 340w, <?php echo esc_url( CLINICA_URI . '/assets/img/caixa/mao-telemovel.webp' ); ?> 680w"
+								sizes="(max-width: 640px) 320px, 360px" width="680" height="906" alt="" decoding="async">
+							<div class="cx-tel" data-tema="idle">
+								<span class="cx-tel__notch"></span>
+								<div class="cx-tel__estado"><span>09:41</span><span class="cx-tel__sinal"><i></i><i></i><i></i><i></i></span></div>
+
+								<div class="cx-tel__ecra cx-tel__ecra--idle" data-ecra="idle">
+									<span class="cx-tel__logo"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="48" height="48" alt=""></span>
+									<b>Clínica Vida</b>
+									<small>Caixa pronta</small>
+								</div>
+
+								<div class="cx-tel__ecra cx-tel__ecra--app" data-ecra="pedido" hidden>
+									<div class="cx-tel__notif"><span class="cx-tel__appic" data-tel-ini>M</span><span><b data-tel-marca>M-Pesa</b><small>Pedido de pagamento recebido</small></span></div>
+									<div class="cx-tel__topo">
+										<b class="cx-tel__marca" data-tel-marca>M-Pesa</b>
+										<small>Pagar a comerciante</small>
+									</div>
+									<div class="cx-tel__cartao">
+										<span class="cx-tel__com"><span class="cx-tel__comic"><img src="<?php echo esc_url( CLINICA_URI . '/assets/img/logo-simbolo-96.webp' ); ?>" width="24" height="24" alt=""></span><span><b>Clínica Vida</b><small>Comerciante</small></span></span>
+										<span class="cx-tel__valor" data-tel-valor>0 MZN</span>
+										<span class="cx-tel__de"><small>Do número</small><b data-tel-num>—</b></span>
+									</div>
+									<div class="cx-tel__pin">
+										<small>Introduza o PIN</small>
+										<span class="cx-tel__dots"><i></i><i></i><i></i><i></i></span>
+										<span class="cx-tel__teclado">
+											<?php foreach ( array( '1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫' ) as $tk ) : ?>
+												<i<?php echo '' !== $tk ? ' data-k="' . esc_attr( $tk ) . '"' : ''; ?>><?php echo esc_html( $tk ); ?></i>
+											<?php endforeach; ?>
+										</span>
 									</div>
 								</div>
-							<?php endforeach; ?>
+							</div>
 						</div>
-						<p class="pm-empty rc-pgnores" hidden>Nenhum paciente corresponde à pesquisa.</p>
-					<?php else : ?>
-						<p class="pm-empty">Não há pagamentos por cobrar.</p>
-					<?php endif; ?>
-				</div>
-			</div>
 
-			<!-- Pagos -->
-			<div class="rc-paypanel" data-tab="pagos" hidden>
-				<div class="pm-panel">
-					<?php if ( $pg_pagos ) : ?>
-						<div class="rc-paytbl rc-paytbl--paid">
-							<div class="rc-paytbl__head"><span>Recibo</span><span>Paciente</span><span>Detalhe</span><span class="r">Valor</span><span></span></div>
-							<?php foreach ( $pg_pagos as $pg ) : ?>
-								<div class="rc-payrow rc-payrow--paid" data-name="<?php echo esc_attr( mb_strtolower( (string) ( $pg['paciente'] ?? '' ) ) ); ?>">
-									<span class="rc-pay__r"><?php echo esc_html( Clinica_Pagamentos::numero_recibo( (int) $pg['id'] ) ); ?></span>
-									<span class="rc-pay__n"><?php echo esc_html( $pg['paciente'] ?: 'Paciente' ); ?></span>
-									<span class="rc-pay__c"><?php echo $pg['esp'] ? esc_html( $pg['esp'] ) : 'Consulta'; ?><?php echo $pg['referencia'] ? ' · ' . esc_html( $pg['referencia'] ) : ''; ?></span>
-									<span class="rc-pay__v r"><?php echo number_format( (float) $pg['valor'], 2, ',', '.' ); ?> <small><?php echo esc_html( $moeda ); ?></small></span>
-									<span class="rc-pay__a">
-										<?php if ( current_user_can( 'clinica_emitir_recibo' ) ) : ?>
-											<a class="pm-act pm-act--ok" href="<?php echo esc_url( add_query_arg( 'recibo', (int) $pg['id'], remove_query_arg( array( 'cl', 'recibo' ) ) ) ); ?>" target="_blank" rel="noopener">Emitir fatura</a>
-										<?php endif; ?>
-									</span>
-								</div>
-							<?php endforeach; ?>
+						<div class="cx-cena cx-cena--cartao" data-cena="cartao" hidden>
+							<span class="cx-ondas"><i></i><i></i><i></i></span>
+							<div class="rc-bci cx-bci">
+								<span class="rc-bci__petala rc-bci__petala--a"></span>
+								<span class="rc-bci__petala rc-bci__petala--b"></span>
+								<span class="rc-bci__brilho"></span>
+								<span class="rc-bci__marca"><svg viewBox="0 0 40 24"><ellipse cx="11" cy="14" rx="4.2" ry="9" transform="rotate(-38 11 14)"/><ellipse cx="20" cy="10" rx="4.2" ry="9.5"/><ellipse cx="29" cy="14" rx="4.2" ry="9" transform="rotate(38 29 14)"/></svg><b>BCI</b><i>Classic</i></span>
+								<span class="rc-bci__chip"><i></i><i></i><i></i></span>
+								<svg class="rc-bci__nfc" viewBox="0 0 24 24"><path d="M8 7a7 7 0 0 1 0 10M11.5 5a10 10 0 0 1 0 14M15 3a13 13 0 0 1 0 18"/></svg>
+								<span class="rc-bci__num">•••• •••• •••• ••••</span>
+								<span class="rc-bci__nome" data-cartao-nome>CLIENTE</span>
+								<span class="rc-bci__visa">VISA</span>
+							</div>
+							<div class="cx-cartao__info">
+								<b data-cartao-valor>0 MZN</b>
+								<span>Aproxime ou insira o cartão no terminal</span>
+							</div>
 						</div>
-						<p class="pm-empty rc-pgnores" hidden>Nenhum paciente corresponde à pesquisa.</p>
-					<?php else : ?>
-						<p class="pm-empty">Ainda não há pagamentos confirmados.</p>
-					<?php endif; ?>
-				</div>
+
+						<div class="cx-cena cx-cena--cash" data-cena="cash" hidden>
+							<div class="cx-cash">
+								<div class="cx-cash__linha"><span>Total</span><b data-cash-total>—</b></div>
+								<div class="cx-cash__linha"><span>Recebido</span><b data-cash-rec>—</b></div>
+								<div class="cx-cash__linha cx-cash__linha--troco"><span>Troco</span><b data-cash-troco>—</b></div>
+								<p class="cx-cash__t">Dar de troco</p>
+								<div class="cx-cash__notas" data-cash-notas></div>
+								<p class="cx-cash__dica" data-cash-dica>Escreva o valor recebido para ver as notas a devolver.</p>
+							</div>
+						</div>
+
+						<div class="cx-cena cx-cena--ok" data-cena="ok"<?php echo $cx_pago ? '' : ' hidden'; ?>>
+							<svg class="cx-ok__ic" viewBox="0 0 96 96"><circle class="cx-ok__aro" cx="48" cy="48" r="40" pathLength="100"/><path class="cx-ok__visto" d="M31 49l11 11 23-25" pathLength="100"/></svg>
+							<b class="cx-ok__t">Pagamento registado</b>
+							<?php if ( $cx_pago ) : ?>
+								<span class="cx-ok__v"><?php echo esc_html( $fmt_mz( $cx_pago['valor'] ) ); ?></span>
+								<span class="cx-ok__s"><?php echo esc_html( ( $cx_pago['paciente'] ?: 'Paciente' ) . ' · ' . ( Clinica_Pagamentos::METODOS[ $cx_pago['metodo'] ] ?? $cx_pago['metodo'] ) ); ?></span>
+							<?php endif; ?>
+						</div>
+					</div>
+
+					<div class="cx-lado">
+						<?php if ( $cx_pago ) : ?>
+							<div class="cx-feito" id="rc-cx-feito">
+								<p class="cx-feito__t">Recibo <?php echo esc_html( Clinica_Pagamentos::numero_recibo( (int) $cx_pago['id'] ) ); ?></p>
+								<dl class="cx-feito__dl">
+									<div><dt>Paciente</dt><dd><?php echo esc_html( $cx_pago['paciente'] ?: 'Paciente' ); ?></dd></div>
+									<div><dt>Consulta</dt><dd><?php echo esc_html( trim( ( $cx_pago['esp'] ?: 'Consulta' ) . ( $cx_pago['medico'] ? ' · ' . $cx_pago['medico'] : '' ) ) ); ?></dd></div>
+									<div><dt>Método</dt><dd><?php echo esc_html( Clinica_Pagamentos::METODOS[ $cx_pago['metodo'] ] ?? $cx_pago['metodo'] ); ?></dd></div>
+									<?php if ( ! empty( $cx_pago['referencia'] ) && ( Clinica_Pagamentos::METODOS[ $cx_pago['metodo'] ] ?? '' ) !== $cx_pago['referencia'] ) : ?><div><dt>Referência</dt><dd><?php echo esc_html( $cx_pago['referencia'] ); ?></dd></div><?php endif; ?>
+									<div class="is-total"><dt>Valor</dt><dd><?php echo esc_html( $fmt_mz( $cx_pago['valor'] ) ); ?></dd></div>
+								</dl>
+								<?php if ( current_user_can( 'clinica_emitir_recibo' ) ) : ?>
+									<a class="cx-go" href="<?php echo esc_url( add_query_arg( 'recibo', (int) $cx_pago['id'], remove_query_arg( array( 'cl', 'recibo', 'pg', 'pago' ) ) ) ); ?>" target="_blank" rel="noopener">Emitir recibo</a>
+								<?php endif; ?>
+								<button type="button" class="cx-sec" data-cx-proximo>Cobrar outro pagamento</button>
+							</div>
+						<?php endif; ?>
+
+						<div class="cx-vazio" id="rc-cx-vazio"<?php echo $cx_pago ? ' hidden' : ''; ?>>
+							<b>Escolha um pagamento</b>
+							<p>Toque num paciente da lista para cobrar. O método aparece aqui ao lado, passo a passo.</p>
+						</div>
+
+						<form method="post" class="cx-form" id="rc-cx-form" hidden>
+							<?php wp_nonce_field( 'rc_pg', 'rc_nonce' ); ?>
+							<input type="hidden" name="rc_action" id="rc-cx-acao" value="pagamento">
+							<input type="hidden" name="id" id="rc-cx-id">
+							<input type="hidden" name="metodo" id="rc-cx-metodo" value="numerario">
+
+							<div class="cx-form__quem">
+								<span class="cx-item__av" id="rc-cx-ini" aria-hidden="true"></span>
+								<span><b id="rc-cx-nome"></b><small id="rc-cx-det"></small></span>
+							</div>
+							<p class="cx-form__total"><span>Total a pagar</span><b id="rc-cx-total"></b></p>
+
+							<fieldset class="cx-metodos">
+								<legend>Método de pagamento</legend>
+								<div class="cx-metodos__grelha" role="radiogroup" aria-label="Método de pagamento">
+									<i class="cx-metodos__ind" aria-hidden="true"></i>
+									<?php $prim = true; foreach ( $metodos_cx as $mk => $mm ) : ?>
+										<button type="button" role="radio" class="cx-met-b cx-met-b--<?php echo esc_attr( $mk ); ?>" data-metodo="<?php echo esc_attr( $mk ); ?>" aria-checked="<?php echo $prim ? 'true' : 'false'; ?>"><?php echo Clinica_Painel::icone( $mm[1] ); ?><span><?php echo esc_html( $mm[0] ); ?></span></button>
+									<?php $prim = false; endforeach; ?>
+								</div>
+							</fieldset>
+
+							<div class="cx-extra" data-para="numerario">
+								<label class="rc-c"><span>Valor recebido</span><input type="number" id="rc-cx-recebido" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+								<div class="cx-notas-r" id="rc-cx-notas"></div>
+								<p class="cx-troco"><span>Troco</span><b id="rc-cx-troco">—</b></p>
+							</div>
+							<div class="cx-extra" data-para="mpesa emola" hidden>
+								<label class="rc-c"><span>Número do cliente</span><input type="tel" name="telefone" id="rc-cx-tel" inputmode="tel" placeholder="84 123 4567" autocomplete="off"></label>
+								<label class="rc-c" data-ref-movel><span>ID da transação <small>opcional</small></span><input type="text" name="referencia" maxlength="64" placeholder="Ex.: 8FG3K2L9QX" autocomplete="off"></label>
+							</div>
+							<div class="cx-extra" data-para="cartao" hidden>
+								<label class="rc-c"><span>Referência do terminal <small>opcional</small></span><input type="text" name="referencia" maxlength="64" placeholder="Nº de autorização do talão" autocomplete="off"></label>
+							</div>
+
+							<button type="submit" class="cx-go" id="rc-cx-go">Confirmar pagamento</button>
+							<p class="cx-hint" id="rc-cx-hint"></p>
+						</form>
+					</div>
+				</section>
 			</div>
 		</section>
 
-		<!-- Modal de espera durante a cobrança M-Pesa (sistema real). -->
-			<div class="rc-mpwait" id="rc-mpwait" hidden role="alertdialog" aria-labelledby="rc-mpwait-t" aria-describedby="rc-mpwait-d">
-				<div class="rc-mpwait__card">
-					<div class="rc-mpwait__spin" aria-hidden="true"></div>
-					<h3 class="rc-mpwait__t" id="rc-mpwait-t">A cobrar via M-Pesa…</h3>
-					<p class="rc-mpwait__d" id="rc-mpwait-d">Enviámos o pedido para o telemóvel do cliente. <b>Peça-lhe para confirmar e introduzir o PIN M-Pesa.</b></p>
-					<p class="rc-mpwait__num"></p>
-					<p class="rc-mpwait__hint">A confirmação pode demorar até 1 minuto. Não feche nem atualize esta página.</p>
-				</div>
+		<!-- Espera durante a cobrança M-Pesa (o cliente introduz o PIN no telemóvel). -->
+		<div class="rc-mpwait" id="rc-mpwait" hidden role="alertdialog" aria-labelledby="rc-mpwait-t" aria-describedby="rc-mpwait-d">
+			<div class="rc-mpwait__card">
+				<div class="rc-mpwait__spin" aria-hidden="true"></div>
+				<h3 class="rc-mpwait__t" id="rc-mpwait-t">A cobrar via M-Pesa…</h3>
+				<p class="rc-mpwait__d" id="rc-mpwait-d">Enviámos o pedido para o telemóvel do cliente. <b>Peça-lhe para confirmar e introduzir o PIN M-Pesa.</b></p>
+				<p class="rc-mpwait__num"></p>
+				<p class="rc-mpwait__hint">A confirmação pode demorar até 1 minuto. Não feche nem atualize esta página.</p>
 			</div>
+		</div>
 
-			<script>
-			function clMpesaCobrar( form ) {
-				var campo = form.querySelector( 'input[name="telefone"]' );
-				var tel = campo ? campo.value.trim() : '';
-				if ( ! tel ) { return false; }
-				if ( ! confirm( 'Cobrar via M-Pesa ao número ' + tel + '?\n\nO cliente vai receber o pedido de PIN no telemóvel.' ) ) { return false; }
-				var w = document.getElementById( 'rc-mpwait' );
-				if ( w ) {
-					var num = w.querySelector( '.rc-mpwait__num' );
-					if ( num ) { num.textContent = tel + ( form.dataset.mpvalor ? '  ·  ' + form.dataset.mpvalor : '' ); }
-					w.hidden = false;
-					requestAnimationFrame( function () { w.classList.add( 'is-on' ); } );
-				}
-				return true;
-			}
-			</script>
+		<!-- A Caixa (escolha, método, troco e palco animado) vive em assets/js/caixa.js. -->
 
-			<!-- ============================ MENSAGENS ============================ -->
-		<section class="pm-view" data-view="mensagens" hidden>
-			<div class="ad-head"><div class="ad-head__t"><h2>Mensagens</h2><p>Pedidos recebidos pelo formulário de contacto do site</p></div>
-				<span class="ad-head__meta"><?php echo (int) $msg_novas; ?> por ler</span>
+			<!-- Mensagens
+			     Caixa de entrada do formulário de contacto do site: lista à
+			     esquerda, leitura à direita (no telemóvel, uma por baixo da outra). -->
+		<?php
+		$iniciais = static function ( string $nome ): string {
+			$p = preg_split( '/\s+/', trim( $nome ) ) ?: array();
+			$i = mb_substr( $p[0] ?? '', 0, 1 ) . ( count( $p ) > 1 ? mb_substr( (string) end( $p ), 0, 1 ) : '' );
+			return mb_strtoupper( $i ?: '?' );
+		};
+		$quando = static function ( string $iso ) use ( $hoje_ymd ): string {
+			return substr( $iso, 0, 10 ) === $hoje_ymd ? date_i18n( 'H:i', strtotime( $iso ) ) : date_i18n( 'd/m', strtotime( $iso ) );
+		};
+		?>
+		<header class="db-secao pm-view" data-view="mensagens" hidden>
+			<div>
+				<p class="db-secao__eyebrow">Mensagens</p>
+				<h2 class="db-secao__titulo">Caixa de entrada</h2>
+				<p class="db-secao__sub">Pedidos enviados pelo formulário de contacto do site.</p>
 			</div>
 			<?php if ( $mensagens ) : ?>
-				<div class="rc-msgs">
-					<?php foreach ( $mensagens as $msg ) : ?>
-						<article class="rc-msg <?php echo empty( $msg['lido'] ) ? 'is-new' : ''; ?>">
-							<div class="rc-msg__top">
-								<div class="rc-msg__who">
-									<div class="rc-msg__from"><?php echo esc_html( $msg['nome'] ); ?><?php if ( empty( $msg['lido'] ) ) : ?> <span class="rc-msg__tag">Novo</span><?php endif; ?></div>
-									<div class="rc-msg__meta"><?php echo esc_html( $msg['email'] ); ?><?php echo $msg['telefone'] ? ' · ' . esc_html( $msg['telefone'] ) : ''; ?> · <?php echo esc_html( $fmt_dt( $msg['criado_em'] ) ); ?></div>
+				<nav class="db-periodo" id="rc-msg-filtro" aria-label="Filtrar mensagens">
+					<a href="#mensagens" data-filtro="todas" aria-current="true">Todas <b><?php echo count( $mensagens ); ?></b></a>
+					<a href="#mensagens" data-filtro="novas">Por ler <b><?php echo (int) $msg_novas; ?></b></a>
+				</nav>
+			<?php endif; ?>
+		</header>
+
+		<section class="db-cartao db-caixa pm-view" data-view="mensagens" hidden aria-label="Mensagens recebidas">
+			<?php if ( $mensagens ) : ?>
+				<ul class="db-caixa__lista" id="rc-msg-lista">
+					<?php foreach ( $mensagens as $i => $msg ) :
+						$nova = empty( $msg['lido'] );
+						?>
+						<li<?php echo $nova ? ' class="is-nova"' : ''; ?>>
+							<button type="button" class="db-caixa__item<?php echo 0 === $i ? ' is-ativa' : ''; ?>" data-msg="rc-msg-<?php echo (int) $msg['id']; ?>" aria-controls="rc-msg-<?php echo (int) $msg['id']; ?>" aria-pressed="<?php echo 0 === $i ? 'true' : 'false'; ?>">
+								<span class="db-avatar" aria-hidden="true"><?php echo esc_html( $iniciais( $msg['nome'] ) ); ?></span>
+								<span class="db-caixa__resumo">
+									<span class="db-caixa__linha"><b><?php echo esc_html( $msg['nome'] ); ?></b><time datetime="<?php echo esc_attr( $msg['criado_em'] ); ?>"><?php echo esc_html( $quando( $msg['criado_em'] ) ); ?></time></span>
+									<span class="db-caixa__assunto"><?php if ( $nova ) : ?><i class="db-caixa__ponto" aria-label="Por ler"></i><?php endif; ?><?php echo esc_html( $msg['assunto'] ?: 'Sem assunto' ); ?></span>
+									<span class="db-caixa__previa"><?php echo esc_html( wp_trim_words( $msg['mensagem'], 14, '…' ) ); ?></span>
+								</span>
+							</button>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+
+				<div class="db-caixa__leitura">
+					<?php foreach ( $mensagens as $i => $msg ) :
+						$nova = empty( $msg['lido'] );
+						?>
+						<article class="db-msg" id="rc-msg-<?php echo (int) $msg['id']; ?>"<?php echo $i ? ' hidden' : ''; ?>>
+							<header class="db-msg__cab">
+								<span class="db-avatar db-avatar--grande" aria-hidden="true"><?php echo esc_html( $iniciais( $msg['nome'] ) ); ?></span>
+								<div class="db-msg__quem">
+									<b><?php echo esc_html( $msg['nome'] ); ?></b>
+									<span><?php echo esc_html( $msg['email'] . ( $msg['telefone'] ? ' · ' . $msg['telefone'] : '' ) ); ?></span>
 								</div>
-								<div class="rc-msg__acts">
-									<a class="rc-msg__reply" href="mailto:<?php echo esc_attr( $msg['email'] ); ?>?subject=<?php echo rawurlencode( 'Re: ' . ( $msg['assunto'] ?: 'O seu contacto — Clínica Vida' ) ); ?>">Responder por email</a>
-									<?php if ( empty( $msg['lido'] ) ) : ?>
-										<form method="post" class="rc-msg__act">
-											<?php wp_nonce_field( 'rc_msg', 'rc_nonce' ); ?>
-											<input type="hidden" name="rc_action" value="msg_lida">
-											<input type="hidden" name="id" value="<?php echo (int) $msg['id']; ?>">
-											<button type="submit" class="pm-act">Marcar como lida</button>
-										</form>
-									<?php endif; ?>
-								</div>
+								<time class="db-msg__data" datetime="<?php echo esc_attr( $msg['criado_em'] ); ?>"><?php echo esc_html( $fmt_dt( $msg['criado_em'] ) ); ?></time>
+							</header>
+							<h3 class="db-msg__assunto"><?php echo esc_html( $msg['assunto'] ?: 'Sem assunto' ); ?></h3>
+							<div class="db-msg__corpo"><?php echo wpautop( esc_html( $msg['mensagem'] ) ); ?></div>
+							<div class="db-msg__acoes">
+								<a class="db-botao" href="mailto:<?php echo esc_attr( $msg['email'] ); ?>?subject=<?php echo rawurlencode( 'Re: ' . ( $msg['assunto'] ?: 'O seu contacto com a Clínica Vida' ) ); ?>">Responder por email</a>
+								<?php if ( $msg['telefone'] ) : ?>
+									<a class="db-botao db-botao--claro" href="<?php echo esc_attr( Clinica_Homepage::tel_href( $msg['telefone'] ) ); ?>">Ligar</a>
+								<?php endif; ?>
+								<?php if ( $nova ) : ?>
+									<form method="post" class="db-msg__form">
+										<?php wp_nonce_field( 'rc_msg', 'rc_nonce' ); ?>
+										<input type="hidden" name="rc_action" value="msg_lida">
+										<input type="hidden" name="id" value="<?php echo (int) $msg['id']; ?>">
+										<button type="submit" class="db-botao db-botao--claro">Marcar como lida</button>
+									</form>
+								<?php else : ?>
+									<span class="db-msg__lida">Lida</span>
+								<?php endif; ?>
 							</div>
-							<?php if ( ! empty( $msg['assunto'] ) ) : ?><div class="rc-msg__subj"><?php echo esc_html( $msg['assunto'] ); ?></div><?php endif; ?>
-							<p class="rc-msg__body"><?php echo nl2br( esc_html( $msg['mensagem'] ) ); ?></p>
 						</article>
 					<?php endforeach; ?>
 				</div>
 			<?php else : ?>
-				<p class="pm-empty">Sem mensagens recebidas.</p>
+				<?php Clinica_Painel::vazio( 'Caixa de entrada vazia', 'As mensagens enviadas pelo formulário de contacto do site aparecem aqui, com o contacto de quem escreveu.', 'mensagem' ); ?>
 			<?php endif; ?>
 		</section>
 		</main>
@@ -1161,8 +1612,16 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 		}
 		return null;
 	}
+	var titulos = {
+		painel: 'Painel', consultas: 'Agenda do dia', fila: 'Fila de atendimento', marcar: 'Nova consulta',
+		pacientes: 'Pacientes', 'novo-paciente': 'Novo paciente', historico: 'Históricos',
+		histadmin: 'Histórico do paciente', pagamentos: 'Pagamentos', mensagens: 'Mensagens'
+	};
+	var tituloEl = document.querySelector( '[data-dz-titulo]' );
 	function show( v ) {
 		views.forEach( function ( s ) { s.hidden = ( s.dataset.view !== v ); } );
+		document.dispatchEvent( new CustomEvent( 'clinica:vista', { detail: v } ) );
+		if ( tituloEl ) { tituloEl.textContent = titulos[ v ] || 'Receção'; }
 		// O histórico é um detalhe de Pacientes: mantém esse item ativo.
 		var nav = ( 'histadmin' === v ) ? 'pacientes' : v;
 		items.forEach( function ( i ) { i.classList.toggle( 'is-active', i.dataset.go === nav ); } );
@@ -1172,8 +1631,14 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 			if ( g === atual ) { g.classList.add( 'is-open' ); }
 		} );
 		if ( shell ) { shell.classList.toggle( 'is-full', v !== 'painel' ); }
+		if ( window.history && history.replaceState ) { history.replaceState( null, '', location.pathname + location.search + '#' + v ); }
 		window.scrollTo( 0, 0 );
 	}
+	function vistaDoHash() {
+		var h = location.hash.replace( '#', '' );
+		return h && document.querySelector( '.pm-view[data-view="' + h + '"]' ) ? h : '';
+	}
+	window.addEventListener( 'hashchange', function () { var h = vistaDoHash(); if ( h ) { show( h ); } } );
 	clickers.forEach( function ( i ) { i.addEventListener( 'click', function ( e ) { e.preventDefault(); show( i.dataset.go ); } ); } );
 	// Cabeçalhos de grupo: clicar abre/fecha o submenu (acordeão, um aberto de cada vez).
 	side.querySelectorAll( '[data-toggle]' ).forEach( function ( t ) {
@@ -1186,11 +1651,33 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 		} );
 	} );
 	var inicial =<?php echo $hist_pac ? "'histadmin'" : ( isset( $_GET['dia'] ) ? "'consultas'" : "'painel'" ); ?>;
-	if ( /[?&]cl=rc_pac_(dados|existe)/.test( location.search ) ) { inicial = 'novo-paciente'; }
+	if ( vistaDoHash() ) { inicial = vistaDoHash(); }
+	if ( /[?&]cl=nc_cobrar/.test( location.search ) ) { inicial = 'pagamentos'; }
+	else if ( /[?&]cl=rc_pac_(dados|existe)/.test( location.search ) ) { inicial = 'novo-paciente'; }
 	else if ( /[?&]cl=rc_pac_ok/.test( location.search ) ) { inicial = 'pacientes'; }
 	else if ( /[?&]cl=nc_/.test( location.search ) ) { inicial = 'marcar'; }
 	else if ( /[?&]cl=pg_/.test( location.search ) ) { inicial = 'pagamentos'; }
 	show( inicial );
+
+	// Pesquisa do topo: abre Pacientes já filtrado pelo que se escreveu.
+	( function () {
+		var f = document.querySelector( '[data-dz-procura]' ), campo = document.getElementById( 'dz-procura' );
+		var alvo = document.getElementById( 'rc-psearch' );
+		if ( ! f || ! campo || ! alvo ) { return; }
+		function procurar() {
+			show( 'pacientes' );
+			alvo.value = campo.value;
+			alvo.dispatchEvent( new Event( 'input' ) );
+		}
+		f.addEventListener( 'submit', function ( e ) { e.preventDefault(); procurar(); } );
+		campo.addEventListener( 'input', function () { if ( campo.value.trim().length > 1 ) { procurar(); campo.focus(); } } );
+	} )();
+	var perfil = document.querySelector( '.dz-perfil' );
+	if ( perfil ) {
+		document.addEventListener( 'click', function ( e ) {
+			if ( perfil.open && ( ! perfil.contains( e.target ) || e.target.closest( '.dz-perfil__menu a' ) ) ) { perfil.open = false; }
+		} );
+	}
 
 	// Pesquisa no diretório de pacientes.
 	( function () {
@@ -1236,48 +1723,115 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 
 	if ( s ) { s.addEventListener( 'input', aplicar ); }
 
-		// ---- Nova consulta (walk-in): sector, medico e horarios (AJAX) ----
+		// Nova consulta: paciente (procura ou pessoa nova), médico e hora
 		( function () {
-			var esp = document.getElementById( 'rc-esp' ),
-				med = document.getElementById( 'rc-med' ),
-				data = document.getElementById( 'rc-data' ),
-				caixa = document.getElementById( 'rc-slots' ),
-				inicio = document.getElementById( 'rc-inicio' ),
-				dias = document.getElementById( 'rc-days' ),
-				nslots = document.getElementById( 'rc-nslots' ),
-				go = document.getElementById( 'rc-go' ),
-				nome = document.getElementById( 'rc-nome' ),
-				email = document.getElementById( 'rc-email' ),
-				nasc = document.getElementById( 'rc-nasc' ),
-				idade = document.getElementById( 'rc-idade' ),
-				sPac = document.getElementById( 's-pac' ),
-				sEsp = document.getElementById( 's-esp' ),
-				sMed = document.getElementById( 's-med' ),
-				sData = document.getElementById( 's-data' ),
-				sHora = document.getElementById( 's-hora' );
-			if ( ! med || ! data || ! caixa ) { return; }
+			var form = document.getElementById( 'rc-form' );
+			if ( ! form ) { return; }
 			var AJAX = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+			var PACS = <?php echo wp_json_encode( $pac_ac ); ?>;
+			var $ = function ( id ) { return document.getElementById( id ); };
+			var reuse = $( 'rc-reuse' ), med = $( 'rc-med' ), inicio = $( 'rc-inicio' ), data = $( 'rc-data' ),
+				caixa = $( 'rc-slots' ), nslots = $( 'rc-nslots' ), dias = $( 'rc-days' ), go = $( 'rc-go' ),
+				falta = $( 'rc-falta' ), primeira = $( 'rc-primeira' ), q = $( 'rc-pac-q' ), res = $( 'rc-pac-res' ),
+				sel = $( 'rc-pac-sel' ), nome = $( 'rc-nome' ), tel = $( 'rc-tel' ), email = $( 'rc-email' ), foto = $( 'rc-res-foto' );
+			var modo = 'existente', espSel = null;
+			var SEM = [ 'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado' ], MES = [ 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez' ];
 
-			function msg( t ) { caixa.innerHTML = '<p class="rc-slots__msg">' + t + '</p>'; }
-			function txt( el, v ) { if ( el ) { el.textContent = v || ''; el.classList.toggle( 'is-set', !! v ); } }
 			function dataLonga( v ) {
 				if ( ! v ) { return ''; }
-				var p = v.split( '-' ), d = new Date( +p[0], +p[1] - 1, +p[2] ),
-					sem = [ 'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado' ],
-					mes = [ 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez' ];
-				return sem[ d.getDay() ] + ', ' + d.getDate() + ' ' + mes[ d.getMonth() ];
+				var p = v.split( '-' ), d = new Date( +p[0], +p[1] - 1, +p[2] );
+				return SEM[ d.getDay() ] + ', ' + d.getDate() + ' ' + MES[ d.getMonth() ];
+			}
+			function txt( id, v ) { var el = $( id ); if ( el ) { el.textContent = v || '—'; el.classList.toggle( 'is-set', !! v ); } }
+			function telOk( v ) { return /^(\+?258|00258)?\s*8[2-7](\s*\d){7}$/.test( ( v || '' ).trim() ); }
+			function pessoa() {
+				if ( 'existente' === modo ) { return reuse.value ? sel.querySelector( '[data-sel-nome]' ).textContent : ''; }
+				var n = nome.value.trim();
+				return n.length >= 3 && ( telOk( tel.value ) || /.+@.+\..+/.test( email.value.trim() ) ) ? n : '';
 			}
 			function resumo() {
-				var temPessoa = !! ( nome && nome.value.trim() && email && email.value.trim() );
-				var ok = temPessoa && !! med.value && !! inicio.value;
-				if ( go ) { go.disabled = ! ok; }
-				txt( sPac, nome ? nome.value.trim() : '' );
-				txt( sEsp, esp && esp.value ? esp.options[ esp.selectedIndex ].text : '' );
-				txt( sMed, med.value ? med.options[ med.selectedIndex ].text : '' );
-				txt( sData, dataLonga( data.value ) );
-				txt( sHora, inicio.value ? inicio.value.split( ' ' )[ 1 ] : '' );
+				var p = pessoa(), f = [];
+				if ( ! p ) { f.push( 'paciente' ); }
+				if ( ! med.value ) { f.push( 'médico' ); }
+				if ( ! inicio.value ) { f.push( 'hora' ); }
+				go.disabled = f.length > 0;
+				falta.textContent = f.length ? 'Falta: ' + f.join( ', ' ) + '.' : 'Tudo pronto.';
+				falta.classList.toggle( 'is-ok', ! f.length );
+				txt( 's-pac', p );
+				txt( 's-esp', espSel ? espSel.dataset.nome : '' );
+				var mb = form.querySelector( '.rc-medc[aria-checked="true"]' );
+				txt( 's-med', mb ? mb.dataset.nome : '' );
+				txt( 's-data', inicio.value ? dataLonga( inicio.value.split( ' ' )[0] ) : '' );
+				txt( 's-hora', inicio.value ? inicio.value.split( ' ' )[1] : '' );
+				// Passos: o atual fica marcado, os completos com visto.
+				var feito = [ !! p, !! med.value, !! inicio.value ];
+				document.querySelectorAll( '.rc-passos li' ).forEach( function ( li, i ) {
+					li.classList.toggle( 'is-feito', feito[ i ] );
+					li.classList.toggle( 'is-atual', ! feito[ i ] && ( 0 === i || feito[ i - 1 ] ) );
+				} );
 			}
 
+			// Paciente: já registado (procura) ou pessoa nova.
+			form.querySelectorAll( '.rc-seg [data-modo]' ).forEach( function ( b ) {
+				b.addEventListener( 'click', function () {
+					modo = b.dataset.modo;
+					form.querySelectorAll( '.rc-seg [data-modo]' ).forEach( function ( o ) { o.setAttribute( 'aria-checked', o === b ? 'true' : 'false' ); } );
+					form.querySelectorAll( '.rc-nc__modo' ).forEach( function ( m ) { m.hidden = m.dataset.modo !== modo; } );
+					if ( 'novo' === modo ) { reuse.value = ''; nome.focus(); } else { q.focus(); }
+					resumo();
+				} );
+			} );
+			var ativo = -1;
+			function fecharRes() { res.hidden = true; q.setAttribute( 'aria-expanded', 'false' ); ativo = -1; }
+			function escolher( p ) {
+				reuse.value = p.id;
+				sel.querySelector( '[data-sel-ini]' ).textContent = p.i;
+				sel.querySelector( '[data-sel-nome]' ).textContent = p.n;
+				sel.querySelector( '[data-sel-tel]' ).textContent = p.m || 'Sem contacto registado';
+				sel.hidden = false; q.parentNode.hidden = true; fecharRes(); resumo();
+			}
+			q.addEventListener( 'input', function () {
+				var t = q.value.trim().toLowerCase();
+				res.innerHTML = '';
+				if ( t.length < 2 ) { fecharRes(); return; }
+				var achados = PACS.filter( function ( p ) { return p.b.indexOf( t ) !== -1; } ).slice( 0, 6 );
+				if ( ! achados.length ) {
+					res.innerHTML = '<li class="rc-pac-res__vazio">Sem resultados. <button type="button" class="rc-link" data-novo>Registar pessoa nova</button></li>';
+					res.querySelector( '[data-novo]' ).addEventListener( 'click', function () {
+						form.querySelector( '.rc-seg [data-modo="novo"]' ).click(); nome.value = q.value.trim(); resumo();
+					} );
+				}
+				achados.forEach( function ( p, i ) {
+					var li = document.createElement( 'li' );
+					li.setAttribute( 'role', 'option' ); li.id = 'rc-pac-o' + i; li.className = 'rc-pac-res__i';
+					li.innerHTML = '<span class="dz-av"></span><span><b></b><small></small></span>';
+					li.querySelector( '.dz-av' ).textContent = p.i;
+					li.querySelector( 'b' ).textContent = p.n;
+					li.querySelector( 'small' ).textContent = p.m || '';
+					li.addEventListener( 'mousedown', function ( e ) { e.preventDefault(); escolher( p ); } );
+					li._p = p;
+					res.appendChild( li );
+				} );
+				res.hidden = false; q.setAttribute( 'aria-expanded', 'true' );
+			} );
+			q.addEventListener( 'keydown', function ( e ) {
+				var ops = res.querySelectorAll( '[role="option"]' );
+				if ( ! ops.length ) { return; }
+				if ( 'ArrowDown' === e.key || 'ArrowUp' === e.key ) {
+					e.preventDefault();
+					ativo = ( ativo + ( 'ArrowDown' === e.key ? 1 : ops.length - 1 ) ) % ops.length;
+					ops.forEach( function ( o, i ) { o.classList.toggle( 'is-ativo', i === ativo ); o.setAttribute( 'aria-selected', i === ativo ? 'true' : 'false' ); } );
+					q.setAttribute( 'aria-activedescendant', ops[ ativo ].id );
+				} else if ( 'Enter' === e.key && ativo >= 0 ) {
+					e.preventDefault(); escolher( ops[ ativo ]._p );
+				} else if ( 'Escape' === e.key ) { fecharRes(); }
+			} );
+			q.addEventListener( 'blur', function () { setTimeout( fecharRes, 120 ); } );
+			sel.querySelector( '[data-sel-trocar]' ).addEventListener( 'click', function () {
+				reuse.value = ''; sel.hidden = true; q.parentNode.hidden = false; q.value = ''; q.focus(); resumo();
+			} );
+			[ nome, tel, email ].forEach( function ( el ) { el.addEventListener( 'input', resumo ); } );
+			var nasc = $( 'rc-nasc' ), idade = $( 'rc-idade' );
 			if ( nasc && idade ) {
 				nasc.addEventListener( 'change', function () {
 					if ( ! nasc.value ) { idade.value = ''; return; }
@@ -1287,77 +1841,121 @@ $rc_editavel = array( 'pendente', 'confirmada' );
 				} );
 			}
 
-			if ( nome ) { nome.addEventListener( 'input', resumo ); }
-			if ( email ) { email.addEventListener( 'input', resumo ); }
-
-			if ( esp ) {
-				esp.addEventListener( 'change', function () {
-					var v = esp.value; med.value = '';
-					Array.prototype.forEach.call( med.options, function ( o, i ) { if ( 0 === i ) { return; } o.hidden = !! v && o.dataset.esp !== v; } );
-					carregar(); resumo();
-				} );
+			// Especialidade -> médicos dessa especialidade (o primeiro fica escolhido).
+			var meds = form.querySelectorAll( '.rc-medc' ), dicaMeds = form.querySelector( '[data-meds-dica]' );
+			function escolherMed( b ) {
+				meds.forEach( function ( o ) { o.setAttribute( 'aria-checked', o === b ? 'true' : 'false' ); } );
+				med.value = b ? b.dataset.med : '';
+				primeira.disabled = ! med.value;
+				carregar();
 			}
-
-			if ( dias ) {
-				dias.querySelectorAll( '.rc-dchip' ).forEach( function ( b ) {
-					b.addEventListener( 'click', function () {
-						dias.querySelectorAll( '.rc-dchip' ).forEach( function ( o ) { o.classList.remove( 'is-on' ); } );
-						b.classList.add( 'is-on' ); data.value = b.dataset.v; carregar();
-					} );
+			form.querySelectorAll( '.rc-esp' ).forEach( function ( b ) {
+				b.addEventListener( 'click', function () {
+					espSel = b;
+					form.querySelectorAll( '.rc-esp' ).forEach( function ( o ) { o.setAttribute( 'aria-checked', o === b ? 'true' : 'false' ); } );
+					var prim = null;
+					meds.forEach( function ( m ) { var on = m.dataset.esp === b.dataset.esp; m.hidden = ! on; if ( on && ! prim ) { prim = m; } } );
+					dicaMeds.hidden = true;
+					if ( foto && b.dataset.img ) { foto.style.backgroundImage = 'url(' + b.dataset.img + ')'; }
+					escolherMed( prim );
 				} );
-				data.addEventListener( 'change', function () { dias.querySelectorAll( '.rc-dchip' ).forEach( function ( o ) { o.classList.toggle( 'is-on', o.dataset.v === data.value ); } ); } );
-			}
+			} );
+			meds.forEach( function ( b ) { b.addEventListener( 'click', function () { escolherMed( b ); } ); } );
 
-			function grupo( titulo, lista ) {
+			// Dia e horas livres.
+			function msg( t ) { caixa.innerHTML = '<p class="rc-slots__msg">' + t + '</p>'; nslots.textContent = ''; }
+			function marcarDia( v ) {
+				data.value = v;
+				dias.querySelectorAll( '.rc-dchip' ).forEach( function ( o ) { var on = o.dataset.v === v; o.classList.toggle( 'is-on', on ); o.setAttribute( 'aria-pressed', on ? 'true' : 'false' ); } );
+			}
+			function slots( dia ) { return fetch( AJAX + '?action=clinica_slots&medico=' + encodeURIComponent( med.value ) + '&data=' + encodeURIComponent( dia ), { credentials: 'same-origin' } ).then( function ( r ) { return r.json(); } ); }
+			function grupo( titulo, lista, escolherH ) {
 				var w = document.createElement( 'div' ); w.className = 'rc-sg';
 				var hh = document.createElement( 'span' ); hh.className = 'rc-sg__h'; hh.textContent = titulo; w.appendChild( hh );
 				var g = document.createElement( 'div' ); g.className = 'rc-sg__b';
 				lista.forEach( function ( t ) {
-					var b = document.createElement( 'button' ); b.type = 'button'; b.className = 'rc-slot'; b.textContent = t;
+					var b = document.createElement( 'button' ); b.type = 'button'; b.className = 'rc-slot'; b.textContent = t; b.setAttribute( 'aria-pressed', 'false' );
 					b.addEventListener( 'click', function () {
-						caixa.querySelectorAll( '.rc-slot' ).forEach( function ( o ) { o.classList.remove( 'is-on' ); } );
-						b.classList.add( 'is-on' ); inicio.value = data.value + ' ' + t; resumo();
+						caixa.querySelectorAll( '.rc-slot' ).forEach( function ( o ) { o.classList.remove( 'is-on' ); o.setAttribute( 'aria-pressed', 'false' ); } );
+						b.classList.add( 'is-on' ); b.setAttribute( 'aria-pressed', 'true' );
+						inicio.value = data.value + ' ' + t; resumo();
 					} );
 					g.appendChild( b );
+					if ( escolherH === t ) { setTimeout( function () { b.click(); }, 0 ); }
 				} );
 				w.appendChild( g ); return w;
 			}
-
+			function desenhar( lista, escolherH ) {
+				if ( ! lista || ! lista.length ) { msg( 'Sem horas livres neste dia. Experimente outro dia ou "Primeira vaga".' ); return; }
+				nslots.textContent = lista.length + ( 1 === lista.length ? ' livre' : ' livres' );
+				var manha = lista.filter( function ( h ) { return parseInt( h, 10 ) < 13; } ), tarde = lista.filter( function ( h ) { return parseInt( h, 10 ) >= 13; } );
+				caixa.innerHTML = '';
+				if ( manha.length ) { caixa.appendChild( grupo( 'Manhã', manha, escolherH ) ); }
+				if ( tarde.length ) { caixa.appendChild( grupo( 'Tarde', tarde, escolherH ) ); }
+			}
 			function carregar() {
 				inicio.value = ''; resumo();
-				if ( nslots ) { nslots.textContent = ''; }
-				if ( ! med.value || ! data.value ) { msg( 'Escolha o médico para ver as horas livres.' ); return; }
-				msg( 'A procurar horários…' );
-				fetch( AJAX + '?action=clinica_slots&medico=' + encodeURIComponent( med.value ) + '&data=' + encodeURIComponent( data.value ), { credentials: 'same-origin' } )
-					.then( function ( r ) { return r.json(); } )
-					.then( function ( slots ) {
-						if ( ! slots || ! slots.length ) { msg( 'Sem horários livres neste dia. Experimente outra data ou outro médico.' ); return; }
-						if ( nslots ) { nslots.textContent = slots.length + ( 1 === slots.length ? ' livre' : ' livres' ); }
-						var manha = slots.filter( function ( h ) { return parseInt( h, 10 ) < 13; } ), tarde = slots.filter( function ( h ) { return parseInt( h, 10 ) >= 13; } );
-						caixa.innerHTML = '';
-						if ( manha.length ) { caixa.appendChild( grupo( 'Manhã', manha ) ); }
-						if ( tarde.length ) { caixa.appendChild( grupo( 'Tarde', tarde ) ); }
-					} )
-					.catch( function () { msg( 'Não foi possível obter os horários. Tente de novo.' ); } );
+				if ( ! med.value ) { msg( 'Escolha o médico para ver as horas livres.' ); return; }
+				if ( ! data.value ) { msg( 'Escolha o dia para ver as horas livres.' ); return; }
+				msg( 'A procurar horas livres…' );
+				slots( data.value ).then( function ( l ) { desenhar( l ); } ).catch( function () { msg( 'Não foi possível obter as horas. Tente de novo.' ); } );
 			}
+			dias.querySelectorAll( '.rc-dchip' ).forEach( function ( b ) { b.addEventListener( 'click', function () { marcarDia( b.dataset.v ); carregar(); } ); } );
+			data.addEventListener( 'change', function () { marcarDia( data.value ); carregar(); } );
+			primeira.addEventListener( 'click', function () {
+				if ( ! med.value ) { return; }
+				primeira.disabled = true; msg( 'A procurar a primeira vaga…' );
+				var base = new Date( dias.querySelector( '.rc-dchip' ).dataset.v + 'T00:00:00' ), i = 0;
+				( function proximo() {
+					if ( i > 20 ) { msg( 'Sem vagas nas próximas três semanas para este médico.' ); primeira.disabled = false; return; }
+					var d = new Date( base ); d.setDate( base.getDate() + i ); i++;
+					var v = d.getFullYear() + '-' + String( d.getMonth() + 1 ).padStart( 2, '0' ) + '-' + String( d.getDate() ).padStart( 2, '0' );
+					slots( v ).then( function ( l ) {
+						if ( l && l.length ) { marcarDia( v ); desenhar( l, l[0] ); primeira.disabled = false; return; }
+						proximo();
+					} ).catch( function () { msg( 'Não foi possível procurar. Tente de novo.' ); primeira.disabled = false; } );
+				} )();
+			} );
 
-			med.addEventListener( 'change', function () { carregar(); resumo(); } );
-			data.addEventListener( 'change', carregar );
+			form.addEventListener( 'submit', function ( e ) {
+				if ( go.disabled ) { e.preventDefault(); return; }
+				if ( ! confirm( 'Marcar a consulta de ' + ( pessoa() || 'paciente' ) + '?' ) ) { e.preventDefault(); }
+			} );
 			resumo();
 		} )();
 
-		// Dashboard: contagem animada no centro do donut.
+	// Mensagens: escolher na lista mostra a mensagem ao lado; filtro "Por ler".
 	( function () {
-		var el = document.querySelector( '.rc-donutnum' );
-		if ( ! el ) { return; }
-		var to = parseInt( el.dataset.to, 10 ) || 0;
-		if ( to <= 0 ) { return; }
-		var steps = 28, i = 0;
-		var t = setInterval( function () {
-			i++;
-			el.textContent = Math.round( to * i / steps );
-			if ( i >= steps ) { clearInterval( t ); el.textContent = to; }
-		}, 24 );
+		var lista = document.getElementById( 'rc-msg-lista' );
+		if ( ! lista ) { return; }
+		var itens = lista.querySelectorAll( '.db-caixa__item' );
+		itens.forEach( function ( b ) {
+			b.addEventListener( 'click', function () {
+				itens.forEach( function ( o ) {
+					var on = o === b;
+					o.classList.toggle( 'is-ativa', on );
+					o.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+					var art = document.getElementById( o.dataset.msg );
+					if ( art ) { art.hidden = ! on; }
+				} );
+				var alvo = document.getElementById( b.dataset.msg );
+				if ( alvo && window.matchMedia && window.matchMedia( '(max-width: 900px)' ).matches ) {
+					alvo.scrollIntoView( { block: 'start', behavior: 'smooth' } );
+				}
+			} );
+		} );
+		var filtro = document.getElementById( 'rc-msg-filtro' );
+		if ( ! filtro ) { return; }
+		filtro.querySelectorAll( 'a' ).forEach( function ( a ) {
+			a.addEventListener( 'click', function ( e ) {
+				e.preventDefault();
+				filtro.querySelectorAll( 'a' ).forEach( function ( o ) {
+					if ( o === a ) { o.setAttribute( 'aria-current', 'true' ); } else { o.removeAttribute( 'aria-current' ); }
+				} );
+				var so = 'novas' === a.dataset.filtro;
+				lista.querySelectorAll( 'li' ).forEach( function ( li ) { li.hidden = so && ! li.classList.contains( 'is-nova' ); } );
+			} );
+		} );
 	} )();
 
 	// Históricos: abas (Fichas / Agendas) + pesquisa na aba ativa.

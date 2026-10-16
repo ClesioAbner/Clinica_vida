@@ -402,7 +402,7 @@ final class Clinica_Repo {
 			'status'       => 'pendente',
 			'slot_ativo'   => 1,  // ocupa o horário (uq_slot impede duplicados)
 			'observacoes'  => $in['observacoes'],
-		) );
+		) + ( ! empty( $in['origem'] ) ? array( 'origem' => substr( (string) $in['origem'], 0, 16 ) ) : array() ) );
 
 		// Guardar já: criar_para_consulta() faz outro INSERT e $wpdb->insert_id
 		// passaria a ser o do pagamento, não o da consulta.

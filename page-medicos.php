@@ -2,8 +2,10 @@
 /**
  * Template Name: Clínica — Médicos
  *
- * Página pública da equipa: hero (texto + foto à direita) + grelha da equipa + CTA.
- * Reutiliza o cabeçalho e o rodapé da homepage para manter a identidade.
+ * Página pública da equipa, montada com os blocos da referência ClinicHub
+ * (os mesmos componentes .cv-* da página inicial, outra organização):
+ * hero → equipa ("our team") → forma de cuidar ("reviews") → FAQ.
+ * Cabeçalho e rodapé (com a faixa de marcação) são os do site público.
  *
  * @package Clinica
  */
@@ -14,15 +16,25 @@ defined( 'ABSPATH' ) || exit;
 get_header();
 ?>
 
-<div class="hp">
+<div class="hp hp--medicos">
 
 	<?php get_template_part( 'pages/home/site-header' ); ?>
 
-	<main id="conteudo" class="med">
+	<main id="conteudo">
 		<?php
-		get_template_part( 'pages/medicos/banner' );
-		get_template_part( 'pages/medicos/valores' );
+		// A ordem aqui é a ordem visual da página.
+		get_template_part( 'pages/medicos/hero' );
 		get_template_part( 'pages/medicos/equipa' );
+		get_template_part( 'pages/medicos/cuidar' );
+		get_template_part(
+			'pages/partials/faq',
+			null,
+			array(
+				'id'        => 'perguntas',
+				'titulo'    => 'Escolher o seu médico',
+				'perguntas' => Clinica_Homepage::faq_medicos(),
+			)
+		);
 		?>
 	</main>
 

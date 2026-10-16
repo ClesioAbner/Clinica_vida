@@ -2,8 +2,7 @@
 Theme Name:  Clinica
 Theme URI:   https://ngoma.co.mz
 Author:      Eclesio Abner Pembelane
-Description: Tema personalizado do sistema de gestao de clinica. So apresentacao 
-             a logica de negccio vive no plugin clinic-core.
+Description: Tema da Clínica Vida: site público e portais da clínica (médico, receção, gestão e direção).
 Version:     0.1.0
 Requires at least: 6.6
 Requires PHP: 8.1
@@ -11,10 +10,5 @@ Text Domain: clinica
 License:     GPL-2.0-or-later
 */
 
-/*
-  ATENCAO: nao escrever CSS de layout aqui.
-  Este ficheiro existe apenas para o cabeCalho que o WordPress lê.
-  Os estilos reais vem de:
-    • theme.json        → tokens (cor, tipografia, espaçamento)
-    • assets/css/main.css → camada de componentes (enfileirada em inc/enqueue.php)
-*/
+/* Só o cabeçalho que o WordPress lê. Os estilos vivem em assets/css/ e são
+   enfileirados em inc/enqueue.php. */

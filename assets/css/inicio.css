@@ -1,0 +1,655 @@
+/* Início (homepage 2026) — classes .ini-*
+
+   Linguagem visual da referência ClinicHub, recriada com o conteúdo e os
+   dados da Clínica Vida. Tokens (--ch-*, --hp-serif) vivem no .hp do
+   home.css; este ficheiro só carrega na página inicial. */
+
+.hp--inicio {
+	background: #fff;
+}
+
+/* Manifesto */
+.ini-manifesto {
+	margin: 0 8px;
+	padding: 140px 32px 90px;
+	overflow: hidden;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.ini-manifesto__texto {
+	max-width: 880px;
+	margin: 0 auto;
+	text-align: center;
+	font-family: var(--hp-serif);
+	font-size: 40px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+	color: #fff;
+}
+/* O JS marca .is-pronto e acende as palavras (.is-acesa) com o scroll. */
+.ini-manifesto__texto.is-pronto .ini-palavra {
+	color: rgba(255, 255, 255, 0.22);
+	transition: color 0.35s ease;
+}
+.ini-manifesto__texto.is-pronto .ini-palavra.is-acesa {
+	color: #fff;
+}
+
+.ini-colagem {
+	position: relative;
+	max-width: var(--hp-maxw);
+	height: 760px;
+	margin: 120px auto 0;
+}
+.ini-colagem__foto {
+	position: absolute;
+	left: var(--x);
+	top: var(--y);
+	width: clamp(84px, 10.5vw, 150px);
+	aspect-ratio: 1;
+	overflow: hidden;
+	border-radius: var(--ch-r-cartao);
+	background: #163a3c;
+	will-change: transform;
+	box-shadow: 0 24px 44px -24px rgba(0, 0, 0, 0.6);
+}
+.ini-colagem__foto img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.ini-colagem__titulo {
+	/* Centrado com inset + margin:auto (e não com transform): a animação de
+	   entrada usa transform e apagaria um translate(-50%,-50%). */
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	width: min(460px, 72%);
+	height: fit-content;
+	margin: auto;
+	text-align: center;
+	font-family: var(--hp-serif);
+	font-weight: 400;
+	font-size: 42px;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	color: #fff;
+	text-wrap: balance;
+}
+
+/* Especialidades */
+.ini-especialidades {
+	padding-top: 100px;
+}
+
+.ini-bento {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1.82fr) minmax(0, 2fr);
+	gap: 16px;
+}
+.ini-bento__lado {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-template-rows: 200px 200px;
+	gap: 16px;
+}
+.ini-esp {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	border-radius: var(--ch-r-cartao);
+	background: #e9ecea;
+}
+.ini-esp img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.ini-esp:hover img {
+	transform: scale(1.05);
+}
+.ini-esp--largo {
+	grid-column: 1 / -1;
+}
+.ini-bento__centro {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 30px;
+	padding: 40px 34px;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-menta);
+	text-align: center;
+}
+.ini-bento__marca {
+	width: 64px;
+	height: 64px;
+}
+.ini-bento--simples {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-auto-rows: 240px;
+}
+
+/* Porquê */
+.ini-porque {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	margin: 0 8px;
+	padding: 72px 32px 110px;
+	border-radius: var(--ch-r-secao);
+	background: var(--ch-escuro);
+}
+.ini-porque__bg img {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: -2;
+	width: 100%;
+	height: 82%;
+	object-fit: cover;
+	object-position: 50% 30%;
+}
+.ini-porque::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: linear-gradient(
+		to bottom,
+		rgba(9, 41, 43, 0.5) 0%,
+		rgba(9, 41, 43, 0.12) 30%,
+		rgba(9, 41, 43, 0.7) 56%,
+		var(--ch-escuro) 78%
+	);
+}
+.ini-porque .cv-head {
+	margin-bottom: 360px;
+}
+.ini-vidros {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	max-width: 1000px;
+	margin: 0 auto;
+}
+.ini-vidro {
+	display: flex;
+	flex-direction: column;
+	padding: 24px 26px 26px;
+	border-radius: var(--ch-r-cartao);
+	color: #fff;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	-webkit-backdrop-filter: blur(20px) saturate(120%);
+	backdrop-filter: blur(20px) saturate(120%);
+}
+.ini-vidro--alto {
+	grid-column: 2;
+	grid-row: 1 / span 2;
+}
+.ini-vidro__titulo {
+	margin: 0 0 10px;
+	font-size: 18px;
+	font-weight: 500;
+	color: #fff;
+}
+.ini-vidro__texto {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.45;
+	color: rgba(255, 255, 255, 0.8);
+}
+.ini-mock {
+	margin-top: auto;
+	padding-top: 28px;
+}
+
+.ini-mock--medico {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	width: 190px;
+	margin: 28px auto 0;
+	padding: 16px 14px 14px;
+	border-radius: 8px;
+	background: linear-gradient(180deg, #f4f6f6, #dde4e3);
+	color: var(--ch-escuro);
+	text-align: center;
+	box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.6);
+}
+.ini-mock--medico img {
+	width: 52px;
+	height: 52px;
+	margin-bottom: 8px;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center 20%;
+}
+.ini-mock--medico strong {
+	font-size: 15px;
+	font-weight: 500;
+}
+.ini-mock--medico span {
+	font-size: 13px;
+	color: var(--ch-cinza);
+}
+
+.ini-mock--agenda {
+	position: relative;
+	padding-bottom: 90px;
+}
+.ini-agenda {
+	display: grid;
+	gap: 8px;
+	width: min(340px, 86%);
+	padding: 14px 16px 16px;
+	border-radius: 8px;
+	background: rgba(244, 246, 246, 0.92);
+	color: var(--ch-escuro);
+	font-size: 13px;
+	box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.6);
+}
+.ini-agenda strong {
+	font-size: 14px;
+	font-weight: 500;
+}
+.ini-agenda__sub {
+	margin-top: -6px;
+	color: var(--ch-cinza);
+}
+.ini-agenda__campo {
+	padding: 7px 10px;
+	border: 1px solid #dfe4e3;
+	border-radius: 6px;
+	background: #fff;
+}
+.ini-agenda__acoes {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 4px;
+}
+.ini-agenda__ok {
+	padding: 7px 12px;
+	border-radius: 5px;
+	background: var(--ch-teal);
+	color: #fff;
+	font-weight: 600;
+}
+.ini-cal {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	width: 214px;
+	padding: 10px 12px 12px;
+	border-radius: 8px;
+	background: rgba(244, 246, 246, 0.96);
+	color: var(--ch-escuro);
+	font-size: 11px;
+	box-shadow: 0 18px 30px -16px rgba(0, 0, 0, 0.6);
+}
+.ini-cal__mes {
+	margin-bottom: 8px;
+	text-align: center;
+	font-size: 12px;
+	font-weight: 600;
+}
+.ini-cal__grelha {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 3px;
+	text-align: center;
+}
+.ini-cal__grelha span {
+	display: grid;
+	place-items: center;
+	height: 22px;
+	border-radius: 4px;
+}
+.ini-cal__dia-semana {
+	color: var(--ch-cinza);
+}
+.ini-cal__grelha .is-passado {
+	color: #a5adac;
+}
+.ini-cal__grelha .is-escolhido {
+	background: var(--ch-escuro);
+	color: #fff;
+	font-weight: 600;
+}
+
+.ini-mock--sms {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: start;
+	gap: 12px;
+	margin-top: 28px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: rgba(244, 246, 246, 0.92);
+	color: var(--ch-escuro);
+	box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.6);
+}
+.ini-sms__icone {
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 9px;
+	background: #fff;
+}
+.ini-sms__corpo {
+	display: grid;
+	gap: 2px;
+	font-size: 13px;
+	line-height: 1.35;
+}
+.ini-sms__corpo strong {
+	font-size: 14px;
+	font-weight: 600;
+}
+.ini-sms__hora {
+	font-size: 12px;
+	color: var(--ch-cinza);
+}
+
+/* Equipa */
+.ini-equipa {
+	padding-right: 0;
+	padding-left: 0;
+}
+.ini-equipa .hp-container {
+	box-sizing: content-box;
+	padding: 0 32px;
+}
+.ini-marquee {
+	overflow: hidden;
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+	mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+.ini-marquee__pista {
+	display: flex;
+	width: max-content;
+	animation: ini-marquee 60s linear infinite;
+}
+.ini-marquee:hover .ini-marquee__pista,
+.ini-marquee:focus-within .ini-marquee__pista {
+	animation-play-state: paused;
+}
+.ini-marquee__grupo {
+	display: flex;
+	gap: 24px;
+	margin: 0;
+	padding: 0 24px 0 0;
+	list-style: none;
+}
+.ini-marquee .cv-medico {
+	width: 300px;
+}
+@keyframes ini-marquee {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+/* Responsivo */
+@media (max-width: 1100px) {
+	.ini-bento {
+		grid-template-columns: 1fr;
+	}
+	.ini-bento__lado {
+		grid-template-rows: 220px 220px;
+	}
+	.ini-bento__centro {
+		padding: 48px 32px;
+	}
+	.ini-porque .cv-head {
+		margin-bottom: 300px;
+	}
+}
+
+@media (max-width: 900px) {
+	.ini-manifesto {
+		padding: 100px 24px 60px;
+	}
+	.ini-manifesto__texto {
+		font-size: 30px;
+	}
+	.ini-colagem {
+		height: 620px;
+		margin-top: 80px;
+	}
+	.ini-colagem__titulo {
+		font-size: 32px;
+	}
+	.ini-vidros {
+		grid-template-columns: 1fr;
+	}
+	.ini-vidro--alto {
+		grid-column: auto;
+		grid-row: auto;
+	}
+	.ini-equipa .hp-container {
+		padding: 0 24px;
+	}
+}
+
+@media (max-width: 640px) {
+	.ini-manifesto {
+		padding: 80px 20px 40px;
+	}
+	.ini-manifesto__texto {
+		font-size: 23px;
+		line-height: 1.35;
+	}
+	.ini-colagem {
+		height: 600px;
+		margin-top: 56px;
+	}
+	.ini-colagem__titulo {
+		width: 82%;
+		font-size: 28px;
+	}
+	/* No telemóvel o título ocupa quase a largura toda: as fotografias saem da
+	   faixa do meio (≈42–58%) para cima e para baixo. !important vence o style inline. */
+	.ini-colagem__foto:nth-child(1) {
+		--x: 6% !important;
+		--y: 2% !important;
+	}
+	.ini-colagem__foto:nth-child(2) {
+		--x: 40% !important;
+		--y: 0% !important;
+	}
+	.ini-colagem__foto:nth-child(3) {
+		--x: 72% !important;
+		--y: 8% !important;
+	}
+	.ini-colagem__foto:nth-child(4) {
+		--x: 12% !important;
+		--y: 22% !important;
+	}
+	.ini-colagem__foto:nth-child(5) {
+		--x: 70% !important;
+		--y: 26% !important;
+	}
+	.ini-colagem__foto:nth-child(6) {
+		--x: 18% !important;
+		--y: 72% !important;
+	}
+	.ini-colagem__foto:nth-child(7) {
+		--x: 62% !important;
+		--y: 70% !important;
+	}
+	.ini-mock--agenda {
+		padding-bottom: 0;
+	}
+	.ini-agenda {
+		width: 100%;
+	}
+	.ini-cal {
+		position: static;
+		width: 100%;
+		margin-top: 10px;
+	}
+	.ini-bento__lado {
+		grid-template-rows: 170px 170px;
+		gap: 10px;
+	}
+	.ini-bento {
+		gap: 10px;
+	}
+	.ini-porque {
+		padding: 56px 20px 72px;
+	}
+	.ini-porque__bg img {
+		height: 62%;
+	}
+	.ini-porque .cv-head {
+		margin-bottom: 240px;
+	}
+	.ini-equipa .hp-container {
+		padding: 0 20px;
+	}
+	.ini-marquee .cv-medico {
+		width: 240px;
+	}
+}
+
+/* Movimento reduzido: sem marquee (vira scroll horizontal) nem paralaxe. */
+@media (prefers-reduced-motion: reduce) {
+	.ini-marquee {
+		overflow-x: auto;
+		-webkit-mask-image: none;
+		mask-image: none;
+	}
+	.ini-marquee__pista {
+		animation: none;
+	}
+	.ini-marquee__grupo[aria-hidden="true"] {
+		display: none;
+	}
+	.ini-colagem__foto {
+		transform: none !important;
+	}
+}
+
+/* Colagem no telemóvel: uma grelha arrumada (título em cima, uma fotografia
+   grande e cinco pequenas), sem paralaxe — espalhadas e a 84px ficavam soltas. */
+@media (max-width: 640px) {
+	.ini-colagem {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 10px;
+		height: auto;
+		margin-top: 48px;
+	}
+	.ini-colagem__titulo {
+		position: static;
+		grid-column: 1 / -1;
+		order: -1;
+		width: auto;
+		margin: 0 0 14px;
+		font-size: 28px;
+	}
+	.ini-colagem__foto {
+		position: static;
+		width: auto;
+		transform: none !important;
+		border-radius: 14px;
+		box-shadow: 0 14px 26px -18px rgba(0, 0, 0, 0.7);
+	}
+	.ini-colagem__foto:nth-child(1) {
+		grid-column: span 2;
+		grid-row: span 2;
+	}
+	.ini-colagem__foto:nth-child(7) {
+		display: none;
+	}
+}
+
+/* Telemóvel: o "Porquê" com a fotografia inteira em cima (antes ficava cortada
+   e tapada pelos cartões) e as especialidades em carrossel. */
+@media (max-width: 640px) {
+	.ini-porque {
+		padding: 0 0 44px;
+	}
+	.ini-porque__bg {
+		position: relative;
+		display: block;
+	}
+	.ini-porque__bg img {
+		position: relative;
+		z-index: 0;
+		width: 100%;
+		height: auto;
+		aspect-ratio: 784 / 871;
+		object-position: 50% 30%;
+	}
+	.ini-porque__bg::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			to bottom,
+			rgba(9, 41, 43, 0.4) 0%,
+			rgba(9, 41, 43, 0) 26%,
+			rgba(9, 41, 43, 0.5) 68%,
+			var(--ch-escuro) 100%
+		);
+	}
+	.ini-porque::after {
+		display: none;
+	}
+	.ini-porque__inner {
+		position: relative;
+		z-index: 1;
+		margin-top: -116px;
+		padding: 0 16px;
+	}
+	.ini-porque .cv-head {
+		margin-bottom: 24px;
+	}
+
+	/* Especialidades em carrossel (desliza com o dedo); a chamada a marcar no fim. */
+	.ini-bento,
+	.ini-bento--simples {
+		display: flex;
+		gap: 12px;
+		margin: 0 calc(50% - 50vw);
+		padding: 4px 20px 6px;
+		overflow-x: auto;
+		scroll-snap-type: x mandatory;
+		scroll-padding: 0 20px;
+		scrollbar-width: none;
+	}
+	.ini-bento::-webkit-scrollbar {
+		display: none;
+	}
+	.ini-bento__lado {
+		display: contents;
+	}
+	.ini-esp,
+	.ini-esp--largo {
+		flex: 0 0 74%;
+		height: 320px;
+		grid-column: auto;
+		scroll-snap-align: start;
+	}
+	.ini-bento__centro {
+		order: 2;
+		flex: 0 0 74%;
+		justify-content: center;
+		min-height: 320px;
+		padding: 28px 22px;
+		scroll-snap-align: start;
+	}
+	.ini-bento__centro .cv-h3 {
+		font-size: 24px;
+	}
+}

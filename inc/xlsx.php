@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Clinica_Xlsx {
 
-	/** Letra da coluna a partir do índice 0 (0=A, 26=AA…). */
+	// Letra da coluna a partir do índice 0 (0=A, 26=AA…). */
 	private static function col( int $i ): string {
 		$s = '';
 		$i++;
@@ -55,7 +55,7 @@ final class Clinica_Xlsx {
 			}
 		}
 
-		// ---- sheet1.xml ----
+		//  sheet1.xml 
 		$cols_xml = '<cols>';
 		foreach ( $larg as $i => $w ) {
 			$cols_xml .= '<col min="' . ( $i + 1 ) . '" max="' . ( $i + 1 ) . '" width="' . round( $w, 1 ) . '" customWidth="1"/>';
@@ -105,7 +105,7 @@ final class Clinica_Xlsx {
 			. '<mergeCells count="1"><mergeCell ref="' . $merge . '"/></mergeCells>'
 			. '</worksheet>';
 
-		// ---- styles.xml ----
+		// styles.xml
 		$styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
 			. '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
 			. '<numFmts count="2"><numFmt numFmtId="164" formatCode="#,##0"/><numFmt numFmtId="165" formatCode="#,##0.00"/></numFmts>'

@@ -50,7 +50,7 @@ final class Clinica_Login_Guard {
 		add_action( 'send_headers', array( self::class, 'cabecalhos_seguranca' ) );
 	}
 
-	// ---------------------------------------------------------------- IP / chave
+	// IP / chave
 
 	/**
 	 * IP do cliente. Usa REMOTE_ADDR (fonte fiável); cabeçalhos de proxy como
@@ -66,7 +66,7 @@ final class Clinica_Login_Guard {
 		return 'clg_' . hash( 'sha256', self::ip() . wp_salt( 'auth' ) );
 	}
 
-	// ---------------------------------------------------------------- Rate limit
+	// Rate limit
 
 	/** Antes de autenticar: se o IP está bloqueado, recusa de imediato. */
 	public static function recusar_se_bloqueado( $user ) {
@@ -116,7 +116,7 @@ final class Clinica_Login_Guard {
 		delete_transient( self::chave() );
 	}
 
-	// ---------------------------------------------------------------- Mensagens
+	// Mensagens
 
 	/**
 	 * Mensagem de erro única para credenciais inválidas -> não revela se o
@@ -129,7 +129,7 @@ final class Clinica_Login_Guard {
 		return esc_html__( 'Credenciais inválidas. Verifique o utilizador e a palavra-passe.', 'clinica' );
 	}
 
-	// ---------------------------------------------------------------- Cabeçalhos
+	// Cabeçalhos
 
 	/** Cabeçalhos de segurança no frontend (equivalente ao "helmet"). */
 	public static function cabecalhos_seguranca(): void {

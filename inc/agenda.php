@@ -23,9 +23,9 @@ final class Clinica_Agenda {
 	const T_BLOQUEIOS = 'clinica_bloqueios';
 	const DB_VERSION  = '1';
 
-	/** dia_semana segue o ISO: 1=Segunda … 7=Domingo (= date('N')). */
+	// dia_semana segue o ISO: 1=Segunda … 7=Domingo (= date('N')). */
 
-	/** Cria as tabelas de feriados/bloqueios e semeia horários por omissão. */
+	// Cria as tabelas de feriados/bloqueios e semeia horários por omissão. */
 	public static function instalar(): void {
 		if ( get_option( 'clinica_agenda_db' ) === self::DB_VERSION ) {
 			return;
@@ -73,16 +73,27 @@ final class Clinica_Agenda {
 		update_option( 'clinica_agenda_db', self::DB_VERSION );
 	}
 
+
+	// Converte hora 'HH:MM' em minutos desde 00:00. */
 	private static function min( string $hora ): int {
 		$p = explode( ':', $hora );
 		return ( (int) $p[0] ) * 60 + ( (int) ( $p[1] ?? 0 ) );
 	}
 
+	// Converte minutos desde 00:00 em hora 'HH:MM'.
+	public static function min_para_hora( int $minutos ): string {
+		$horas = floor( $minutos / 60 );
+		$min   = $minutos % 60;
+		return sprintf( '%02d:%02d', $horas, $min );
+	}
+
+	// Converte hora 'HH:MM' em minutos desde 00:00. 
 	public static function e_feriado( string $data ): bool {
 		global $wpdb;
 		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM " . self::T_FERIADOS . " WHERE data = %s", $data ) );
 	}
 
+	// Verifica se um médico está bloqueado/folga numa data. 
 	public static function esta_bloqueado( int $medico_id, string $data ): bool {
 		global $wpdb;
 		return (bool) $wpdb->get_var( $wpdb->prepare(
@@ -91,10 +102,10 @@ final class Clinica_Agenda {
 		) );
 	}
 
-	/**
-	 * Horas disponíveis ('HH:MM') de um médico numa data (Y-m-d).
-	 * Devolve [] se o dia não tiver disponibilidade.
-	 */
+	
+	 // Horas disponíveis ('HH:MM') de um médico numa data (Y-m-d).
+	 //Devolve [] se o dia não tiver disponibilidade.
+	 
 	public static function slots_livres( int $medico_id, string $data ): array {
 		global $wpdb;
 
@@ -167,7 +178,7 @@ final class Clinica_Agenda {
 
 	// Leituras (gestão)
 
-	/** Horário semanal de um médico. */
+	// Horário semanal de um médico. */
 	public static function horarios_medico( int $medico_id ): array {
 		global $wpdb;
 		return $wpdb->get_results( $wpdb->prepare(
@@ -176,13 +187,13 @@ final class Clinica_Agenda {
 		), ARRAY_A ) ?: array();
 	}
 
-	/** Todos os feriados. */
+	// Todos os feriados. */
 	public static function feriados(): array {
 		global $wpdb;
 		return $wpdb->get_results( "SELECT id, data, descricao FROM " . self::T_FERIADOS . " ORDER BY data", ARRAY_A ) ?: array();
 	}
 
-	/** Todos os bloqueios/folgas, com o nome do médico. */
+	// Todos os bloqueios/folgas, com o nome do médico. */
 	public static function bloqueios_todos(): array {
 		global $wpdb;
 		return $wpdb->get_results(
@@ -204,10 +215,10 @@ final class Clinica_Agenda {
 	}
 }
 
-/**
- * Controlador PRG da gestão de agenda (horários, feriados, folgas).
- * Requer capability clinica_gerir_agenda (secretária/admin).
- */
+
+ // Controlador PRG da gestão de agenda (horários, feriados, folgas).
+ // Requer capability clinica_gerir_agenda (secretária/admin).
+ 
 function clinica_controller_agenda(): void {
 	if ( empty( $_POST['ag_action'] ) ) {
 		return;

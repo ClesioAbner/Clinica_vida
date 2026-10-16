@@ -1,66 +1,109 @@
-/* ==========================================================================
-   Homepage da Clínica — camada de apresentação
+/* Fonte de display (Lora, var --hp-serif) — carregada em inc/enqueue.php, no
+   mesmo pedido que a Inter. */
+
+/* Homepage da Clínica — camada de apresentação
    Sistema de apresentação da homepage (protótipo interno).
 
    Convenções:
      • Todas as classes têm o prefixo .hp-  (homepage) e vivem dentro de .hp
        -> isolamento total do CSS dos portais (clinic-portal.css).
      • Cores, raios e larguras são tokens no :root de .hp (fáceis de mudar).
-     • Desktop-first; os breakpoints no fim empilham as grelhas.
-   ========================================================================== */
+     • Desktop-first; os breakpoints no fim empilham as grelhas. */
 
 .hp {
-	/* — Paleta (teal clínico) — */
-	--hp-primary:     #4E7E9B;
-	--hp-primary-600: #3F6D89;
-	--hp-primary-700: #33566B;
-	--hp-teal-300:    #8FB6C9;
-	--hp-teal-200:    #A9C9DB;
-	--hp-teal-100:    #B7D2DF;
-	--hp-tint:        #E4EEF4;
-	--hp-tint-hero:   #EDF4F8;
-	--hp-surface-50:  #F2F7FA;
-	--hp-bg-soft:     #f5f7fa;
+	/* Paleta dos painéis e páginas de conta — os mesmos petróleo/teal/menta
+	   da referência ClinicHub (ver --ch-* abaixo), em tons de interface. */
+	--hp-primary: #155e63;
+	--hp-primary-600: #0f4a4e;
+	--hp-primary-700: #09292b;
+	--hp-teal-300: #7db8a8;
+	--hp-teal-200: #9fcdbe;
+	--hp-teal-100: #bfdfd3;
+	--hp-tint: #e6f4ec;
+	--hp-tint-hero: #eff8f2;
+	--hp-surface-50: #f3f9f5;
+	--hp-bg-soft: #f6f8f7;
 
-	/* — Texto e linhas — */
-	--hp-ink:         #0f172a;
-	--hp-muted:       #64748b;
-	--hp-muted-2:     #475569;
-	--hp-muted-soft:  #94a3b8;
-	--hp-border:      #e8edf3;
-	--hp-border-2:    #dbe4f0;
-	--hp-border-3:    #DCE8EF;
-	--hp-border-strong: #cbd9de;
-	--hp-star:        #f59e0b;
+	/* Petróleo fundo (faixa "Serviços") e acento quente.
+	   O petróleo dá seriedade clínica e faz os cartões brancos saltar. O âmbar é
+	   o ÚNICO gesto quente da página (a "Vida", a luz de Maputo), usado uma só
+	   vez, no hero — complementar do teal, par sóbrio e não decorativo. */
+	--hp-deep-1: #155e63;
+	--hp-deep-2: #09292b;
+	--hp-accent: #e0954a;
+	--hp-accent-soft: #f3e1c9;
 
-	/* — Estado (sucesso/erro) —
+	/* Texto e linhas */
+	--hp-ink: #0b1f20;
+	--hp-muted: #6f6f6f;
+	--hp-muted-2: #3b3b3b;
+	--hp-muted-soft: #9aa19e;
+	--hp-border: #e6e8e6;
+	--hp-border-2: #dce2de;
+	--hp-border-3: #dce7e1;
+	--hp-border-strong: #cfd6d2;
+	--hp-star: #f59e0b;
+
+	/* Estado (sucesso/erro).
 	   Mesmos valores que os portais já usavam em hardcode: um alerta tem o
 	   mesmo aspeto na homepage, na agenda e na receção. */
-	--hp-ok-tint:   #E7F3EE;
-	--hp-ok-ink:    #245B3B;
-	--hp-ok-line:   #B9DCC9;
-	--hp-erro-tint: #FBEDEC;
-	--hp-erro-ink:  #8A2F29;
-	--hp-erro-line: #E7C7C4;
+	--hp-ok-tint: #e7f3ee;
+	--hp-ok-ink: #245b3b;
+	--hp-ok-line: #b9dcc9;
+	--hp-erro-tint: #fbedec;
+	--hp-erro-ink: #8a2f29;
+	--hp-erro-line: #e7c7c4;
 
-	/* — Forma — */
-	--hp-radius:    8px;
+	/* Forma */
+	--hp-radius: 8px;
 	--hp-radius-lg: 16px;
-	--hp-pill:      999px;
-	--hp-maxw:      1200px;
+	--hp-pill: 999px;
+	--hp-maxw: 1200px;
 
-	font-family: 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+	/* Linguagem visual 2026 (referência ClinicHub, adaptada à Clínica Vida).
+	   Valores medidos na referência: serifa Lora 400, petróleo #09292B, teal
+	   #155E63, menta #EAFFE3, raios 15/20px, botões brancos de raio 12px. */
+	--hp-serif: "Lora", Georgia, "Times New Roman", serif;
+	--ch-escuro: #09292b;
+	--ch-teal: #155e63;
+	--ch-menta: #eaffe3;
+	--ch-creme: #f2eae1; /* fundo dos retratos da equipa */
+	--ch-verde-10: rgba(34, 168, 105, 0.1);
+	--ch-texto: #000;
+	--ch-texto-2: #3b3b3b;
+	--ch-cinza: #6f6f6f;
+	--ch-linha: #e6e8e6;
+	--ch-vidro: rgba(18, 18, 18, 0.55);
+	--ch-r-cartao: 15px;
+	--ch-r-secao: 20px;
+	--ch-r-botao: 12px;
+
+	font-family:
+		"Inter",
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		sans-serif;
 	color: var(--hp-ink);
 	-webkit-font-smoothing: antialiased;
 }
-.hp *, .hp *::before, .hp *::after { box-sizing: border-box; }
+.hp *,
+.hp *::before,
+.hp *::after {
+	box-sizing: border-box;
+}
 /* Reset de links com :where() -> especificidade mínima (0,1,0).
    Assim os componentes (.hp-btn--*, .hp-nav__link, ...) ganham por ordem de
    cascata, sem o link genérico lhes roubar a cor (era o bug do botão azul vazio). */
-.hp :where(a) { text-decoration: none; color: var(--hp-primary); }
-.hp :where(a:hover) { color: var(--hp-primary-600); }
+.hp :where(a) {
+	text-decoration: none;
+	color: var(--hp-primary);
+}
+.hp :where(a:hover) {
+	color: var(--hp-primary-600);
+}
 
-/* — Acessibilidade —
+/* Acessibilidade.
    Anel de foco único para todo o site. :focus-visible (e não :focus) só marca
    quem navega por teclado, sem pôr anéis a quem clica com o rato.
    Fica aqui, na base, para nenhum componente ter de se lembrar dele. */
@@ -73,330 +116,994 @@
 /* Texto só para leitores de ecrã: rótulos que o desenho resolve por placeholder
    mas que a navegação por voz/teclado precisa de ouvir. */
 .hp-sr-only {
-	position: absolute; width: 1px; height: 1px;
-	padding: 0; margin: -1px; overflow: hidden;
-	clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
 }
 
 /* Atalho "saltar para o conteúdo": invisível até receber foco (primeiro Tab). */
 .hp-skip {
-	position: absolute; left: 50%; top: 0; transform: translate(-50%, -120%);
-	z-index: 100; padding: 12px 20px;
-	background: var(--hp-primary); color: #fff;
+	position: absolute;
+	left: 50%;
+	top: 0;
+	transform: translate(-50%, -120%);
+	z-index: 100;
+	padding: 12px 20px;
+	background: var(--hp-primary);
+	color: #fff;
 	border-radius: 0 0 var(--hp-radius) var(--hp-radius);
-	font-size: 14px; font-weight: 600;
-	transition: transform .18s ease;
+	font-size: 14px;
+	font-weight: 600;
+	transition: transform 0.18s ease;
 }
-.hp-skip:focus { transform: translate(-50%, 0); color: #fff; }
+.hp-skip:focus {
+	transform: translate(-50%, 0);
+	color: #fff;
+}
 
 /* Quem prefere menos movimento, não leva movimento nenhum. */
 @media (prefers-reduced-motion: reduce) {
-	.hp *, .hp *::before, .hp *::after {
-		animation-duration: .01ms !important;
+	.hp *,
+	.hp *::before,
+	.hp *::after {
+		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
-		transition-duration: .01ms !important;
+		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
 	}
 }
 
 /* Centrador comum: largura máxima do conteúdo. O espaçamento lateral (32px)
    é dado por cada secção, para o fundo poder ir de ponta a ponta. */
-.hp-container { max-width: var(--hp-maxw); margin: 0 auto; }
-
-/* — Botões (uma base + variantes) — */
-.hp-btn {
-	display: inline-flex; align-items: center; justify-content: center;
-	border-radius: var(--hp-pill); font-weight: 600; cursor: pointer;
-	transition: background .2s, color .2s, border-color .2s, box-shadow .2s, transform .2s;
+.hp-container {
+	max-width: var(--hp-maxw);
+	margin: 0 auto;
 }
-.hp-btn--primary { padding: 10px 22px; font-size: 14px; color: #fff; background: var(--hp-primary); border: none; box-shadow: 0 4px 14px rgba(78,126,155,.25); }
-.hp-btn--primary:hover { background: var(--hp-primary-600); color: #fff; }
-.hp-btn--ghost { padding: 10px 20px; font-size: 14px; color: var(--hp-primary); background: #fff; border: 1.5px solid var(--hp-border-2); }
-.hp-btn--ghost:hover { border-color: var(--hp-primary); background: var(--hp-surface-50); color: var(--hp-primary-600); }
-.hp-btn--outline { color: var(--hp-ink); background: #fff; border: 1.5px solid var(--hp-border-2); }
-.hp-btn--outline:hover { border-color: var(--hp-primary); color: var(--hp-primary); }
-.hp-btn--white { color: var(--hp-primary-700); background: #fff; border: none; box-shadow: 0 6px 20px rgba(15,23,42,.15); }
-.hp-btn--white:hover { background: var(--hp-surface-50); color: var(--hp-primary-700); }
-.hp-btn--lg { padding: 15px 30px; font-size: 15px; }
-.hp-btn--primary.hp-btn--lg { box-shadow: 0 6px 20px rgba(78,126,155,.3); }
 
-/* — Título de secção centrado (eyebrow + h2 + lead) — */
-.hp-head { text-align: center; max-width: 560px; margin: 0 auto 56px; }
-.hp-eyebrow { font-size: 13px; font-weight: 700; color: var(--hp-primary); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 12px; }
-.hp-head__title { margin: 0 0 16px; font-size: 36px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
-.hp-head__lead { margin: 0; font-size: 16px; line-height: 1.6; color: var(--hp-muted); }
+/* Botões (uma base + variantes) */
+/* min-height 44px: alvo de toque mínimo (WCAG 2.5.5). O gap separa texto e
+   ícone/seta — num inline-flex o espaço em branco do HTML desaparece. */
+.hp-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 44px;
+	border-radius: var(--hp-pill);
+	font-weight: 600;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		color 0.2s,
+		border-color 0.2s,
+		box-shadow 0.2s,
+		transform 0.2s;
+}
+.hp-btn--white {
+	color: var(--hp-primary-700);
+	background: #fff;
+	border: none;
+	box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15);
+}
+.hp-btn--white:hover {
+	background: var(--hp-surface-50);
+	color: var(--hp-primary-700);
+}
+.hp-btn--lg {
+	padding: 15px 30px;
+	font-size: 15px;
+}
+/* Botão translúcido para fundos escuros/fotografia (menu móvel, hero, CTA). */
+.hp-btn--vidro {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.08);
+	border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.hp .hp-btn--vidro:hover {
+	color: #fff;
+	background: rgba(255, 255, 255, 0.16);
+	border-color: rgba(255, 255, 255, 0.5);
+}
 
+/* Título de secção centrado (eyebrow + h2 + lead) */
 
-/* ---------------------------------------------------------------- HEADER */
+/* Header
+   Três "pílulas" de vidro escuro a flutuar sobre a página (referência
+   ClinicHub): marca · navegação · CTA branco. Sem barra de fundo — o vidro
+   lê-se sobre fotografia e sobre branco. Abaixo de 960px vira uma só barra. */
 .hp-header {
-	position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-	background: rgba(255,255,255,.92); backdrop-filter: blur(12px);
-	border-bottom: 1px solid var(--hp-border);
+	position: fixed;
+	top: 22px;
+	left: 0;
+	right: 0;
+	z-index: 100;
+	padding: 0 32px;
+	pointer-events: none; /* só as pílulas recebem cliques */
 }
 .hp-header__inner {
-	max-width: var(--hp-maxw); margin: 0 auto; padding: 0 32px; height: 88px;
-	display: flex; align-items: center; justify-content: space-between; gap: 32px;
+	max-width: var(--hp-maxw);
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
 }
-.hp-logo { display: flex; align-items: center; gap: 10px; color: var(--hp-ink); }
-/* Logo em imagem: encaixa na altura do header (88px) mantendo a proporção. */
-.hp-logo__img { height: 74px; width: auto; display: block; object-fit: contain; }
-/* Marca alternativa em texto (usada no rodapé). */
-.hp-logo__mark { width: 36px; height: 36px; border-radius: 8px; background: var(--hp-primary); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; }
-.hp-logo__text { font-size: 19px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
-.hp-logo__text b { color: var(--hp-primary); font-weight: 800; }
-.hp-nav { display: flex; align-items: center; gap: 32px; }
-.hp-nav__link { font-size: 14.5px; font-weight: 500; color: var(--hp-muted-2); }
-.hp-nav__link:hover { color: var(--hp-primary); }
-.hp-nav__link.is-active { color: var(--hp-primary); font-weight: 600; }
-.hp-header__actions { display: flex; align-items: center; gap: 14px; }
-/* Conta autenticada: foto + nome (indica sessão iniciada). */
-.hp-account { display: inline-flex; align-items: center; gap: 9px; padding: 4px 12px 4px 4px; border: 1px solid var(--hp-border-2); border-radius: 999px; text-decoration: none; transition: border-color .2s, box-shadow .2s; }
-.hp-account:hover { border-color: var(--hp-primary); box-shadow: 0 2px 10px rgba(78,126,155,.14); }
-.hp-account__img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: block; }
-.hp-account__name { font-size: 14px; font-weight: 600; color: var(--hp-ink); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-
-/* ------------------------------------------------------------------ HERO */
-.hp-hero { background: var(--hp-tint-hero); padding: 152px 32px 0; }
-.hp-hero__inner { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,.95fr); gap: 56px; align-items: center; }
-.hp-hero__text { padding-bottom: 72px; }
-.hp-hero__title { margin: 0 0 20px; font-size: 52px; line-height: 1.12; font-weight: 800; letter-spacing: -.03em; color: var(--hp-ink); }
-.hp-hero__lead { margin: 0 0 32px; font-size: 17px; line-height: 1.65; color: var(--hp-muted); max-width: 480px; }
-.hp-hero__actions { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
-/* Sinais de confiança: linha discreta de vantagens com "visto" teal. */
-.hp-hero__trust { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; list-style: none; }
-.hp-hero__trust li { position: relative; padding-left: 22px; font-size: 14px; font-weight: 500; color: var(--hp-muted-2); }
-.hp-hero__trust li::before { content: "✓"; position: absolute; left: 0; top: 0; color: var(--hp-primary); font-weight: 800; }
-.hp-hero__media { position: relative; align-self: end; }
-/* A foto (medica3.png) já vem redonda — círculo + anel azul embutidos.
-   Como o PNG não tem transparência (cantos brancos), recortamo-la em círculo
-   para os cantos desaparecerem sobre o fundo teal. O leve scale come qualquer
-   margem branca residual, deixando o anel encostado à borda. */
-.hp-hero__photo {
-	display: block; width: 100%; max-width: 520px; margin-left: auto;
-	aspect-ratio: 1 / 1; border-radius: 50%; overflow: hidden;
+.hp-pill,
+.hp-menu-toggle {
+	pointer-events: auto;
+	background: var(--ch-vidro);
+	-webkit-backdrop-filter: blur(14px) saturate(140%);
+	backdrop-filter: blur(14px) saturate(140%);
+	border-radius: 10px;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
-.hp-hero__photo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.04); }
-
-/* Cartão de estatísticas que "flutua" sobre a secção seguinte. */
-.hp-stats {
-	background: #fff; border-radius: var(--hp-radius); box-shadow: 0 16px 40px rgba(15,23,42,.10);
-	padding: 32px 48px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 24px;
-	transform: translateY(50%);
+.hp-logo {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 14px 6px 6px;
+	color: #fff;
+	flex-shrink: 0;
 }
-.hp-stat__n { font-size: 30px; font-weight: 800; color: var(--hp-ink); letter-spacing: -.02em; }
-.hp-stat__l { font-size: 13.5px; color: var(--hp-muted); margin-top: 4px; }
-.hp-stat + .hp-stat { border-left: 1px solid var(--hp-tint); padding-left: 32px; }
-
-
-/* --------------------------------------------------- BARRA DE MARCAÇÃO */
-/* padding-top grande porque o cartão de estatísticas invade esta secção. */
-.hp-marcacao { padding: 120px 32px 0; background: #fff; }
-/* Barra teal elevada com os campos (brancos) em caixas próprias + botão. */
-.hp-search__bar {
-	background: var(--hp-teal-300); border: none; border-radius: 16px;
-	box-shadow: 0 12px 30px rgba(78,126,155,.25);
-	padding: 14px; display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: stretch;
+.hp-logo__tile {
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 8px;
+	background: linear-gradient(160deg, #fff 0%, #dfe7e6 100%);
+	box-shadow: inset 0 -2px 4px rgba(9, 41, 43, 0.12);
 }
-/* Cada campo: ícone + (rótulo em cima, controlo em baixo). */
-.hp-field { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid transparent; border-radius: 12px; transition: border-color .2s, box-shadow .2s; }
-.hp-field:focus-within { border-color: var(--hp-primary-700); box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
-.hp-field__icon { width: 20px; height: 20px; color: var(--hp-primary); flex-shrink: 0; }
-.hp-field__body { flex: 1; min-width: 0; }
-.hp-field__label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--hp-muted); margin-bottom: 2px; }
-.hp-field__control { width: 100%; border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--hp-ink); padding: 0; cursor: pointer; }
-.hp-field__control:focus { outline: none; }
-.hp-search__submit { min-height: 60px; padding: 0 30px; border: none; border-radius: 12px; background: var(--hp-primary); color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 6px 16px rgba(78,126,155,.28); transition: background .2s, transform .2s; }
-.hp-search__submit svg { width: 18px; height: 18px; }
-.hp-search__submit:hover { background: var(--hp-primary-600); transform: translateY(-1px); }
-
-
-/* -------------------------------------------------------- ESPECIALIDADES */
-.hp-especialidades { padding: 48px 32px 96px; background: #fff; }
-.hp-esp-grid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 20px; }
-/* Cartão quadrado minimalista (estilo "Department Category"): borda + ícone. */
-.hp-esp { aspect-ratio: 1 / 1; background: #fff; border: 1px solid var(--hp-border-3); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 18px; text-align: center; transition: box-shadow .2s, transform .2s, border-color .2s; }
-.hp-esp:hover { box-shadow: 0 12px 28px rgba(78,126,155,.15); transform: translateY(-3px); border-color: var(--hp-primary); }
-/* Ícone anatómico em linha, azul suave, SEM caixa de fundo (como na referência). */
-.hp-esp__icon { width: 54px; height: 54px; color: var(--hp-teal-300); display: flex; align-items: center; justify-content: center; transition: color .2s; }
-.hp-esp__icon svg { width: 100%; height: 100%; }
-.hp-esp:hover .hp-esp__icon { color: var(--hp-primary); }
-.hp-esp__name { font-size: 13.5px; font-weight: 600; color: var(--hp-muted-2); }
-
-
-/* ----------------------------------------------------------------- SOBRE */
-.hp-sobre { padding: 96px 32px; background: #7FA6BC; }
-.hp-sobre__inner { display: grid; grid-template-columns: minmax(0,.95fr) minmax(0,1.15fr) minmax(0,.8fr); gap: 48px; align-items: center; }
-.hp-sobre__title { margin: 0 0 20px; font-size: 34px; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; color: #fff; }
-.hp-sobre__lead { margin: 0 0 32px; font-size: 15px; line-height: 1.7; color: rgba(255,255,255,.88); }
-/* Cartões de serviço alinhados numa grelha 2×2 (como na referência). */
-.hp-servicos { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; }
-.hp-servico { background: #fff; border-radius: 12px; padding: 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.10); transition: transform .2s, box-shadow .2s; }
-.hp-servico:hover { transform: translateY(-4px); box-shadow: 0 16px 34px rgba(15,23,42,.16); }
-.hp-servico__icon { width: 44px; height: 44px; border-radius: 10px; background: var(--hp-tint); color: var(--hp-primary); display: flex; align-items: center; justify-content: center; }
-.hp-servico__icon svg { width: 22px; height: 22px; }
-.hp-servico__title { font-size: 15px; font-weight: 700; color: var(--hp-ink); }
-.hp-servico__text { font-size: 13px; line-height: 1.6; color: var(--hp-muted); }
-.hp-sobre__media { position: relative; width: 100%; height: 420px; min-width: 0; }
-.hp-sobre__media img { width: 100%; height: 100%; object-fit: cover; object-position: center top; border-radius: var(--hp-radius-lg); }
-
-
-/* --------------------------------------------------------------- MÉDICOS */
-.hp-medicos { padding: 96px 32px; background: #fff; }
-.hp-medicos__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 56px; }
-.hp-medicos__intro { max-width: 520px; }
-.hp-medicos__title { margin: 0; font-size: 36px; font-weight: 800; letter-spacing: -.02em; color: var(--hp-ink); }
-.hp-med-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-.hp-med { display: block; background: #fff; border: 1px solid var(--hp-border); border-radius: var(--hp-radius); overflow: hidden; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: box-shadow .25s, transform .25s, border-color .25s; }
-.hp-med:hover { box-shadow: 0 16px 36px rgba(78,126,155,.14); border-color: var(--hp-teal-200); transform: translateY(-4px); }
-.hp-med__photo { width: 100%; aspect-ratio: 4 / 5; background: var(--hp-tint); overflow: hidden; }
-.hp-med__photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; transition: transform .4s; }
-.hp-med:hover .hp-med__photo img { transform: scale(1.04); }
-.hp-med__body { padding: 18px 20px 22px; }
-.hp-med__spec { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--hp-primary); margin-bottom: 6px; }
-.hp-med__name { font-size: 17px; font-weight: 700; color: var(--hp-ink); line-height: 1.25; }
-.hp-med__cargo { font-size: 13px; font-weight: 500; color: var(--hp-muted); margin-top: 3px; }
-
-
-/* ------------------------------------------------------------ TESTEMUNHOS */
-.hp-testemunhos { padding: 96px 32px; background: var(--hp-bg-soft); }
-.hp-test-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.hp-test { position: relative; margin: 0; overflow: hidden; background: #fff; border: 1px solid var(--hp-border); border-radius: 18px; padding: 32px 30px 26px; box-shadow: 0 2px 10px rgba(15,23,42,.04); display: flex; flex-direction: column; transition: box-shadow .25s, transform .25s, border-color .25s; }
-.hp-test:hover { box-shadow: 0 18px 40px rgba(78,126,155,.14); border-color: var(--hp-teal-200); transform: translateY(-4px); }
-/* Aspa decorativa grande, discreta, no canto superior. */
-.hp-test__quote { position: absolute; top: 6px; right: 24px; font-family: Georgia, "Times New Roman", serif; font-size: 96px; line-height: 1; font-weight: 700; color: var(--hp-primary); opacity: .1; pointer-events: none; }
-.hp-test__text { position: relative; z-index: 1; margin: 0 0 24px; font-size: 15.5px; line-height: 1.75; color: #334155; flex: 1; }
-.hp-test__author { display: flex; align-items: center; gap: 12px; padding-top: 20px; border-top: 1px solid var(--hp-border); }
-.hp-test__avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--hp-tint); color: var(--hp-primary); display: flex; align-items: center; justify-content: center; font-size: 14.5px; font-weight: 700; box-shadow: 0 0 0 4px rgba(78,126,155,.08); }
-.hp-test__who { flex: 1; min-width: 0; }
-.hp-test__name { font-size: 14.5px; font-weight: 700; color: var(--hp-ink); }
-.hp-test__detail { font-size: 12.5px; color: var(--hp-muted); margin-top: 1px; }
-.hp-test__stars { flex: none; display: inline-flex; gap: 2px; color: var(--hp-star); }
-
-
-/* --------------------------------------------------------- CTA / CONTACTO */
-.hp-contacto { padding: 96px 32px; background: #fff; }
-.hp-contacto__card { background: var(--hp-primary); border-radius: var(--hp-radius-lg); padding: 64px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 64px; align-items: center; box-shadow: 0 20px 50px rgba(78,126,155,.30); }
-.hp-contacto__title { margin: 0 0 16px; font-size: 34px; font-weight: 800; letter-spacing: -.02em; color: #fff; }
-.hp-contacto__lead { margin: 0 0 36px; font-size: 16px; line-height: 1.65; color: rgba(255,255,255,.85); max-width: 440px; }
-.hp-contacts { display: flex; flex-direction: column; gap: 20px; }
-.hp-contact { display: flex; align-items: center; gap: 14px; }
-.hp-contact__icon { width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.hp-contact__label { font-size: 12.5px; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-.hp-contact__value { font-size: 16px; font-weight: 700; color: #fff; }
-/* Formulário de pedido rápido. */
-.hp-form { background: #fff; border-radius: var(--hp-radius); padding: 32px; box-shadow: 0 12px 32px rgba(15,23,42,.18); }
-.hp-form__title { font-size: 19px; font-weight: 800; color: var(--hp-ink); margin-bottom: 20px; }
-.hp-form__fields { display: flex; flex-direction: column; gap: 14px; }
-.hp-input { height: 46px; padding: 0 14px; border-radius: var(--hp-radius); border: 1.5px solid var(--hp-border-2); background: var(--hp-bg-soft); font-family: inherit; font-size: 14px; color: var(--hp-ink); width: 100%; }
-/* Sem outline:none — o anel de foco da camada de acessibilidade tem de passar.
-   A borda só reforça o estado para quem usa o rato. */
-.hp-input:focus { border-color: var(--hp-primary); }
-/* Textarea: a altura fixa de .hp-input não serve para texto livre. */
-.hp-input--area { height: auto; min-height: 88px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
-.hp-form__submit { height: 48px; border: none; border-radius: var(--hp-pill); background: var(--hp-primary); color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(78,126,155,.25); }
-.hp-form__submit:hover { background: var(--hp-primary-600); }
-.hp-form__note { font-size: 12px; color: var(--hp-muted-soft); text-align: center; line-height: 1.5; }
-
-/* Alerta do controlador PRG (clinica_render_flash imprime .cl-alert).
-   O site público precisa da regra própria: o CSS dos portais não carrega aqui. */
-.hp .cl-alert { padding: 12px 16px; margin-bottom: 14px; border-radius: var(--hp-radius); font-size: 14px; font-weight: 600; line-height: 1.45; }
-.hp .cl-alert--success { background: var(--hp-ok-tint); color: var(--hp-ok-ink); border: 1px solid var(--hp-ok-line); }
-.hp .cl-alert--error { background: var(--hp-erro-tint); color: var(--hp-erro-ink); border: 1px solid var(--hp-erro-line); }
-
-
-/* ---------------------------------------------------------------- FOOTER */
-/* Faixa final de call-to-action — full-bleed editorial (imagem + overlay teal). */
-.hp-cta { position: relative; padding: 84px 32px; background: #24485c; overflow: hidden; }
-.hp-cta::before { content: ""; position: absolute; inset: 0; background: linear-gradient(95deg, rgba(20,40,52,.96) 0%, rgba(40,73,92,.88) 42%, rgba(40,73,92,.34) 80%, rgba(40,73,92,.12) 100%), url(../img/cta1.png) right center / cover no-repeat; }
-.hp-cta__inner { position: relative; z-index: 1; max-width: var(--hp-maxw); margin: 0 auto; }
-.hp-cta__content { max-width: 560px; }
-.hp-cta__eyebrow { display: block; margin-bottom: 11px; font-size: 11.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.72); }
-.hp-cta__title { margin: 0; color: #fff; font-size: clamp(24px, 2.7vw, 34px); font-weight: 800; letter-spacing: -.025em; line-height: 1.15; text-shadow: 0 1px 20px rgba(15,23,42,.25); }
-.hp-cta__lead { margin: 13px 0 0; max-width: 46ch; color: rgba(255,255,255,.9); font-size: 15.5px; line-height: 1.55; }
-.hp-cta__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
-.hp-cta__ghost { color: #fff; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.55); backdrop-filter: blur(2px); }
-.hp-cta__ghost:hover { color: #fff; background: rgba(255,255,255,.15); border-color: #fff; }
-@media (max-width: 860px) { .hp-cta { padding: 64px 26px; } .hp-cta::before { background-position: 66% center; } }
-@media (max-width: 640px) {
-	.hp-cta { padding: 52px 20px; }
-	.hp-cta::before { background: linear-gradient(rgba(22,43,56,.93), rgba(40,73,92,.82)), url(../img/cta1.png) center / cover no-repeat; }
+.hp-logo__tile img {
+	width: 26px;
+	height: 26px;
+	display: block;
+}
+.hp-logo__text {
+	font-family: var(--hp-serif);
+	font-size: 19px;
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	color: #fff;
+	white-space: nowrap;
+}
+.hp :where(a.hp-logo:hover) {
+	color: #fff;
 }
 
-.hp-footer { background: #0f172a; color: #94a3b8; padding: 72px 32px 0; }
-.hp-footer__top { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.1fr; gap: 48px; padding-bottom: 48px; align-items: start; }
-.hp-footer__brand-col { max-width: 320px; }
-/* Logo do rodapé: mostra SÓ o símbolo do logo2 (sem as letras), recortando
-   a zona do ícone. Ajustar background-position/size se o enquadramento sair torto. */
-.hp-footer__logo {
-	display: block; width: 74px; height: 69px; margin-bottom: 16px;
-	background-repeat: no-repeat;
-	background-size: 176px auto;      /* zoom no ícone */
-	background-position: -51px -32px; /* enquadra a cruz, corta as letras */
+.hp-header__right {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
-.hp-footer__about { margin: 0; font-size: 14px; line-height: 1.7; }
-.hp-footer__col { display: flex; flex-direction: column; gap: 12px; }
-.hp-footer__col-title { font-size: 13px; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
-.hp-footer__link { font-size: 14px; color: #94a3b8; }
-.hp-footer__link:hover { color: #fff; }
-.hp-footer__contact { font-size: 14px; line-height: 1.6; color: #94a3b8; font-style: normal; margin: 0; }
-.hp-footer__bottom { border-top: 1px solid rgba(255,255,255,.10); padding: 24px 0; display: flex; align-items: center; justify-content: space-between; gap: 24px; font-size: 13px; }
-.hp-footer__legal { display: flex; gap: 24px; }
+.hp-nav {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	height: 54px;
+	padding: 0 10px;
+}
+.hp-nav__link {
+	display: inline-flex;
+	align-items: center;
+	height: 40px;
+	padding: 0 12px;
+	border-radius: 8px;
+	font-size: 16px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.72);
+	white-space: nowrap;
+	transition:
+		color 0.2s,
+		background 0.2s;
+}
+.hp .hp-nav__link:hover,
+.hp .hp-nav__link.is-active {
+	color: #fff;
+}
+.hp .hp-nav__link.is-active {
+	background: rgba(255, 255, 255, 0.1);
+}
+.hp-header__cta {
+	padding: 6px;
+}
+.hp-header__btn {
+	display: inline-flex;
+	align-items: center;
+	height: 42px;
+	padding: 0 20px;
+	border-radius: 8px;
+	background: #fff;
+	font-size: 16px;
+	font-weight: 500;
+	color: #000;
+	white-space: nowrap;
+	transition:
+		background 0.2s,
+		transform 0.2s;
+}
+.hp .hp-header__btn {
+	color: #000;
+}
+.hp .hp-header__btn:hover {
+	background: #eef3f2;
+	color: #000;
+}
+
+/* Menu móvel — hambúrguer (vira X) + painel de vidro por baixo da barra.
+   O estado vive em aria-expanded/hidden (main.js), não em classes. */
+.hp-menu-toggle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	padding: 0;
+	border: 0;
+	color: #fff;
+	cursor: pointer;
+}
+.hp-menu-toggle__bars {
+	position: relative;
+	display: block;
+	width: 20px;
+	height: 14px;
+}
+.hp-menu-toggle__bars span {
+	position: absolute;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	border-radius: 2px;
+	background: currentColor;
+	transition:
+		transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1),
+		opacity 0.15s;
+}
+.hp-menu-toggle__bars span:nth-child(1) {
+	top: 0;
+}
+.hp-menu-toggle__bars span:nth-child(2) {
+	top: 6px;
+}
+.hp-menu-toggle__bars span:nth-child(3) {
+	top: 12px;
+}
+.hp-menu-toggle[aria-expanded="true"] .hp-menu-toggle__bars span:nth-child(1) {
+	transform: translateY(6px) rotate(45deg);
+}
+.hp-menu-toggle[aria-expanded="true"] .hp-menu-toggle__bars span:nth-child(2) {
+	opacity: 0;
+}
+.hp-menu-toggle[aria-expanded="true"] .hp-menu-toggle__bars span:nth-child(3) {
+	transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Gaveta do menu móvel: desliza da direita sobre um fundo escurecido.
+   Estado em .is-aberta (main.js); fechada fica fora do ecrã e inert. */
+.hp-gaveta-fundo {
+	position: fixed;
+	inset: 0;
+	z-index: 190;
+	background: rgba(4, 18, 19, 0.5);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 0.35s ease,
+		visibility 0s linear 0.35s;
+}
+.hp-gaveta-fundo.is-aberto {
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
+	transition: opacity 0.35s ease;
+}
+.hp-gaveta {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 200;
+	display: flex;
+	flex-direction: column;
+	width: min(86vw, 380px);
+	height: 100dvh;
+	padding: 14px 20px calc(20px + env(safe-area-inset-bottom));
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border-radius: 22px 0 0 22px;
+	background: radial-gradient(120% 70% at 100% 0%, #155e63 0%, #0b3a3d 45%, #09292b 100%);
+	box-shadow: -24px 0 60px -20px rgba(0, 0, 0, 0.55);
+	color: #fff;
+	transform: translateX(104%);
+	visibility: hidden;
+	transition:
+		transform 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+		visibility 0s linear 0.42s;
+}
+.hp-gaveta.is-aberta {
+	transform: translateX(0);
+	visibility: visible;
+	transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.hp-gaveta.is-arrastar {
+	transition: none;
+}
+html.hp-gaveta-aberta,
+html.hp-gaveta-aberta body {
+	overflow: hidden;
+}
+
+.hp-gaveta__topo {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 4px 0 18px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.hp-gaveta__marca {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--hp-serif);
+	font-size: 19px;
+	font-weight: 500;
+	text-decoration: none;
+}
+.hp .hp-gaveta__marca,
+.hp .hp-gaveta__marca:hover {
+	color: #fff;
+}
+.hp-gaveta__fechar {
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 0;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+	cursor: pointer;
+	transition:
+		background 0.2s,
+		transform 0.2s;
+}
+.hp-gaveta__fechar:hover {
+	background: rgba(255, 255, 255, 0.16);
+	transform: rotate(90deg);
+}
+.hp-gaveta__fechar svg {
+	width: 20px;
+	height: 20px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+}
+
+.hp-gaveta__nav {
+	display: grid;
+	padding: 10px 0 6px;
+}
+.hp-gaveta__link {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 58px;
+	padding: 0 4px 0 2px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	font-family: var(--hp-serif);
+	font-size: 24px;
+	font-weight: 400;
+	letter-spacing: -0.01em;
+	text-decoration: none;
+	opacity: 0;
+	transform: translateX(24px);
+	transition:
+		opacity 0.35s ease,
+		transform 0.45s cubic-bezier(0.32, 0.72, 0, 1),
+		color 0.2s;
+}
+.hp .hp-gaveta__link {
+	color: rgba(255, 255, 255, 0.78);
+}
+.hp .hp-gaveta__link:hover,
+.hp .hp-gaveta__link.is-active {
+	color: #fff;
+}
+.hp-gaveta__link svg {
+	flex: none;
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	opacity: 0.55;
+	transition:
+		transform 0.2s,
+		opacity 0.2s;
+}
+.hp-gaveta__link:hover svg {
+	transform: translateX(3px);
+	opacity: 1;
+}
+.hp-gaveta__link.is-active {
+	position: relative;
+}
+.hp-gaveta__link.is-active::before {
+	content: "";
+	position: absolute;
+	left: -20px;
+	top: 18px;
+	bottom: 18px;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: var(--ch-menta);
+}
+.hp-gaveta__link.is-active svg {
+	opacity: 1;
+	color: var(--ch-menta);
+}
+.hp-gaveta__link:focus-visible,
+.hp-gaveta__fechar:focus-visible,
+.hp-gaveta__marca:focus-visible {
+	outline: 2px solid var(--ch-menta);
+	outline-offset: 2px;
+	border-radius: 8px;
+}
+
+.hp-gaveta__acoes {
+	display: grid;
+	gap: 10px;
+	margin-top: 22px;
+	opacity: 0;
+	transform: translateY(12px);
+	transition:
+		opacity 0.35s ease,
+		transform 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.hp-gaveta__acoes .hp-btn {
+	justify-content: center;
+	border-radius: var(--ch-r-botao);
+}
+.hp-gaveta__sair {
+	padding: 10px 0;
+	font-size: 14px;
+	text-align: center;
+	text-decoration: none;
+}
+.hp .hp-gaveta__sair {
+	color: rgba(255, 255, 255, 0.7);
+}
+.hp-gaveta__info {
+	display: grid;
+	gap: 14px;
+	margin: auto 0 0;
+	padding-top: 26px;
+	opacity: 0;
+	transition: opacity 0.35s ease;
+}
+.hp-gaveta__info div {
+	display: grid;
+	gap: 2px;
+}
+.hp-gaveta__info dt {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.5);
+}
+.hp-gaveta__info dd {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.9);
+}
+.hp .hp-gaveta__info a {
+	color: #fff;
+	text-decoration: none;
+}
+
+/* Aberta: os destinos entram em cascata. */
+.hp-gaveta.is-aberta :is(.hp-gaveta__link, .hp-gaveta__acoes, .hp-gaveta__info) {
+	opacity: 1;
+	transform: none;
+	transition-delay: calc(0.08s + var(--i, 0) * 0.045s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hp-gaveta,
+	.hp-gaveta.is-aberta,
+	.hp-gaveta-fundo {
+		transition:
+			opacity 0.2s ease,
+			visibility 0s;
+	}
+	.hp-gaveta {
+		transform: none;
+		opacity: 0;
+	}
+	.hp-gaveta.is-aberta {
+		opacity: 1;
+	}
+	.hp-gaveta :is(.hp-gaveta__link, .hp-gaveta__acoes, .hp-gaveta__info) {
+		transform: none;
+		transition: opacity 0.2s;
+	}
+}
+
+@media (max-width: 960px) {
+	.hp-header {
+		top: 12px;
+		padding: 0 12px;
+	}
+	/* Uma só barra de vidro: marca à esquerda, hambúrguer à direita. */
+	.hp-header__inner {
+		pointer-events: auto;
+		padding: 6px;
+		border-radius: 12px;
+		background: var(--ch-vidro);
+		-webkit-backdrop-filter: blur(14px) saturate(140%);
+		backdrop-filter: blur(14px) saturate(140%);
+	}
+	.hp-header__inner .hp-pill,
+	.hp-header__inner .hp-menu-toggle {
+		background: transparent;
+		box-shadow: none;
+		-webkit-backdrop-filter: none;
+		backdrop-filter: none;
+	}
+	.hp-nav,
+	.hp-header__cta {
+		display: none;
+	}
+	.hp-menu-toggle {
+		display: inline-flex;
+	}
+	.hp-logo {
+		padding: 0 8px 0 0;
+	}
+}
+@media (min-width: 961px) {
+	.hp-gaveta,
+	.hp-gaveta-fundo {
+		display: none !important;
+	}
+}
 
 /* Redes sociais: o fundo colorido da marca cresce no hover e o ícone ganha
    vidro fosco (efeito adaptado do snippet fornecido, boas práticas de cor). */
-.hp-social { display: flex; gap: 10px; margin-top: 22px; }
-.hp-social__btn { position: relative; width: 36px; height: 36px; border-radius: 8px; display: block; }
-.hp-social__icon {
-	position: relative; z-index: 2; width: 100%; height: 100%;
-	display: flex; align-items: center; justify-content: center;
-	border-radius: 8px; border: 1px solid rgba(255,255,255,.14);
-	color: #cbd5e1; transition: all .3s;
+.hp-social {
+	display: flex;
+	gap: 10px;
+	margin-top: 22px;
 }
-.hp-social__icon svg { width: 16px; height: 16px; }
-.hp-social__bg { position: absolute; inset: 0; z-index: 1; border-radius: 8px; pointer-events: none; transition: transform .3s; }
-.hp-social__btn:hover .hp-social__bg { transform: scale(1.25); }
+.hp-social__btn {
+	position: relative;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	display: block;
+}
+.hp-social__icon {
+	position: relative;
+	z-index: 2;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #cbd5e1;
+	transition: all 0.3s;
+}
+.hp-social__icon svg {
+	width: 16px;
+	height: 16px;
+}
+.hp-social__bg {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: 8px;
+	pointer-events: none;
+	transition: transform 0.3s;
+}
+.hp-social__btn:hover .hp-social__bg {
+	transform: scale(1.25);
+}
 .hp-social__btn:hover .hp-social__icon {
-	border-color: rgba(255,255,255,.35);
-	background: rgba(255,255,255,.10);
+	border-color: rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.1);
 	backdrop-filter: blur(4px);
 	color: #fff;
 }
 /* Cor da marca de cada rede. */
-.hp-social__btn--facebook  .hp-social__bg { background: #1877F2; }
-.hp-social__btn--instagram .hp-social__bg { background: #E4405F; }
-.hp-social__btn--whatsapp  .hp-social__bg { background: #25D366; }
-.hp-social__btn--linkedin  .hp-social__bg { background: #0A66C2; }
+.hp-social__btn--facebook .hp-social__bg {
+	background: #1877f2;
+}
+.hp-social__btn--instagram .hp-social__bg {
+	background: #e4405f;
+}
+.hp-social__btn--whatsapp .hp-social__bg {
+	background: #25d366;
+}
+.hp-social__btn--tiktok .hp-social__bg {
+	background: #010101;
+}
 
+/* Sistema tipográfico (display)
+   A serifa de display unifica todos os títulos de secção: a página deixa de ser
+   "Inter a 800" em todo o lado e ganha uma voz coerente e sénior. Tamanhos e
+   cores de cada secção mantêm-se — só muda a família e o peso. Colocado no fim
+   da folha para vencer, por cascata, as declarações individuais acima. */
 
-/* ------------------------------------------------------------ RESPONSIVO */
-@media (max-width: 1024px) {
-	.hp-nav { display: none; }
-	.hp-hero { padding-top: 120px; }
-	.hp-hero__inner { grid-template-columns: 1fr; gap: 32px; }
-	.hp-hero__text { padding-bottom: 32px; }
-	.hp-hero__photo { max-width: 380px; margin: 0 auto; }
-	.hp-sobre__inner { grid-template-columns: 1fr; }
-	.hp-esp-grid { grid-template-columns: repeat(3, 1fr); }
-	.hp-med-grid { grid-template-columns: repeat(2, 1fr); }
-	.hp-test-grid { grid-template-columns: 1fr; }
-	.hp-contacto__card { grid-template-columns: 1fr; padding: 48px; }
-	.hp-search__bar { grid-template-columns: 1fr 1fr; }
-	.hp-search__submit { grid-column: 1 / -1; min-height: 52px; }
+/* Polimento sénior
+   Mantém a estrutura original e melhora apenas acabamento e movimento. */
+.hp {
+	overflow-x: clip;
+}
+.hp-btn {
+	border-radius: 7px;
+	box-shadow: none;
+}
+.hp-btn:hover {
+	transform: translateY(-1px);
+}
+
+@keyframes hp-polish-photo {
+	from {
+		opacity: 0;
+		transform: translateY(14px) scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
 }
 
 @media (max-width: 640px) {
-	.hp-hero__title { font-size: 36px; }
-	.hp-head__title, .hp-medicos__title { font-size: 28px; }
-	.hp-stats { grid-template-columns: repeat(2, 1fr); padding: 24px; }
-	.hp-stat + .hp-stat { border-left: none; padding-left: 0; }
-	.hp-esp-grid { grid-template-columns: repeat(2, 1fr); }
-	.hp-med-grid { grid-template-columns: 1fr; }
-	.hp-search__bar { grid-template-columns: 1fr; }
-	.hp-medicos__head { flex-direction: column; align-items: flex-start; }
-	.hp-footer__top { grid-template-columns: 1fr 1fr; }
-	.hp-footer__bottom { flex-direction: column; align-items: flex-start; }
-	.hp-contacto__card { padding: 32px 22px; }
-	.hp-hero, .hp-marcacao, .hp-especialidades, .hp-sobre, .hp-medicos,
-	.hp-testemunhos, .hp-contacto, .hp-footer { padding-left: 20px; padding-right: 20px; }
+	.hp img {
+		max-width: 100%;
+	}
+}
+
+/* Fecho
+   CTA final + rodapé numa só faixa petróleo, com formas suaves ao fundo
+   (referência ClinicHub). Substitui o .hp-cta e o .hp-footer antigos. */
+.hp-fecho {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	padding: 110px 32px 40px;
+	background: var(--ch-escuro);
+	color: rgba(255, 255, 255, 0.62);
+}
+.hp-fecho__formas span {
+	position: absolute;
+	z-index: -1;
+	background: rgba(255, 255, 255, 0.035);
+}
+.hp-fecho__formas span:nth-child(1) {
+	left: -140px;
+	top: -90px;
+	width: 620px;
+	height: 420px;
+	border-radius: 48% 52% 60% 40% / 55% 45% 55% 45%;
+	transform: rotate(-18deg);
+}
+.hp-fecho__formas span:nth-child(2) {
+	left: 120px;
+	top: 300px;
+	width: 190px;
+	height: 260px;
+	border-radius: 95px;
+}
+.hp-fecho__formas span:nth-child(3) {
+	right: -120px;
+	bottom: 120px;
+	width: 420px;
+	height: 320px;
+	border-radius: 60% 40% 45% 55% / 50% 60% 40% 50%;
+	transform: rotate(14deg);
+}
+.hp-fecho__cta {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 30px;
+	padding-bottom: 100px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	text-align: center;
+}
+.hp-fecho__marca {
+	display: grid;
+	place-items: center;
+	width: 76px;
+	height: 76px;
+	border-radius: 17px;
+	background: linear-gradient(160deg, #fff 0%, #d7e1e0 100%);
+	box-shadow:
+		inset 0 -3px 6px rgba(9, 41, 43, 0.18),
+		0 14px 34px -14px rgba(0, 0, 0, 0.6);
+}
+.hp-fecho__marca img {
+	width: 46px;
+	height: 46px;
+}
+.hp-fecho__titulo {
+	max-width: 520px;
+	margin: 0;
+	font-family: var(--hp-serif);
+	font-weight: 400;
+	font-size: 42px;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	color: #fff;
+	text-wrap: balance;
+}
+.hp-fecho__grelha {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 170px)) minmax(0, 1fr);
+	gap: 40px;
+	padding: 80px 0 64px;
+}
+.hp-fecho__col {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 14px;
+}
+.hp-fecho__col-titulo {
+	margin: 0 0 6px;
+	font-size: 16px;
+	font-weight: 500;
+	color: rgba(255, 255, 255, 0.5);
+}
+.hp .hp-fecho__link {
+	font-size: 15px;
+	color: #fff;
+	transition: opacity 0.2s;
+	overflow-wrap: anywhere;
+}
+.hp .hp-fecho__link:hover {
+	color: #fff;
+	opacity: 0.72;
+}
+.hp-fecho__contacto {
+	justify-self: end;
+	min-width: 240px;
+}
+.hp-fecho__contacto address {
+	font-style: normal;
+	font-size: 15px;
+	line-height: 1.5;
+	color: #fff;
+}
+.hp-fecho__horario {
+	font-size: 15px;
+	color: rgba(255, 255, 255, 0.62);
+}
+.hp-fecho__base {
+	display: grid;
+	gap: 14px;
+	max-width: 640px;
+	font-size: 14px;
+	line-height: 1.55;
+}
+.hp-fecho__base p {
+	margin: 0;
+}
+.hp .hp-fecho__base a {
+	color: #fff;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+@media (max-width: 900px) {
+	.hp-fecho {
+		padding: 80px 24px 36px;
+	}
+	.hp-fecho__titulo {
+		font-size: 34px;
+	}
+	.hp-fecho__grelha {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 36px 24px;
+	}
+	.hp-fecho__contacto {
+		grid-column: 1 / -1;
+		justify-self: start;
+	}
+}
+@media (max-width: 640px) {
+	.hp-fecho {
+		padding: 64px 20px 32px;
+	}
+	.hp-fecho__cta {
+		gap: 24px;
+		padding-bottom: 64px;
+	}
+	.hp-fecho__titulo {
+		font-size: 30px;
+	}
+	.hp-fecho__grelha {
+		padding: 56px 0 48px;
+	}
+}
+
+/* Gaveta branca (pedido do dono): o mesmo deslizar da direita, em claro. */
+.hp-gaveta {
+	background: #fff;
+	color: #0b1f20;
+	box-shadow: -24px 0 60px -20px rgba(4, 18, 19, 0.45);
+}
+.hp-gaveta-fundo {
+	background: rgba(4, 18, 19, 0.55);
+}
+.hp-gaveta__topo {
+	border-bottom-color: #e9eeec;
+}
+.hp .hp-gaveta__marca,
+.hp .hp-gaveta__marca:hover {
+	color: #0b1f20;
+}
+.hp-gaveta__fechar {
+	background: #f2f5f4;
+	color: #0b1f20;
+}
+.hp-gaveta__fechar:hover {
+	background: #e6ecea;
+}
+.hp-gaveta__link {
+	border-bottom-color: #eef2f1;
+}
+.hp .hp-gaveta__link {
+	color: #4b5b59;
+}
+.hp .hp-gaveta__link:hover,
+.hp .hp-gaveta__link.is-active {
+	color: #0b1f20;
+}
+.hp-gaveta__link.is-active::before {
+	background: var(--ch-teal);
+}
+.hp-gaveta__link.is-active svg {
+	color: var(--ch-teal);
+}
+.hp-gaveta__link:focus-visible,
+.hp-gaveta__fechar:focus-visible,
+.hp-gaveta__marca:focus-visible {
+	outline-color: var(--ch-teal);
+}
+.hp-gaveta .hp-btn--white {
+	background: var(--ch-escuro);
+	color: #fff;
+}
+.hp .hp-gaveta .hp-btn--white:hover {
+	background: var(--ch-teal);
+	color: #fff;
+}
+.hp-gaveta .hp-btn--vidro {
+	border: 1px solid #dce3e1;
+	background: #fff;
+	color: #0b1f20;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+.hp .hp-gaveta .hp-btn--vidro:hover {
+	border-color: var(--ch-teal);
+	color: var(--ch-teal);
+}
+.hp .hp-gaveta__sair {
+	color: #73807d;
+}
+.hp-gaveta__info {
+	padding-top: 22px;
+	border-top: 1px solid #eef2f1;
+}
+.hp-gaveta__info dt {
+	color: #73807d;
+}
+.hp-gaveta__info dd {
+	color: #0b1f20;
+}
+.hp .hp-gaveta__info a {
+	color: var(--ch-teal);
+}
+
+/* Rodapé: contactos com ícone, linha legal e autoria. */
+.hp-fecho__dados {
+	display: grid;
+	gap: 14px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.hp-fecho__dados li {
+	display: grid;
+	grid-template-columns: 18px minmax(0, 1fr);
+	align-items: start;
+	gap: 12px;
+}
+.hp-fecho__ic {
+	width: 18px;
+	height: 18px;
+	margin-top: 2px;
+	color: var(--ch-menta);
+	opacity: 0.75;
+}
+.hp-fecho__pilha {
+	display: grid;
+	gap: 4px;
+}
+.hp-fecho__base {
+	max-width: none;
+}
+.hp-fecho__base > p {
+	max-width: 640px;
+}
+.hp-fecho__legal {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px 28px;
+	padding-top: 22px;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.hp-fecho__docs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 22px;
+}
+.hp .hp-fecho__docs a,
+.hp-fecho__prefs {
+	color: rgba(255, 255, 255, 0.82);
+	text-decoration: none;
+	transition: color 0.2s;
+}
+.hp-fecho__prefs {
+	padding: 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	cursor: pointer;
+}
+.hp .hp-fecho__docs a:hover,
+.hp-fecho__prefs:hover {
+	color: #fff;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.hp-fecho__prefs:focus-visible {
+	outline: 2px solid var(--ch-menta);
+	outline-offset: 3px;
+	border-radius: 4px;
+}
+.hp-fecho__autor {
+	color: rgba(255, 255, 255, 0.5);
+}
+@media (max-width: 640px) {
+	.hp-fecho__legal {
+		flex-direction: column;
+		align-items: flex-start;
+	}
 }

@@ -2,8 +2,9 @@
 /**
  * Template Name: Clínica — Contacto
  *
- * Página de contacto: informação da clínica + imagem + formulário com backend
- * real (grava em clinica_mensagens). Reutiliza cabeçalho/rodapé da homepage.
+ * Contacto montado com os blocos da referência ClinicHub (componentes .cv-*):
+ * banner limpo → fale connosco (formulário real, grava em clinica_mensagens)
+ * → onde estamos → perguntas frequentes.
  *
  * @package Clinica
  */
@@ -16,18 +17,30 @@ clinica_controller_contacto();
 
 get_header();
 ?>
-
-<div class="hp">
+<div class="hp hp--contacto">
 
 	<?php get_template_part( 'pages/home/site-header' ); ?>
 
-	<main id="conteudo" class="con">
-		<?php get_template_part( 'pages/contacto/conteudo' ); ?>
+	<main id="conteudo">
+		<?php
+		// A ordem aqui é a ordem visual da página.
+		get_template_part( 'pages/contacto/hero' );
+		get_template_part( 'pages/contacto/mensagem' );
+		get_template_part( 'pages/partials/local', null, array( 'titulo' => 'Venha visitar-nos em Sommerschield' ) );
+		get_template_part(
+			'pages/partials/faq',
+			null,
+			array(
+				'id'        => 'perguntas',
+				'perguntas' => Clinica_Homepage::faq(),
+				'cartao'    => false,
+			)
+		);
+		?>
 	</main>
 
 	<?php get_template_part( 'pages/home/site-footer' ); ?>
 
 </div>
-
 <?php
 get_footer();
